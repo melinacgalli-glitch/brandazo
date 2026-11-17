@@ -125,6 +125,9 @@ Ejemplos: `ejemplos/solicitud-minima.json` (solo lo que la web ya tiene) y `ejem
 | `201` | Guardada: contacto creado o vinculado y oportunidad creada. | No |
 | `200` | Ya estaba (reintento). `status: "duplicate"`. | No |
 | `400` | `INVALID_JSON`, `MISSING_IDEMPOTENCY_KEY`, `IDEMPOTENCY_KEY_MISMATCH` | No: corregir |
+
+> Si el cuerpo es **JSON mal formado**, la plataforma (Google Cloud) responde `400` antes de que llegue a Brandazo y esa respuesta puede no tener el formato de error de la sección siguiente. Tratar cualquier `400` como «corregir, no reintentar».
+
 | `401` | `MISSING_SIGNATURE`, `UNKNOWN_KEY`, `INVALID_SIGNATURE`, `TIMESTAMP_OUT_OF_RANGE` | No: corregir (revisar secreto y reloj) |
 | `409` | `IDEMPOTENCY_CONFLICT` (mismo id, otro cuerpo) | No |
 | `409` | `REQUEST_IN_PROGRESS` (el mismo id se está procesando) | **Sí** |

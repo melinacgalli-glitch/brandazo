@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.brandazo.com.ar/schemas/integrations/cafelito/event-quote.response.v1.json",
+  "title": "Cotización de Cafelito Ambulante (respuesta de éxito)",
+  "description": "Se devuelve SOLO después de guardar la cotización, el contacto y la oportunidad. 201 la primera vez; 200 con status «duplicate» si llega de nuevo el mismo Idempotency-Key con el mismo cuerpo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "receiptId", "quoteId", "receivedAt", "contact", "opportunity", "estimate", "warnings"],
+  "properties": {
+    "status": { "enum": ["created", "duplicate"] },
+    "receiptId": { "type": "string", "pattern": "^brz_q_[A-Za-z0-9]{20}$", "description": "Identificador interno único de la cotización en Brandazo." },
+    "quoteId": { "type": "string", "description": "El mismo quoteId enviado por la web." },
+    "receivedAt": { "type": "string", "format": "date-time", "description": "Fecha y hora de recepción en Brandazo (UTC). En un duplicado es la de la primera recepción." },
+    "contact": {
+      "type": "object", "additionalProperties": false, "required": ["id", "match"],
+      "properties": {
+        "id": { "type": "string" },
+        "match": { "enum": ["existing", "new"], "description": "existing = ya había un contacto con ese teléfono normalizado." }
+      }
+    },
+    "opportunity": {
+      "type": "object", "additionalProperties": false, "required": ["id", "pipeline", "stage"],
+      "properties": {
+        "id": { "type": "string" },
+        "pipeline": { "const": "cafelito-eventos" },
+        "stage": { "const": "nueva-cotizacion" }
+      }
+    },
+    "estimate": {
+      "type": "object", "additionalProperties": false, "required": ["status", "tariffVersion", "subtotalMinor", "currency"],
+      "properties": {
+        "status": { "enum": ["match", "mismatch", "not_sent"], "description": "Comparación entre el estimado de la web y el recálculo de Brandazo." },
+        "tariffVersion": { "type": "string", "description": "Versión de tarifas que usó Brandazo." },
+        "subtotalMinor": { "type": "integer", "description": "Subtotal recalculado por Brandazo, en centavos, sin IVA." },
+        "currency": { "const": "ARS" }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["code", "message"],
+        "properties": {
+          "code": { "enum": ["SHORT_NOTICE", "PHONE_NOT_NORMALIZED", "ADDON_NOT_IN_PLAN", "ESTIMATE_MISMATCH", "POSSIBLE_SPAM"] },
+          "message": { "type": "string" },
+          "field": { "type": "string" }
+        }
+      },
+      "description": "Avisos que NO impiden guardar (la cotización queda marcada para revisión en el CRM)."
+    }
+  }
+}

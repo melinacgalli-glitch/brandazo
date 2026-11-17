@@ -24,7 +24,9 @@ public/
   js/4-funnel.js      Estrategia → Funnel de conversión (ver docs/funnel.md)
   js/5-editorial.js   Contenidos → Planificaciones y Aprobaciones (ver docs/contenidos.md)
   favicon.svg
-firebase.json         configuración de Firebase Hosting
+firebase.json         configuración de Firebase (Hosting, Functions, Firestore, emuladores)
+functions/            servidor: integración del cotizador (ver docs/servidor.md)
+firestore.rules       reglas de la base (cerrada al navegador hasta la Etapa 0)
 .firebaserc           proyecto de Firebase asociado
 docs/                 documentación y decisiones
   integraciones/cafelito-cotizador/   contrato de la API para el cotizador de cafelito.com.ar

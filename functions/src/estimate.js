@@ -1,0 +1,33 @@
+'use strict';
+// Recálculo del presupuesto con la tabla de tarifas versionada (misma regla que docs/.../herramientas/recalcular.mjs).
+// Todo en centavos (enteros). El importe que manda la web es una estimación no confiable.
+const TARIFAS = require('../contract/web-2026-11.json');
+
+function recalcular(q, t = TARIFAS) {
+  const g = q.event.guests, sel = q.selection, warnings = [];
+  const plan = t.plans[sel.plan];
+  const lines = [];
+  const add = (code, label, quantity, unit) => lines.push({ code, label, quantity, unitMinor: unit * 100, totalMinor: quantity * unit * 100 });
+  add('plan', `Plan ${plan.name}`, g, plan.pricePerGuest);
+  add('service', t.serviceFee.label, 1, t.serviceFee.amount);
+  const extra = Math.max(0, q.event.durationHours - t.includedHours);
+  if (extra > 0) add('extra_hours', `Horas extra (${extra})`, extra, t.extraHour.amount);
+  for (const id of sel.addonIds || []) {
+    const a = t.addons.find(x => x.id === id);
+    if (!a) continue;
+    if (a.onlyPlan && a.onlyPlan !== sel.plan) { warnings.push({ code: 'ADDON_NOT_IN_PLAN', field: 'selection.addonIds', message: `«${a.name}» ya viene incluido en el plan ${plan.name}: no se cobra.` }); continue; }
+    add('addon:' + a.id, a.name, g, a.pricePerGuest);
+  }
+  const nc = (sel.customizationIds || []).length;
+  if (nc > 0) {
+    const all = nc === t.customizations.items.length;
+    const total = all ? t.customizations.allThreePrice : t.customizations.pricePerItem * nc;
+    const names = t.customizations.items.filter(x => sel.customizationIds.includes(x.id)).map(x => x.name).join(', ');
+    const line = { code: 'customization', label: `Personalización (${names})`, quantity: nc, totalMinor: total * 100 };
+    if (!all) line.unitMinor = t.customizations.pricePerItem * 100;
+    lines.push(line);
+  }
+  return { tariffVersion: t.tariffVersion, currency: 'ARS', taxIncluded: false, transfer: q.event.inCapital ? 'included' : 'to_quote', subtotalMinor: lines.reduce((s, l) => s + l.totalMinor, 0), lines, warnings };
+}
+
+module.exports = { recalcular, TARIFAS };

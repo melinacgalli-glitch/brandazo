@@ -20,6 +20,7 @@ _Última actualización: 2026-11-17_
 | 2026-11-17 | En el prototipo, Dueño y Admin pueden aprobar en nombre del aprobador asignado; queda registrado. Las ideas creadas desde el calendario no pasan a producción sin aprobación estratégica. | El prototipo tiene un solo usuario real hasta el ingreso real (Etapa 0). |
 | 2026-11-17 | Tagline: «Marketing y ventas, en un mismo lugar.» (antes «a un comando»), en el sitio y en el manual de marca 2.1. La idea de marca «todo tu negocio, a un comando» y el concepto de la barra se mantienen. | Pedido de Melina. |
 | 2026-11-17 | Contrato del cotizador, borrador 2 (revisión del equipo web): se agrega `attribution.fbclid`; `consent` = aceptación de promociones con el texto exacto de la casilla; reintentos de la web durante 1,5 min y aviso por mail como primera versión (cola de 24 h, mejora futura). | Respuesta del equipo de Cafelito Web. La web ya envía según el contrato; falta el endpoint de Brandazo y `brandazo-staging`. |
+| 2026-11-17 | Servidor de la integración en Firebase Cloud Functions 2.ª gen (`southamerica-east1`, Node 22) con Firestore por empresa (`tenants/{id}`); una transacción por cotización; reglas de Firestore cerradas al navegador hasta la Etapa 0; claves en Secret Manager (`INTEGRATION_KEYS`). Ver `docs/servidor.md`. | Fase 2 aprobada por Melina. Probado en el emulador (22 pruebas); falta plan Blaze, `brandazo-staging` y permisos para publicar. |
 
 ## Pendientes de definir
 - Responsable comercial de eventos de Cafelito (regla de asignación inicial).
