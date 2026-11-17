@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0",
+  "quoteId": "5b0f9c1e-8a2d-4c3b-9f1e-2d7a6c4b8e10",
+  "submittedAt": "2026-11-17T16:05:44-03:00",
+  "source": {
+    "site": "cafelito.com.ar",
+    "form": "cafelito-ambulante",
+    "pageUrl": "https://www.cafelito.com.ar/?utm_source=instagram&utm_medium=paid_social&utm_campaign=eventos-fin-de-ano#cafelito-ambulante"
+  },
+  "contact": {
+    "name": "Estudio Contable Ruiz",
+    "phone": "+54 9 351 555-0187",
+    "email": "eventos@ejemplo.com.ar"
+  },
+  "event": {
+    "type": "Corporativo",
+    "date": "2026-12-12",
+    "startTime": "18:00",
+    "durationHours": 5,
+    "inCapital": true,
+    "place": "Oficinas en Nueva Córdoba",
+    "guests": 80
+  },
+  "selection": {
+    "plan": "full",
+    "addonIds": [
+      "cookies",
+      "sanguchitos"
+    ],
+    "customizationIds": [
+      "sticker"
+    ],
+    "wantsCake": false,
+    "wantsColdBrew": true
+  },
+  "dietary": [
+    "Celíacos"
+  ],
+  "notes": "Brindis de fin de año con clientes. Nos gustaría una bebida especial con el color de la marca.",
+  "estimate": {
+    "currency": "ARS",
+    "taxIncluded": false,
+    "subtotalMinor": 142000000,
+    "transfer": "included",
+    "tariffVersion": "web-2026-11",
+    "lines": [
+      {
+        "code": "plan",
+        "label": "Plan Full",
+        "quantity": 80,
+        "unitMinor": 700000,
+        "totalMinor": 56000000
+      },
+      {
+        "code": "service",
+        "label": "Servicio Cafelito",
+        "quantity": 1,
+        "unitMinor": 25000000,
+        "totalMinor": 25000000
+      },
+      {
+        "code": "extra_hours",
+        "label": "Horas extra (1)",
+        "quantity": 1,
+        "unitMinor": 10000000,
+        "totalMinor": 10000000
+      },
+      {
+        "code": "addon:cookies",
+        "label": "Cookies",
+        "quantity": 80,
+        "unitMinor": 250000,
+        "totalMinor": 20000000
+      },
+      {
+        "code": "addon:sanguchitos",
+        "label": "Sanguchitos",
+        "quantity": 80,
+        "unitMinor": 350000,
+        "totalMinor": 28000000
+      },
+      {
+        "code": "customization",
+        "label": "Personalización (Sticker en los vasos)",
+        "quantity": 1,
+        "unitMinor": 3000000,
+        "totalMinor": 3000000
+      }
+    ]
+  },
+  "attribution": {
+    "utmSource": "instagram",
+    "utmMedium": "paid_social",
+    "utmCampaign": "eventos-fin-de-ano",
+    "utmContent": "reel-barra",
+    "landingPage": "https://www.cafelito.com.ar/?utm_source=instagram&utm_medium=paid_social&utm_campaign=eventos-fin-de-ano&utm_content=reel-barra",
+    "referrer": "https://l.instagram.com/",
+    "capturedAt": "2026-11-17T15:58:02-03:00"
+  },
+  "consent": {
+    "marketing": false,
+    "text": "Acepto que Cafelito me contacte por WhatsApp para responder este pedido.",
+    "capturedAt": "2026-11-17T16:05:44-03:00"
+  }
+}

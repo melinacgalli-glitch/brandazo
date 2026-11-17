@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "INVALID_SIGNATURE",
+    "message": "La firma no coincide con el cuerpo recibido.",
+    "requestId": "req_01JD8Q4A2B",
+    "retryable": false
+  }
+}

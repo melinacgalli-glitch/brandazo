@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "IDEMPOTENCY_CONFLICT",
+    "message": "Ese Idempotency-Key ya se usó con un cuerpo distinto.",
+    "requestId": "req_01JD8Q5C9D",
+    "retryable": false
+  }
+}

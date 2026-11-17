@@ -1,0 +1,37 @@
+{
+  "tariffVersion": "web-2026-11",
+  "source": "Leído del cotizador publicado en https://www.cafelito.com.ar/#cafelito-ambulante el 2026-11-17 (código JS del sitio). Si la web cambia precios, hay que publicar una versión nueva de este archivo.",
+  "currency": "ARS",
+  "taxIncluded": false,
+  "unit": "pesos (en el contrato se envían en centavos: × 100)",
+  "plans": {
+    "esencial": { "name": "Esencial", "tagline": "solo calientes", "pricePerGuest": 6000 },
+    "full": { "name": "Full", "tagline": "calientes y fríos", "pricePerGuest": 7000 }
+  },
+  "serviceFee": { "label": "Servicio Cafelito", "amount": 250000 },
+  "includedHours": 4,
+  "extraHour": { "label": "Hora extra", "amount": 100000, "rule": "max(0, horas − 4) × 100.000" },
+  "addons": [
+    { "id": "jarabe", "group": "bebida", "name": "Jarabe de vainilla o caramelo", "pricePerGuest": 1000, "onlyPlan": "esencial" },
+    { "id": "cookies", "group": "dulce", "name": "Cookies", "pricePerGuest": 2500 },
+    { "id": "alfajor-ddl", "group": "dulce", "name": "Alfajor de dulce de leche", "pricePerGuest": 2000 },
+    { "id": "alfajor-pistacho", "group": "dulce", "name": "Alfajor de pistacho y frambuesa", "pricePerGuest": 3500 },
+    { "id": "budines", "group": "dulce", "name": "Budines", "pricePerGuest": 3000 },
+    { "id": "scon", "group": "salado", "name": "Scon de queso y albahaca", "pricePerGuest": 3000 },
+    { "id": "sanguchitos", "group": "salado", "name": "Sanguchitos", "pricePerGuest": 3500 }
+  ],
+  "customizations": {
+    "items": [
+      { "id": "tinta", "name": "Tinta comestible en la espuma" },
+      { "id": "sticker", "name": "Sticker en los vasos" },
+      { "id": "barra", "name": "Barra con el logo del evento" }
+    ],
+    "pricePerItem": 30000,
+    "allThreePrice": 72000,
+    "rule": "si se eligen las 3: 72.000; si no: 30.000 × cantidad"
+  },
+  "transfer": { "inCapital": "incluido", "otherLocality": "a cotizar (no suma al estimado)" },
+  "formula": "subtotal = plan.pricePerGuest × invitados + 250.000 + horas extra + Σ(adicional × invitados) + personalizaciones   (sin IVA, sin traslado fuera de Capital)",
+  "notInEstimate": ["Torta del catálogo (wantsCake)", "Cold brew en lata personalizado (wantsColdBrew)", "Traslado fuera de Capital", "IVA"],
+  "commercialRules": { "minimumGuests": 60, "maximumGuests": 400, "minimumNoticeDays": 7, "deposit": "La fecha se confirma con una seña del 50 %" }
+}

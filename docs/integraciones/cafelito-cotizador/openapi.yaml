@@ -1,0 +1,133 @@
+openapi: 3.1.0
+info:
+  title: Brandazo · Integración Cafelito Ambulante
+  version: 1.0.0-borrador
+  summary: Recepción de cotizaciones del cotizador de la barra móvil de cafelito.com.ar
+  description: |
+    El servidor de **cafelito.com.ar** (ruta `/api/ambulante`) reenvía a Brandazo cada pedido de presupuesto del
+    cotizador de Cafelito Ambulante. Brandazo guarda la cotización, crea o vincula el contacto (por teléfono
+    normalizado) y crea una oportunidad en el pipeline **Cafelito Eventos**, etapa **Nueva cotización**.
+
+    - Brandazo **no** reconstruye el cotizador: recibe, guarda y gestiona.
+    - Las llamadas son **servidor a servidor**. El secreto nunca va al navegador.
+    - La respuesta de éxito se devuelve **solo después de guardar** todo.
+    - El importe que manda la web es una **estimación no confiable**: Brandazo lo recalcula con su tabla de
+      tarifas versionada (`tarifas/web-2026-11.json`) y marca si no coincide.
+
+    Estado: **borrador para revisar con el equipo web**. El endpoint todavía no está publicado.
+  contact:
+    name: Brandazo · Integraciones
+servers:
+  - url: https://brandazo-staging.web.app/api/v1
+    description: Ambiente de pruebas (datos ficticios, clave de pruebas)
+  - url: https://brandazo.web.app/api/v1
+    description: Producción
+security:
+  - firmaHmac: []
+paths:
+  /integrations/cafelito/event-quotes:
+    post:
+      operationId: crearCotizacionEvento
+      summary: Recibir una cotización de Cafelito Ambulante
+      description: |
+        Idempotente por `Idempotency-Key` (= `quoteId`). Reintentos con el mismo cuerpo devuelven la misma
+        respuesta con `status: "duplicate"` y no crean nada nuevo.
+      parameters:
+        - $ref: '#/components/parameters/KeyId'
+        - $ref: '#/components/parameters/Timestamp'
+        - $ref: '#/components/parameters/Signature'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './schemas/event-quote.request.json'
+            examples:
+              minima:
+                summary: Solo los datos que el cotizador ya envía hoy
+                externalValue: './ejemplos/solicitud-minima.json'
+              completa:
+                summary: Con estimado, atribución y consentimiento (campos a agregar en la web)
+                externalValue: './ejemplos/solicitud-completa.json'
+      responses:
+        '201':
+          description: Cotización guardada, contacto creado o vinculado y oportunidad creada.
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/RequestId' }
+          content:
+            application/json:
+              schema: { $ref: './schemas/event-quote.response.json' }
+              examples:
+                creada: { externalValue: './ejemplos/respuesta-201-creada.json' }
+        '200':
+          description: La misma solicitud ya se había recibido (reintento). No se creó nada nuevo.
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/RequestId' }
+            Idempotent-Replayed: { description: Siempre "true", schema: { type: string, const: 'true' } }
+          content:
+            application/json:
+              schema: { $ref: './schemas/event-quote.response.json' }
+              examples:
+                duplicada: { externalValue: './ejemplos/respuesta-200-duplicada.json' }
+        '400': { $ref: '#/components/responses/Error', description: 'INVALID_JSON · MISSING_IDEMPOTENCY_KEY · IDEMPOTENCY_KEY_MISMATCH (no reintentar)' }
+        '401': { $ref: '#/components/responses/Error', description: 'MISSING_SIGNATURE · UNKNOWN_KEY · INVALID_SIGNATURE · TIMESTAMP_OUT_OF_RANGE (no reintentar sin corregir)' }
+        '409': { $ref: '#/components/responses/Error', description: 'IDEMPOTENCY_CONFLICT: mismo Idempotency-Key con otro cuerpo · REQUEST_IN_PROGRESS: el mismo Idempotency-Key se está procesando (reintentar)' }
+        '413': { $ref: '#/components/responses/Error', description: 'PAYLOAD_TOO_LARGE: más de 32 KB' }
+        '415': { $ref: '#/components/responses/Error', description: 'UNSUPPORTED_MEDIA_TYPE: falta Content-Type application/json' }
+        '422': { $ref: '#/components/responses/Error', description: 'VALIDATION_FAILED · EVENT_DATE_IN_PAST (con detalle por campo; no reintentar)' }
+        '429':
+          description: RATE_LIMITED. Reintentar después de Retry-After.
+          headers:
+            Retry-After: { description: Segundos a esperar, schema: { type: integer } }
+          content:
+            application/json:
+              schema: { $ref: './schemas/error.json' }
+        '500': { $ref: '#/components/responses/Error', description: 'INTERNAL_ERROR (reintentar)' }
+        '503': { $ref: '#/components/responses/Error', description: 'UNAVAILABLE (reintentar)' }
+components:
+  securitySchemes:
+    firmaHmac:
+      type: apiKey
+      in: header
+      name: X-Brandazo-Signature
+      description: |
+        `v1=` + HMAC-SHA256 en hexadecimal (minúsculas) de `${X-Brandazo-Timestamp}.${cuerpo crudo}` con el secreto
+        de la clave indicada en `X-Brandazo-Key-Id`. Se firma **exactamente** el texto que se envía como cuerpo.
+        Brandazo rechaza timestamps con más de 5 minutos de diferencia y compara en tiempo constante.
+  parameters:
+    KeyId:
+      name: X-Brandazo-Key-Id
+      in: header
+      required: true
+      description: Identificador de la clave (permite rotar secretos sin cortar el servicio). Ej. `cafelito-web-2026-11`.
+      schema: { type: string, pattern: '^[a-z0-9-]{3,60}$' }
+    Timestamp:
+      name: X-Brandazo-Timestamp
+      in: header
+      required: true
+      description: Segundos desde 1970 (Unix, UTC) del momento del envío. Nuevo en cada intento.
+      schema: { type: string, pattern: '^[0-9]{10}$' }
+    Signature:
+      name: X-Brandazo-Signature
+      in: header
+      required: true
+      schema: { type: string, pattern: '^v1=[0-9a-f]{64}$' }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Igual al `quoteId` del cuerpo. Se conserva 30 días.
+      schema: { type: string, format: uuid }
+  headers:
+    RequestId:
+      description: Identificador del intento, para soporte.
+      schema: { type: string }
+  responses:
+    Error:
+      description: Error estructurado
+      headers:
+        X-Request-Id: { $ref: '#/components/headers/RequestId' }
+      content:
+        application/json:
+          schema: { $ref: './schemas/error.json' }

@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "UNAVAILABLE",
+    "message": "Servicio no disponible momentáneamente. Reintentar.",
+    "requestId": "req_01JD8Q6E1F",
+    "retryable": true
+  }
+}

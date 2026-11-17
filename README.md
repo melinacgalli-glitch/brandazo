@@ -23,6 +23,7 @@ public/
 firebase.json         configuración de Firebase Hosting
 .firebaserc           proyecto de Firebase asociado
 docs/                 documentación y decisiones
+  integraciones/cafelito-cotizador/   contrato de la API para el cotizador de cafelito.com.ar
 ```
 
 ## Probar en local

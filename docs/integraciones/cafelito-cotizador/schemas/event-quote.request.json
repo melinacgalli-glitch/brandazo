@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brandazo.web.app/schemas/integrations/cafelito/event-quote.request.v1.json",
+  "title": "Cotización de Cafelito Ambulante (solicitud)",
+  "description": "Cuerpo que el servidor de cafelito.com.ar envía a Brandazo por cada pedido de presupuesto del cotizador de la barra móvil. Los campos de 'event', 'selection', 'dietary', 'notes' y 'contact' corresponden 1 a 1 a los que el cotizador ya arma hoy (inspeccionado el 2026-11-17). 'estimate', 'attribution', 'consent' y 'contact.email' NO existen hoy en el cotizador: son opcionales y quedan para que el equipo web los agregue.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "quoteId", "submittedAt", "contact", "event", "selection"],
+  "properties": {
+    "schemaVersion": { "const": "1.0", "description": "Versión de este contrato." },
+    "quoteId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+      "description": "Identificador único de la solicitud, generado por la web (UUID v4 recomendado) al tocar «Pedir presupuesto». Debe ser igual al encabezado Idempotency-Key y repetirse en cada reintento."
+    },
+    "submittedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Momento en que la persona envió el pedido, ISO 8601 con zona horaria (ej.: 2026-11-17T15:42:10-03:00). Brandazo guarda además su propia hora de recepción."
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "site": { "type": "string", "maxLength": 100, "default": "cafelito.com.ar" },
+        "form": { "type": "string", "maxLength": 60, "default": "cafelito-ambulante" },
+        "pageUrl": { "type": "string", "format": "uri", "maxLength": 2000, "description": "Página donde se completó el cotizador (incluye parámetros UTM si los hay)." }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "phone"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "Campo «Nombre o empresa» del cotizador, recortado (trim)." },
+        "phone": { "type": "string", "minLength": 6, "maxLength": 30, "pattern": "^[0-9+()\\-.\\s]+$", "description": "Campo «WhatsApp» tal como lo escribió la persona. Brandazo lo normaliza a formato internacional (+54 9 …). No hace falta normalizarlo en la web." },
+        "email": { "type": "string", "format": "email", "maxLength": 200, "description": "NO existe hoy en el cotizador. Opcional." }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "date", "startTime", "durationHours", "inCapital", "guests"],
+      "properties": {
+        "type": { "enum": ["Corporativo", "Cumpleaños", "Casamiento", "Lanzamiento o activación", "Otro"], "description": "Campo «Tipo de evento» (eventType en el cotizador)." },
+        "date": { "type": "string", "format": "date", "description": "Campo «Fecha» (date), AAAA-MM-DD. El cotizador exige 7 días de anticipación." },
+        "startTime": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$", "description": "Campo «Hora de inicio» (start), HH:MM. El cotizador ofrece de 08:00 a 22:00 cada 30 minutos." },
+        "durationHours": { "type": "integer", "minimum": 2, "maximum": 8, "description": "Duración del servicio en horas (hours). El cotizador permite de 2 a 8." },
+        "inCapital": { "type": "boolean", "description": "Campo «Localidad»: true = Córdoba Capital, false = Otra localidad (traslado a cotizar)." },
+        "place": { "type": "string", "maxLength": 200, "description": "Campo «Lugar o dirección (opcional)». Vacío si no se completó." },
+        "guests": { "type": "integer", "minimum": 60, "maximum": 400, "description": "Campo «Invitados» (guests). El cotizador permite de 60 a 400 de a 5." }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan"],
+      "properties": {
+        "plan": { "enum": ["esencial", "full"], "description": "Plan elegido (plan)." },
+        "addonIds": {
+          "type": "array", "uniqueItems": true, "maxItems": 7, "default": [],
+          "items": { "enum": ["jarabe", "cookies", "alfajor-ddl", "alfajor-pistacho", "budines", "scon", "sanguchitos"] },
+          "description": "Adicionales (addonIds). «jarabe» solo aplica al plan esencial: si llega con «full» se ignora en el recálculo y se avisa."
+        },
+        "customizationIds": {
+          "type": "array", "uniqueItems": true, "maxItems": 3, "default": [],
+          "items": { "enum": ["tinta", "sticker", "barra"] },
+          "description": "Personalizaciones (customizationIds)."
+        },
+        "wantsCake": { "type": "boolean", "default": false, "description": "«Quiero sumar una torta del catálogo»." },
+        "wantsColdBrew": { "type": "boolean", "default": false, "description": "«Me interesa el cold brew en lata personalizado»." }
+      }
+    },
+    "dietary": {
+      "type": "array", "uniqueItems": true, "maxItems": 3, "default": [],
+      "items": { "enum": ["Celíacos", "Vegetarianos", "Veganos"] },
+      "description": "Necesidades alimentarias marcadas (dietary)."
+    },
+    "notes": { "type": "string", "maxLength": 2000, "description": "Campo «Contanos lo que tengas en mente» (notes)." },
+    "estimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "taxIncluded", "subtotalMinor"],
+      "description": "Opcional. Presupuesto que la web le mostró a la persona. Brandazo lo guarda como estimación NO confiable y lo compara con su propio recálculo.",
+      "properties": {
+        "currency": { "const": "ARS" },
+        "taxIncluded": { "const": false, "description": "El cotizador muestra precios + IVA." },
+        "subtotalMinor": { "type": "integer", "minimum": 0, "description": "Subtotal en centavos (ej.: $1.420.000 → 142000000)." },
+        "transfer": { "enum": ["included", "to_quote"], "description": "Traslado incluido (Capital) o a cotizar (otra localidad)." },
+        "tariffVersion": { "type": "string", "maxLength": 40, "description": "Versión de tarifas usada por la web (ej.: web-2026-11)." },
+        "lines": {
+          "type": "array", "maxItems": 20,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["code", "label", "totalMinor"],
+            "properties": {
+              "code": { "type": "string", "pattern": "^(plan|service|extra_hours|customization|addon:[a-z0-9-]+)$" },
+              "label": { "type": "string", "maxLength": 120 },
+              "quantity": { "type": "integer", "minimum": 0 },
+              "unitMinor": { "type": "integer", "minimum": 0 },
+              "totalMinor": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional. NO se captura hoy en la web. Origen de la visita en la que se pidió el presupuesto. Brandazo lo guarda en la cotización sin pisar el origen histórico del contacto.",
+      "properties": {
+        "utmSource": { "type": "string", "maxLength": 200 },
+        "utmMedium": { "type": "string", "maxLength": 200 },
+        "utmCampaign": { "type": "string", "maxLength": 200 },
+        "utmContent": { "type": "string", "maxLength": 200 },
+        "utmTerm": { "type": "string", "maxLength": 200 },
+        "gclid": { "type": "string", "maxLength": 300 },
+        "gbraid": { "type": "string", "maxLength": 300 },
+        "wbraid": { "type": "string", "maxLength": 300 },
+        "landingPage": { "type": "string", "format": "uri", "maxLength": 2000, "description": "Primera página de la visita." },
+        "referrer": { "type": "string", "maxLength": 2000 },
+        "capturedAt": { "type": "string", "format": "date-time", "description": "Cuándo se capturaron estos parámetros (inicio de la visita)." }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional. NO existe hoy en el cotizador. Sin este bloque, Brandazo solo habilita responder la consulta (contacto iniciado por la persona), no enviar comunicaciones de marketing.",
+      "properties": {
+        "marketing": { "type": "boolean" },
+        "text": { "type": "string", "maxLength": 500, "description": "Texto exacto que aceptó la persona." },
+        "capturedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
