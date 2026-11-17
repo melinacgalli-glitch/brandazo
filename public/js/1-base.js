@@ -61,6 +61,34 @@ function D(){ const c=S.company||TMPCO; if(!STORE.has(c)) STORE.set(c,{workspace
 ['workspaces','brands','members','integrations','activity'].forEach(k=>Object.defineProperty(S,k,{get(){return D()[k]},set(v){D()[k]=v},enumerable:true}));
 function emptyModules(){ return {objectives:[],kpis:[],personas:[],positioning:{statement:'',value:'',pillars:[],diff:''},plan:[],budget:{total:0,items:[]},contents:[],campaigns:[],accounts:[],kits:{}}; }
 function switchCompany(c){ S.company=c; S.ws=0; S.brand=S.brands.length?0:-1; }
+/* ===== Guardado en este navegador (prototipo) =====
+   Se guarda todo el estado (empresas y sus datos) en localStorage. Cada empresa sigue con su
+   propio almacén: el aislamiento entre empresas no cambia. Lo definitivo será Firebase. */
+const SAVE_KEY='bz-data', SAVE_V=1; let saveOff=false;
+function persist(){
+  if(saveOff) return;
+  try{
+    const cs=S.companies.slice(); if(S.company&&!cs.includes(S.company)) cs.push(S.company);
+    localStorage.setItem(SAVE_KEY,JSON.stringify({v:SAVE_V,at:new Date().toISOString(),user:S.user,ci:cs.indexOf(S.company),companies:cs,stores:cs.map(c=>STORE.get(c)||null),
+      ws:S.ws,brand:S.brand,collapsed:S.collapsed,notifs:S.notifs,waitlist:S.waitlist,onboard:S.onboard}));
+  }catch(e){ if(!persist.warned){ persist.warned=true; setTimeout(()=>{ try{toast('No se pudieron guardar los datos en este navegador')}catch(_){} },0); } }
+}
+(function restore(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY); if(!raw) return;
+    const d=JSON.parse(raw); if(!d||d.v!==SAVE_V||!Array.isArray(d.companies)) return;
+    S.companies=d.companies; d.stores.forEach((st,i)=>{ if(st) STORE.set(S.companies[i],st); });
+    S.company=d.ci>=0?S.companies[d.ci]:null;
+    Object.assign(S.user,d.user||{}); S.ws=d.ws||0; S.brand=typeof d.brand==='number'?d.brand:-1; S.collapsed=!!d.collapsed;
+    S.notifs=d.notifs||[]; S.waitlist=d.waitlist||{}; if(d.onboard) S.onboard=d.onboard;
+  }catch(e){ /* datos ilegibles: se arranca de cero sin romper la app */ }
+})();
+window.addEventListener('pagehide',persist);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') persist(); });
+function resetSaved(){
+  modal('¿Borrar los datos de este navegador?',`<p>Se borran las empresas, marcas, objetivos, buyer personas, funnels y todo lo que cargaste en este navegador. No se puede deshacer.</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-danger" id="okreset">Borrar todo</button>`);
+  $('#okreset').onclick=()=>{ saveOff=true; try{localStorage.removeItem(SAVE_KEY)}catch(e){} location.hash='#/login'; location.reload(); };
+}
 function seedIfEmpty(){
   if(S.company) return;
   S.user={name:'Melina Galli',email:'melina@estudionorte.com',role:'Fundadora',type:'agencia'};
@@ -347,11 +375,13 @@ function userMenu(anchor){
    <button class="menu-item" data-a="perfil">${ic('user')}<span class="grow">Mi perfil y preferencias</span></button>
    <button class="menu-item" data-a="clave">${ic('key')}<span class="grow">Cambiar contraseña</span></button>
    <button class="menu-item" data-a="kit">${ic('grid')}<span class="grow">UI Kit</span></button><div class="menu-sep"></div>
+   <button class="menu-item" data-a="reset">${ic('trash')}<span class="grow">Borrar datos de este navegador</span></button>
    <button class="menu-item" data-a="salir">${ic('logout')}<span class="grow">Cerrar sesión</span></button>`,'right');
   m.querySelector('[data-a=perfil]').onclick=()=>{closeLayer();go('#/app/config/preferencias')};
   m.querySelector('[data-a=clave]').onclick=changePw;
   m.querySelector('[data-a=kit]').onclick=()=>{closeLayer();go('#/ui-kit')};
   m.querySelector('[data-a=salir]').onclick=()=>{closeLayer();go('#/login')};
+  m.querySelector('[data-a=reset]').onclick=()=>{closeLayer();resetSaved()};
 }
 function setTheme(t){ S.theme=t; document.documentElement.dataset.theme=t; try{localStorage.setItem('bz-theme',t)}catch(e){} render(); }
 function changePw(){
@@ -585,6 +615,7 @@ function bKit(){
 
 /* ===================== Router ===================== */
 function render(){
+  persist();
   const h=location.hash.replace(/^#\/?/,''); const [a,b,c]=h.split('/');
   const root=$('#root'); window.scrollTo(0,0); closeLayer();
   const auth={login:[vLogin,bLogin],registro:[vRegistro,bRegistro],verificar:[vVerificar,bVerificar],recuperar:[vRecuperar,bRecuperar],'recuperar-enviado':[vRecEnviado,()=>{}],'nueva-clave':[vNuevaClave,bNuevaClave]};
