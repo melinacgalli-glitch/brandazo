@@ -275,4 +275,18 @@ shell=function(active,title,inner){
   return CLOUD.on?h.replace('<button class="search" id="cmdk">',tag.replace('class="badge','class="desk badge')+'<button class="search" id="cmdk">'):h;
 };
 
+/* ---------- Conexiones con redes y servicios: todavía no hay ninguna real ----------
+   En el prototipo se simulaban (cuentas y seguidores inventados). En la versión real no se simula:
+   se avisa con claridad y no se guarda nada. La única integración real hoy es el cotizador de Cafelito. */
+if(CLOUD.on){
+  const notYet=n=>{ modal(`${esc(n||'Redes sociales')}: todavía no disponible`,`<p>La conexión real con <b>${esc(n||'Instagram, Facebook, TikTok y LinkedIn')}</b> todavía no está hecha en Brandazo. Para no mostrarte cuentas ni números inventados, por ahora no se puede conectar.</p>
+    <div class="alert alert-info" style="margin-top:12px">${ic('info')}<div>Conectar Instagram y Facebook de verdad requiere una app aprobada por Meta. Está en los próximos pasos de Brandazo.</div></div>
+    <p class="small muted" style="margin-top:12px">Lo que sí funciona hoy: las cotizaciones del sitio de Cafelito llegan solas al CRM.</p>`,`<button class="btn btn-primary" data-close>Entendido</button>`); };
+  const realOnly=()=>{ $$('#conn,[data-conn],[data-reconn],[data-sync],[data-iconn]').forEach(b=>{ b.onclick=e=>{ e.preventDefault(); const i=b.dataset.iconn; notYet(i!=null?INTS[+i][0]:''); }; }); };
+  ['redes','integraciones'].forEach(k=>{ const v=VIEWS[k]; if(!v) return; const _b=v.bind; v.bind=function(...a){ _b.apply(this,a); if(S.company&&S.company.cloud) realOnly(); }; });
+  const _bcNube=bConfig;
+  bConfig=function(tab){ _bcNube(tab); if(!S.company||!S.company.cloud) return;
+    $$('[data-int]').forEach(b=>{ const i=+b.dataset.int; if(!S.integrations[i]) b.onclick=()=>notYet(INTS[i][0]); }); };
+}
+
 render();

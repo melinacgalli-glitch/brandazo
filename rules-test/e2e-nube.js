@@ -84,6 +84,12 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.click('#evcfg'); await page.waitForSelector('#evcok'); await page.click('#evcok'); await page.waitForTimeout(800);
   const st = await get('tenants/cafelito/settings/cafelito-eventos'); ok(st.fields && st.fields.brand.stringValue === 'Cafelito Ambulante', 'marca de las cotizaciones guardada');
 
+  // 5b) Redes e integraciones: sin simulaciones en la versión real
+  await page.goto(BASE + '#/app/redes'); await page.waitForSelector('#conn'); await page.click('#conn'); await page.waitForSelector('#layer .modal');
+  ok(/todavía no disponible/.test(await page.textContent('#layer')), 'Redes: «Conectar» avisa que todavía no está disponible');
+  await page.click('#layer .btn-primary[data-close]'); ok(await page.evaluate(() => !M().accounts.length), 'no se guardó ninguna cuenta inventada');
+  await page.goto(BASE + '#/app/integraciones'); await page.waitForSelector('[data-iconn]'); await page.click('[data-iconn]'); await page.waitForSelector('#layer .modal');
+  ok(/Meta[\s\S]*todavía no disponible/.test(await page.textContent('#layer')), 'Integraciones: Meta avisa que todavía no está disponible'); await page.click('#layer .btn-primary[data-close]');
   // 6) Subir datos del navegador
   await page.click('#me'); await page.waitForSelector('[data-a=subir]'); ok(true, 'menú ofrece "Subir datos de este navegador"');
   await page.click('[data-a=subir]'); await page.waitForSelector('#impok');
