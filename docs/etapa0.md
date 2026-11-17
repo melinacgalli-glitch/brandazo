@@ -9,6 +9,17 @@ _Última actualización: 2026-11-17 · Estado: **publicado** (reglas, índices, 
 - **CRM → Cafelito Eventos:** tablero en vivo con las cotizaciones del sitio de Cafelito, ficha con contacto, evento, presupuesto, botón de WhatsApp, etapa, responsable, próximo seguimiento, motivo de pérdida e historial. «Configurar» (Dueño/Admin): marca de las cotizaciones, responsable por defecto y horas hasta el primer seguimiento.
 - **Configuración → Usuarios:** invitar, cambiar roles, cancelar invitaciones y quitar personas, todo real. Brandazo no manda el mail de invitación: se avisa a la persona por otro medio.
 
+## Ciclo de vida de una cotización (CRM → Cafelito Eventos)
+| Pasar a | Pide | Obligatorio |
+|---|---|---|
+| Contactado | Canal (WhatsApp, llamada, mail, en persona), nota, próximo seguimiento | Próximo seguimiento |
+| Propuesta enviada | Importe, enviada el, válida hasta, link | Importe y próximo seguimiento |
+| En negociación | Tema (precio, fecha, menú, invitados, otro), nota | Nota y próximo seguimiento |
+| Ganada | Importe final, seña (50 % por defecto), si ya se cobró | Importe final |
+| Perdida | Motivo, nota, se puede volver a contactar | Motivo |
+
+Campos en `opportunities`: `proposal {amountMinor, sentAt, validUntil, link}`, `won {amountMinor, depositMinor, depositPaid, depositPaidAt, balancePaid, balancePaidAt}`, `negotiation {topic}`, `lostReason`, `lostNote`, `canRecontact`. Historia: `tenants/{t}/activities {opportunityId, contactId, at, by, byName, type: etapa|contacto|nota|cobro|cambio, via, text, from, to, details}`. Código: `public/js/9-ciclo-vida.js`.
+
 ## Archivos
 | Archivo | Qué hace |
 |---|---|

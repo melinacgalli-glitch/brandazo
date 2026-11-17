@@ -912,3 +912,13 @@ input[type=date],input[type=time]{cursor:pointer}
 .ev-card .ev-meta{font-size:12px;color:var(--ink-muted);overflow-wrap:anywhere}
 .ev-card .ev-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .ev-card .ev-tag{white-space:normal;max-width:100%;line-height:16px;padding:2px 7px}
+
+/* CRM · ciclo de vida: importe vigente, cobros, actividad y línea de tiempo */
+.ev-card .ev-amtl{font-family:var(--font-body);font-size:11px;color:var(--ink-muted)}
+.ev-cobro{background:var(--surface-sunken);border-radius:var(--radius-md);padding:12px;margin-bottom:12px}
+.ev-act{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
+.ev-tl{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+.ev-tl li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start;overflow-wrap:anywhere}
+.ev-tl-ic{width:28px;height:28px;border-radius:50%;background:var(--surface-sunken);display:grid;place-items:center;color:var(--ink-muted)}
+.ev-tl-ic svg{width:14px;height:14px}
+@media (max-width:640px){ .ev-act > div:first-of-type{grid-template-columns:1fr !important} }

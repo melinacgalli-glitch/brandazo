@@ -79,10 +79,15 @@ service cloud.firestore {
       match /opportunities/{o} {
         allow read: if isMember(t);
         allow update: if isMember(t)
-          && onlyChanges(['stage', 'owner', 'lostReason', 'nextFollowUpAt', 'updatedAt', 'stageHistory'])
+          && onlyChanges(['stage', 'owner', 'lostReason', 'lostNote', 'canRecontact', 'nextFollowUpAt', 'updatedAt', 'stageHistory', 'proposal', 'won', 'negotiation'])
           && request.resource.data.stage in ['nueva-cotizacion', 'contactado', 'propuesta-enviada', 'en-negociacion', 'ganada', 'perdida']
           && (request.resource.data.stage != 'perdida' || request.resource.data.lostReason is string)
-          && request.resource.data.owner is string;
+          && request.resource.data.owner is string
+          // Datos mínimos de cada etapa (importes en centavos, enteros)
+          && (request.resource.data.stage != 'propuesta-enviada' || (request.resource.data.proposal.amountMinor is int && request.resource.data.proposal.amountMinor > 0))
+          && (request.resource.data.stage != 'ganada' || (request.resource.data.won.amountMinor is int && request.resource.data.won.amountMinor > 0
+                && request.resource.data.won.depositMinor is int && request.resource.data.won.depositMinor >= 0 && request.resource.data.won.depositMinor <= request.resource.data.won.amountMinor))
+          && (!(request.resource.data.stage in ['contactado', 'propuesta-enviada', 'en-negociacion']) || request.resource.data.nextFollowUpAt is timestamp);
         allow create, delete: if false;
       }
 
@@ -95,6 +100,16 @@ service cloud.firestore {
         allow write: if isAdmin(t) && s == 'cafelito-eventos'
           && request.resource.data.keys().hasOnly(['brand', 'defaultOwner', 'assignByEventType', 'followUpHours', 'updatedAt', 'updatedBy'])
           && request.resource.data.followUpHours is int && request.resource.data.followUpHours >= 1 && request.resource.data.followUpHours <= 168;
+      }
+
+      // Historia de cada cotización: se agrega a nombre propio, no se edita ni se borra
+      match /activities/{a} {
+        allow read: if isMember(t);
+        allow create: if isMember(t) && request.resource.data.by == request.auth.uid
+          && request.resource.data.opportunityId is string
+          && request.resource.data.type in ['etapa', 'contacto', 'nota', 'cobro', 'cambio']
+          && request.resource.data.text is string && request.resource.data.text.size() <= 2000;
+        allow update, delete: if false;
       }
 
       match /audit/{a} {

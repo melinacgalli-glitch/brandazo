@@ -89,13 +89,38 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.click('[data-op=op1]'); await page.waitForSelector('#evsave');
   const href = await page.getAttribute('a[href^="https://wa.me/"]', 'href'); ok(href && href.startsWith('https://wa.me/5493515550187'), 'botón de WhatsApp con el teléfono normalizado');
   await page.waitForTimeout(600); await page.screenshot({ path: require('os').tmpdir() + '/e2e-ficha.png' }); await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); await page.screenshot({ path: require('os').tmpdir() + '/e2e-ficha-movil.png' }); await page.setViewportSize({ width: 1280, height: 860 });
-  await page.selectOption('#evst', 'perdida'); await page.click('#evsave'); await page.waitForTimeout(300);
-  ok(await page.isVisible('#evlostf .err:has-text("Elegí por qué")') || /Elegí por qué/.test(await page.textContent('#evlostf')), 'pasar a Perdida pide el motivo');
-  await page.selectOption('#evst', 'contactado'); await page.click('#evsave'); await page.waitForTimeout(1500);
-  const op = await get('tenants/cafelito/opportunities/op1');
-  ok(op.fields.stage.stringValue === 'contactado' && op.fields.stageHistory.arrayValue.values.length === 1, 'cambio de etapa guardado con historial');
-  ok(/Contactado[\s\S]*Estudio Contable Ruiz/.test(await page.textContent('.kanban')), 'el tablero se actualiza en vivo');
-  const aud = await list('tenants/cafelito/audit'); ok((aud.documents || []).length === 1, 'quedó registro de auditoría');
+  // Ciclo de vida: Contactado (pide próximo seguimiento) → Propuesta → Ganada con seña 50 % → cobros
+  await page.click('[data-evmove=perdida]'); await page.waitForSelector('#sok'); await page.click('#sok'); await page.waitForTimeout(300);
+  ok(/Elegí por qué/.test(await page.textContent('#layer')), 'pasar a Perdida pide el motivo'); await page.click('#layer [data-close].btn');
+  await page.waitForTimeout(300); await page.click('[data-op=op1]'); await page.waitForSelector('[data-evmove=contactado]');
+  await page.click('[data-evmove=contactado]'); await page.waitForSelector('#svia'); await page.selectOption('#svia', 'WhatsApp'); await page.fill('#snote', 'Le escribí, espera la propuesta'); await page.click('#sok');
+  await page.waitForSelector('#evtl li:has-text("Le escribí")', { timeout: 15000 }); ok(true, 'Contactado: queda en la historia con el canal y la nota');
+  let op = await get('tenants/cafelito/opportunities/op1');
+  ok(op.fields.stage.stringValue === 'contactado' && op.fields.nextFollowUpAt.timestampValue, 'cambio de etapa guardado con próximo seguimiento');
+  await page.click('[data-evmove=propuesta-enviada]'); await page.waitForSelector('#samt'); await page.fill('#samt', ''); await page.click('#sok'); await page.waitForTimeout(300);
+  ok(/Ingresá el importe/.test(await page.textContent('#layer')), 'Propuesta sin importe: lo pide');
+  await page.fill('#samt', '1.300.000'); await page.click('#sok'); await page.waitForSelector('text=Propuesta enviada el', { timeout: 15000 });
+  op = await get('tenants/cafelito/opportunities/op1'); ok(op.fields.proposal.mapValue.fields.amountMinor.integerValue === '130000000', 'importe de la propuesta en centavos (1.300.000 → 130000000)');
+  await page.fill('#evatx', 'Llamé, pide sumar 20 personas'); await page.selectOption('#evat', 'Llamada'); await page.click('#evatok');
+  await page.waitForSelector('#evtl li:has-text("pide sumar 20")', { timeout: 15000 }); ok(true, 'Registrar actividad sin cambiar de etapa');
+  await page.click('[data-evmove=ganada]'); await page.waitForSelector('#sdep');
+  ok(await page.inputValue('#sdep') === '650.000', 'seña del 50 % calculada sola ($ 650.000)');
+  ok(/Saldo a cobrar: \$ 650\.000/.test(await page.textContent('#sbal')), 'muestra el saldo a cobrar');
+  await page.click('#sok'); await page.waitForSelector('[data-evpay=deposit]', { timeout: 15000 }); await page.waitForTimeout(800);
+  await page.click('[data-evpay=deposit]'); await page.waitForSelector('#pok'); await page.click('#pok'); await page.waitForSelector('[data-evpay=balance]', { timeout: 15000 });
+  op = await get('tenants/cafelito/opportunities/op1'); const won = op.fields.won.mapValue.fields;
+  ok(won.amountMinor.integerValue === '130000000' && won.depositMinor.integerValue === '65000000' && won.depositPaid.booleanValue === true, 'ganada: total, seña y cobro de la seña guardados');
+  const acts = await list('tenants/cafelito/activities'); ok((acts.documents || []).length === 5, 'historia completa: 5 movimientos (' + (acts.documents || []).length + ')');
+  await page.waitForTimeout(600); await page.screenshot({ path: require('os').tmpdir() + '/e2e-ciclo.png', fullPage: false }); await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); ok(await page.evaluate(() => { const d = document.querySelector('#layer .drawer'); return d && d.scrollWidth <= d.clientWidth + 1; }), 'ficha sin desborde en celular'); await page.screenshot({ path: require('os').tmpdir() + '/e2e-ciclo-movil.png' }); await page.setViewportSize({ width: 1280, height: 860 });
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  ok(/Ganada[\s\S]*Estudio Contable Ruiz[\s\S]*1\.300\.000[\s\S]*Seña cobrada/.test(await page.textContent('.kanban')), 'el tablero muestra el importe final y el estado del cobro');
+  // arrastrar una tarjeta abre el formulario de la etapa
+  await page.evaluate(() => { const dt = new DataTransfer(), src = document.querySelector('[data-op=op1]'), dst = document.querySelector('[data-evstage=perdida]');
+    src.dispatchEvent(new DragEvent('dragstart', { dataTransfer: dt, bubbles: true })); dst.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    dst.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true })); src.dispatchEvent(new DragEvent('dragend', { dataTransfer: dt, bubbles: true })); });
+  await page.waitForSelector('#slost', { timeout: 5000 }).catch(() => {});
+  ok(await page.isVisible('#slost'), 'arrastrar a «Perdida» abre el formulario con el motivo'); await page.click('#layer [data-close].btn');
+  const aud = await list('tenants/cafelito/audit'); ok((aud.documents || []).length >= 5, 'quedó registro de auditoría');
 
   // 5) Configurar marca
   await page.click('#evcfg'); await page.waitForSelector('#evcok'); await page.click('#evcok'); await page.waitForTimeout(800);
