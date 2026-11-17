@@ -1,6 +1,6 @@
 # Etapa 0 — Ingreso real, empresas y datos en la nube
 
-_Última actualización: 2026-11-17 · Estado: programado y probado en emuladores; falta publicar (requiere autorización) y el alta inicial._
+_Última actualización: 2026-11-17 · Estado: **publicado** (reglas, índices, función `api` y sitio). Alta hecha: empresas `cafelito` y `cafelito-pruebas`, invitación de la Dueña en ambas; dominios autorizados agregados._
 
 ## Qué cambia para la usuaria
 - En **www.brandazo.com.ar** hay que iniciar sesión de verdad: con Google o con email y contraseña (el email se verifica con un enlace).
