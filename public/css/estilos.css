@@ -383,9 +383,15 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 .link-chip:hover{background:var(--magenta-soft);color:var(--magenta-text);text-decoration:none}
 .link-chip .ico{width:14px;height:14px}
 .persona{display:flex;flex-direction:column;gap:12px}
-.persona-top{display:flex;gap:12px;align-items:center}
+.persona-top{display:flex;gap:12px;align-items:flex-start}
+.persona-top h3{overflow-wrap:anywhere}
+.persona-top .grow{flex:1}
+.persona-units{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.persona-role{font-size:14px;line-height:21px;color:var(--ink-muted);margin:0}
+.persona-grid{grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr))}
+.persona .links{display:flex;flex-wrap:wrap;gap:6px}
 .persona-av{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;font-size:16px;flex:none}
-.persona dl{margin:0;display:grid;gap:8px;font-size:13px}
+.persona dl{margin:0;display:grid;gap:12px;font-size:14px;line-height:21px}
 .persona dt{font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-muted)}
 .persona dd{margin:2px 0 0}
 .quote{font-style:italic;border-left:0;background:var(--surface-sunken);padding:10px 12px;border-radius:var(--radius-md);font-size:13px}

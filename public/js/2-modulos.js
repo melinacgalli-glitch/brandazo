@@ -188,12 +188,59 @@ function stOkr(objs){
   <div class="table-wrap"><table class="t"><thead><tr><th>Indicador</th><th>Canal</th><th class="hide-m">Marca</th><th class="num">Meta</th><th class="num">Actual</th><th>Estado</th></tr></thead><tbody>
   ${kp.length?'':`<tr><td colspan="6" class="muted small" style="text-align:center;padding:24px">Sin KPI cargados. Tocá «Agregar KPI» para sumar el primero.</td></tr>`}${kp.map(k=>{const lowerBetter=k.unit==='$';const ok=lowerBetter?k.actual<=k.target:k.actual>=k.target;const f=v=>k.unit==='$'?money(v):k.unit==='%'?String(v).replace('.',',')+'%':num(v);return `<tr><td><b>${esc(k.name)}</b></td><td>${esc(k.channel)}</td><td class="hide-m"><span class="badge"><i class="sdot" style="background:${brandOf(k.brand).color}"></i>${esc(k.brand)}</span></td><td class="num">${f(k.target)}</td><td class="num">${f(k.actual)}</td><td>${ok?'<span class="badge badge-ok">'+ic('check')+' Cumple</span>':'<span class="badge badge-warn">Por debajo</span>'}</td></tr>`}).join('')}</tbody></table></div>`;
 }
+/* Buyer personas: unidades de negocio = marcas de la empresa (sin entidad nueva).
+   La relación con campañas vive en la campaña (c.personas = [ids]): una sola fuente. */
+function pNorm(p){ if(!Array.isArray(p.brands)) p.brands=p.brand?[p.brand]:[]; p.brand=p.brands[0]||''; if(p.quote==='—') p.quote=''; return p; }
+const pInBrand=p=>!curBrand()||pNorm(p).brands.includes(curBrand().name);
+const pCamps=p=>M().campaigns.filter(c=>(c.personas||[]).includes(p.id));
+function avInk(hex){ const h=(hex||'#85858F').replace('#',''); const [r,g,b]=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255).map(v=>v<=.03928?v/12.92:((v+.055)/1.055)**2.4); const L=.2126*r+.7152*g+.0722*b; return L>.18?'#0E0E10':'#FFFFFF'; }
+function personaCard(p){
+  pNorm(p); const col=brandOf(p.brands[0]).color, camps=pCamps(p);
+  return `<article class="card persona"><div class="persona-top"><div class="persona-av" style="background:${col};color:${avInk(col)}">${initials(p.name)}</div>
+   <div class="grow" style="min-width:0"><h3>${esc(p.name)}${p.age?`, ${esc(p.age)}`:''}</h3><div class="persona-units">${p.brands.map(b=>`<span class="badge"><i class="sdot" style="background:${brandOf(b).color}"></i>${esc(b)}</span>`).join('')||'<span class="small muted">Sin unidad de negocio</span>'}</div></div>
+   <button class="icon-btn" data-pmenu="${p.id}" aria-label="Opciones de ${esc(p.name)}">${ic('more')}</button></div>
+  ${p.role?`<p class="persona-role">${esc(p.role)}</p>`:''}
+  ${p.quote?`<div class="quote">“${esc(p.quote)}”</div>`:''}
+  <dl>${p.goals?`<div><dt>Objetivos</dt><dd>${esc(p.goals)}</dd></div>`:''}${p.pains?`<div><dt>Frustraciones</dt><dd>${esc(p.pains)}</dd></div>`:''}
+   <div><dt>Dónde está</dt><dd>${p.channels.length?`<div class="pill-list">${p.channels.map(c=>`<span class="pill">${esc(c)}</span>`).join('')}</div>`:'<span class="muted">Sin definir</span>'}</dd></div>
+   <div><dt>Campañas</dt><dd>${camps.length?`<div class="links">${camps.map(c=>`<a class="link-chip" href="#/app/campanas/${c.id}">${ic('megaphone')}${esc(c.name)}</a>`).join('')}</div>`:'<span class="muted">Sin campañas vinculadas</span>'}</dd></div></dl></article>`;
+}
 function stPersonas(){
-  const ps=M().personas.filter(inBrand);
-  return `<div class="toolbar"><p class="muted grow">Quiénes son, qué buscan y dónde encontrarlos. Se usan para segmentar audiencias de campañas.</p><button class="btn" id="newpersona">${ic('plus')} Nueva buyer persona</button></div>
-  <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))">${ps.map(p=>`<article class="card persona"><div class="persona-top"><div class="persona-av" style="background:${p.color}">${initials(p.name)}</div><div><h3>${esc(p.name)}, ${esc(p.age)}</h3><div class="small muted">${esc(p.role)}</div></div></div>
-  <div class="quote">“${esc(p.quote)}”</div><dl><div><dt>Objetivos</dt><dd>${esc(p.goals)}</dd></div><div><dt>Frustraciones</dt><dd>${esc(p.pains)}</dd></div><div><dt>Dónde está</dt><dd><div class="pill-list">${p.channels.map(c=>`<span class="pill">${esc(c)}</span>`).join('')}</div></dd></div></dl>
-  <div class="small muted" style="display:flex;gap:6px;align-items:center"><i class="sdot" style="background:${brandOf(p.brand).color}"></i>${esc(p.brand)}</div></article>`).join('')||emptyBlock('users2','Sin buyer personas','Describí a tu cliente ideal para orientar contenidos y campañas.')}</div>`;
+  const ps=M().personas.filter(pInBrand);
+  return `<div class="toolbar"><p class="muted grow">Quiénes son, qué buscan y dónde encontrarlos. Cada buyer persona se vincula a una o más unidades de negocio y a las campañas que le hablan.</p><button class="btn" id="newpersona">${ic('plus')} Nueva buyer persona</button></div>
+  ${ps.length?`<div class="cards persona-grid">${ps.map(personaCard).join('')}</div>`:emptyBlock('users2',curBrand()?`Sin buyer personas en ${esc(curBrand().name)}`:'Sin buyer personas','Describí a tu cliente ideal para orientar contenidos y campañas.')}`;
+}
+function personaForm(p){
+  const isNew=!p; p=p?pNorm(p):{name:'',age:'',role:'',quote:'',goals:'',pains:'',channels:[],brands:curBrand()?[curBrand().name]:(S.brands.length===1?[S.brands[0].name]:[])};
+  const camps=M().campaigns, linked=isNew?[]:pCamps(p).map(c=>c.id);
+  modal(isNew?'Nueva buyer persona':'Editar buyer persona',`<div class="form-grid">${F('pn','Nombre',`value="${esc(p.name)}" placeholder="Ej.: Carolina"`)}${F('pa','Edad',`value="${esc(p.age)}" placeholder="Ej.: 38 años"`)}</div>
+   <div class="field"><label for="pr">Quién es</label><textarea class="input" id="pr" rows="2" placeholder="Ej.: Responsable de RR. HH. en una empresa mediana de Córdoba">${esc(p.role)}</textarea></div>
+   <div class="field"><label for="pq">Frase que la representa (opcional)</label><input class="input" id="pq" value="${esc(p.quote)}" placeholder="Ej.: Necesito que el día del evento funcione solo"></div>
+   <div class="field"><label for="pg">Objetivos</label><textarea class="input" id="pg" rows="3">${esc(p.goals)}</textarea></div>
+   <div class="field"><label for="pp">Frustraciones</label><textarea class="input" id="pp" rows="3">${esc(p.pains)}</textarea></div>
+   <div class="field"><span class="label">Dónde está</span><div style="display:flex;gap:12px;flex-wrap:wrap" id="pch">${CHANNELS.map(c=>`<label class="check"><input type="checkbox" value="${c}" ${p.channels.includes(c)?'checked':''}> ${c}</label>`).join('')}</div></div>
+   <div class="field" id="pbf"><span class="label">Unidades de negocio</span><div style="display:flex;gap:12px;flex-wrap:wrap" id="pbr">${S.brands.map(b=>`<label class="check"><input type="checkbox" value="${esc(b.name)}" ${p.brands.includes(b.name)?'checked':''}> <i class="sdot" style="background:${b.color};margin-top:6px"></i>${esc(b.name)}</label>`).join('')}</div>
+    <div style="display:flex;gap:8px;margin-top:8px"><input class="input" id="pnb" placeholder="Nueva unidad, ej.: Barra de eventos" style="height:32px" aria-label="Nueva unidad de negocio"><button type="button" class="btn btn-sm" id="paddb">Agregar</button></div>
+    <span class="hint">Son las marcas de la empresa. Una buyer persona puede pertenecer a más de una.</span><span class="err" role="alert"></span></div>
+   <div class="field"><span class="label">Campañas</span><div style="display:flex;flex-direction:column;gap:8px" id="pcp">${camps.length?camps.map(c=>`<label class="check"><input type="checkbox" value="${c.id}" ${linked.includes(c.id)?'checked':''}> <span>${esc(c.name)} <span class="small muted">· ${esc(c.brand)} · ${esc(c.status)}</span></span></label>`).join(''):'<span class="small muted">Todavía no hay campañas. Cuando crees una, la vas a poder vincular desde acá o desde la campaña.</span>'}</div></div>`,
+   `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="ok">${isNew?'Crear':'Guardar cambios'}</button>`);
+  $('#paddb').onclick=()=>{ const v=$('#pnb').value.trim(); if(!v) return; if(S.brands.some(b=>b.name.toLowerCase()===v.toLowerCase())) return toast('Esa unidad de negocio ya existe');
+    const b={name:v,color:COLORS[S.brands.length%COLORS.length]}; S.brands.push(b); logAct(`Creaste la marca ${v}`);
+    $('#pbr').insertAdjacentHTML('beforeend',`<label class="check"><input type="checkbox" value="${esc(v)}" checked> <i class="sdot" style="background:${b.color};margin-top:6px"></i>${esc(v)}</label>`); $('#pnb').value=''; toast(`Unidad ${v} creada`); };
+  $('#ok').onclick=()=>{ const brands=$$('#pbr input:checked').map(i=>i.value);
+    let ok=fieldErr($('#pn'),!$('#pn').value.trim()?'Escribí un nombre':''); ok=fieldErr($('#pbr'),!brands.length?'Elegí al menos una unidad de negocio':'')&&ok; if(!ok) return;
+    const t=isNew?{id:uid()}:p; Object.assign(t,{name:$('#pn').value.trim(),age:$('#pa').value.trim(),role:$('#pr').value.trim(),quote:$('#pq').value.trim(),goals:$('#pg').value.trim(),pains:$('#pp').value.trim(),channels:$$('#pch input:checked').map(i=>i.value),brands,brand:brands[0]});
+    if(isNew) M().personas.push(t);
+    const sel=$$('#pcp input:checked').map(i=>i.value); M().campaigns.forEach(c=>{ const has=(c.personas||[]).includes(t.id), want=sel.includes(c.id); if(want&&!has) c.personas=(c.personas||[]).concat(t.id); if(!want&&has) c.personas=c.personas.filter(x=>x!==t.id); });
+    closeLayer(); render(); toast(isNew?'Buyer persona creada':'Cambios guardados'); };
+}
+function personaMenu(btn){
+  const p=M().personas.find(x=>x.id===btn.dataset.pmenu); if(!p) return;
+  const m=popMenu(btn,`<button class="menu-item" data-a="edit">${ic('edit')}<span class="grow">Editar</span></button><button class="menu-item" data-a="del" style="color:var(--danger)">${ic('trash')}<span class="grow">Eliminar</span></button>`,'right');
+  m.querySelector('[data-a="edit"]').onclick=()=>{ closeLayer(); personaForm(p); };
+  m.querySelector('[data-a="del"]').onclick=()=>{ closeLayer(); const camps=pCamps(p);
+    modal('¿Eliminar la buyer persona?',`<p>Vas a eliminar a <b>${esc(p.name)}</b>.${camps.length?` Se va a desvincular de ${camps.length} campaña${camps.length>1?'s':''}.`:''}</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-danger" id="okdel">Eliminar</button>`);
+    $('#okdel').onclick=()=>{ const m2=M(); m2.personas=m2.personas.filter(x=>x!==p); m2.campaigns.forEach(c=>{ if(c.personas) c.personas=c.personas.filter(x=>x!==p.id); }); closeLayer(); render(); toast('Buyer persona eliminada'); }; };
 }
 function stPos(){
   const b=curBrand(); const m=M();
@@ -245,9 +292,8 @@ function bEstrategia(tab){
   const on=(s,f)=>{const e=$(s);if(e)e.onclick=f};
   on('#newkpi',()=>ensureBrand(()=>{ modal('Agregar KPI',`${F('kn','Indicador','placeholder="Ej.: Alcance mensual"')}<div class="form-grid"><div class="field"><label for="kc">Canal</label><select class="select" id="kc">${CHANNELS.concat(['Meta Ads','Google Ads']).map(c=>`<option>${c}</option>`).join('')}</select></div>${F('kt','Meta','type="number" min="0"')}</div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="ok">Agregar</button>`);
    $('#ok').onclick=()=>{ if(!fieldErr($('#kn'),!$('#kn').value.trim()?'Escribí el indicador':''))return; M().kpis.push({name:$('#kn').value.trim(),channel:$('#kc').value,brand:(curBrand()||S.brands[0]||{name:''}).name,target:+$('#kt').value||0,actual:0,unit:''}); closeLayer(); render(); toast('KPI agregado'); }; }));
-  on('#newpersona',()=>ensureBrand(()=>{ modal('Nueva buyer persona',`<div class="form-grid">${F('pn','Nombre','placeholder="Ej.: Carolina"')}${F('pa','Edad','placeholder="Ej.: 32 años"')}</div>${F('pr','Quién es','placeholder="Ej.: Diseñadora, primer departamento propio"')}<div class="field"><label for="pg">Objetivos</label><textarea class="input" id="pg" rows="2"></textarea></div><div class="field"><label for="pp">Frustraciones</label><textarea class="input" id="pp" rows="2"></textarea></div>
-   <div class="field"><span class="label">Dónde está</span><div style="display:flex;gap:12px;flex-wrap:wrap">${CHANNELS.map(c=>`<label class="check"><input type="checkbox" value="${c}"> ${c}</label>`).join('')}</div></div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="ok">Crear</button>`);
-   $('#ok').onclick=()=>{ if(!fieldErr($('#pn'),!$('#pn').value.trim()?'Escribí un nombre':''))return; M().personas.push({id:uid(),brand:(curBrand()||S.brands[0]||{name:''}).name,name:$('#pn').value.trim(),age:$('#pa').value,role:$('#pr').value,goals:$('#pg').value,pains:$('#pp').value,channels:$$('#layer .check input:checked').map(i=>i.value),quote:'—',color:COLORS[M().personas.length%COLORS.length]}); closeLayer(); render(); toast('Buyer persona creada'); }; }));
+  on('#newpersona',()=>ensureBrand(()=>personaForm()));
+  $$('[data-pmenu]').forEach(b=>b.onclick=()=>personaMenu(b));
   $$('[data-pickbrand]').forEach(b=>b.onclick=()=>{S.brand=+b.dataset.pickbrand;render()});
   if($('#fpos')){ const b=curBrand(); const m=M(); m.positioning[b.name]=m.positioning[b.name]||{statement:'',value:'',pillars:[],diff:''}; const p=m.positioning[b.name];
     $('#fpos').onsubmit=e=>{e.preventDefault(); p.statement=$('#ps').value; p.value=$('#pv').value; p.diff=$('#pd').value; render(); toast('Posicionamiento guardado'); };
@@ -429,7 +475,7 @@ function campDetail(c){
   <div class="stat"><div class="l">Conversiones</div><div class="v">${c.m.conv?num(c.m.conv):'—'}</div><div class="d">${k.cpa?'CPA '+money(k.cpa):''}${k.roas?` · ROAS ${k.roas.toFixed(1).replace('.',',')}x <span class="est">estimado</span>`:''}</div></div></div>
   <div class="grid g-dash"><section class="card span-8"><div class="card-head"><h3>Inversión diaria</h3><span class="small muted">Fuente: ${c.channels.includes('Meta Ads')?'Meta Ads':'carga manual'} · actualizado hace 1 h</span></div>
    ${daily.length?barChart(daily,{fmt:v=>'$'+num(v/1000)+'k',labels:daily.map((_,i)=>i%5===0?fdate(iso(addDays(parse(c.start),i))):'')}):`<div class="empty"><p class="small muted">${c.status==='Programada'?'La campaña empieza el '+fdate(c.start)+'. Acá vas a ver la inversión día a día.':'Campaña orgánica: sin inversión publicitaria.'}</p></div>`}</section>
-  <section class="card span-4"><h3 style="margin-bottom:12px">Configuración</h3><dl class="kv" style="grid-template-columns:auto 1fr"><dt>Audiencia</dt><dd style="font-family:inherit">${esc(c.audience)}</dd><dt>Canales</dt><dd style="font-family:inherit">${c.channels.join(', ')}</dd><dt>Segmento</dt><dd style="font-family:inherit">${esc(c.segment)}</dd><dt>Presupuesto</dt><dd>${c.budget?money(c.budget):'—'}</dd></dl>
+  <section class="card span-4"><h3 style="margin-bottom:12px">Configuración</h3><dl class="kv" style="grid-template-columns:auto 1fr"><dt>Audiencia</dt><dd style="font-family:inherit">${esc(c.audience)}</dd><dt>Buyer personas</dt><dd style="font-family:inherit">${(c.personas||[]).map(id=>m.personas.find(p=>p.id===id)).filter(Boolean).map(p=>`<a href="#/app/estrategia/personas">${esc(p.name)}</a>`).join(', ')||'Sin vincular'}</dd><dt>Canales</dt><dd style="font-family:inherit">${c.channels.join(', ')}</dd><dt>Segmento</dt><dd style="font-family:inherit">${esc(c.segment)}</dd><dt>Presupuesto</dt><dd>${c.budget?money(c.budget):'—'}</dd></dl>
    <div style="margin-top:16px"><div class="small muted" style="margin-bottom:6px">Objetivos vinculados</div><div class="links">${objs.map(o=>`<a class="link-chip" href="#/app/estrategia/okr">${ic('target')}${esc(o.title)}</a>`).join('')||'<span class="small muted">Ninguno</span>'}</div></div>
    ${c.channels.includes('Meta Ads')?`<div class="alert alert-ok" style="margin-top:16px">${ic('check')}<div>Sincronizada con <b>Meta Ads</b>: inversión y resultados se actualizan solos.</div></div>`:''}</section>
   <section class="card span-12"><div class="card-head"><h3>Contenidos y piezas (${conts.length})</h3><a class="btn btn-sm btn-ghost" href="#/app/contenidos/lista">Ver en Contenidos</a></div>
@@ -460,24 +506,23 @@ function bCampanas(id){
 }
 function campWizard(){
   if(!S.brands.length) return toast('Primero creá una marca');
-  let step=0; const d={name:'',brand:(curBrand()||S.brands[0]).name,objective:'Ventas',start:iso(NOW),end:iso(addDays(NOW,30)),type:'Paga',budget:'',audience:'',channels:['Instagram'],segment:''};
+  let step=0; const d={name:'',brand:(curBrand()||S.brands[0]).name,objective:'Ventas',start:iso(NOW),end:iso(addDays(NOW,30)),type:'Paga',budget:'',audience:'',channels:['Instagram'],segment:'',personas:[]};
   const steps=['Datos','Presupuesto','Audiencia y canales'];
   const draw=()=>{ modal(`Nueva campaña · ${steps[step]}`,`<div class="stepper">${steps.map((_,i)=>`<span class="${i<=step?'on':''}"></span>`).join('')}</div>${
    step===0?`${F('wn','Nombre',`value="${esc(d.name)}" placeholder="Ej.: Día de la Madre"`)}<div class="form-grid"><div class="field"><label for="wb">Marca</label><select class="select" id="wb">${S.brands.map(b=>`<option ${b.name===d.brand?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div><div class="field"><label for="wo">Objetivo</label><select class="select" id="wo">${['Ventas','Leads','Alcance','Tráfico','Interacción'].map(o=>`<option ${o===d.objective?'selected':''}>${o}</option>`).join('')}</select></div></div><div class="form-grid">${F('ws','Inicio',`type="date" value="${d.start}"`)}${F('we','Fin',`type="date" value="${d.end}"`)}</div>${F('wg','Producto o segmento','value="'+esc(d.segment)+'" placeholder="Ej.: Colección invierno"')}`
    :step===1?`<div class="field"><span class="label">Tipo</span><div class="choice-grid">${['Orgánica','Paga','Orgánica + paga'].map(t=>`<button type="button" class="choice" data-ty="${t}" aria-pressed="${d.type===t}"><b>${t}</b></button>`).join('')}</div></div>${d.type==='Orgánica'?'<p class="small muted">Sin inversión publicitaria. Vas a medir alcance, interacciones y conversiones.</p>':F('wbu','Presupuesto total (ARS)',`type="number" min="0" value="${d.budget}" placeholder="Ej.: 500000"`,'Si conectás Meta Ads o Google Ads, la inversión se sincroniza sola.')}`
-   :`<div class="field"><label for="wa">Audiencia</label><textarea class="input" id="wa" rows="2" placeholder="Ej.: Mujeres 25–45 · Córdoba · interés en deco">${esc(d.audience)}</textarea>${M().personas.length?`<span class="hint">Buyer personas: ${M().personas.filter(p=>p.brand===d.brand).map(p=>`<button type="button" class="link-chip" data-persona="${esc(p.name)}, ${esc(p.age)} · ${esc(p.role)}">${esc(p.name)}</button>`).join(' ')}</span>`:''}</div>
+   :`<div class="field"><label for="wa">Audiencia</label><textarea class="input" id="wa" rows="2" placeholder="Ej.: Mujeres 25–45 · Córdoba · interés en deco">${esc(d.audience)}</textarea></div>${(()=>{ const ps=M().personas.filter(p=>pNorm(p).brands.includes(d.brand)); return `<div class="field"><span class="label">Buyer personas</span>${ps.length?`<div style="display:flex;gap:12px;flex-wrap:wrap" id="wps">${ps.map(p=>`<label class="check"><input type="checkbox" value="${p.id}" ${d.personas.includes(p.id)?'checked':''}> ${esc(p.name)}</label>`).join('')}</div>`:`<span class="small muted">No hay buyer personas de ${esc(d.brand)}. Podés crearlas en Estrategia → Buyer personas.</span>`}`; })()}</div>
      <div class="field"><span class="label">Canales</span><div style="display:flex;gap:12px;flex-wrap:wrap">${CHANNELS.concat(['Meta Ads','Google Ads']).map(c=>`<label class="check"><input type="checkbox" value="${c}" ${d.channels.includes(c)?'checked':''}> ${c}</label>`).join('')}</div><span class="err" role="alert"></span></div>`
   }`,`${step?'<button class="btn" id="back">Volver</button>':'<button class="btn" data-close>Cancelar</button>'}<button class="btn btn-primary" id="ok">${step<2?'Continuar':'Crear campaña'}</button>`);
    $$('#layer [data-ty]').forEach(b=>b.onclick=()=>{d.type=b.dataset.ty;draw()});
-   $$('#layer [data-persona]').forEach(b=>b.onclick=()=>{$('#wa').value=b.dataset.persona});
    const back=$('#back'); if(back) back.onclick=()=>{save();step--;draw()};
    $('#ok').onclick=()=>{ if(!save(true)) return; if(step<2){step++;draw();return;}
-    const c={id:uid(),name:d.name,brand:d.brand,type:d.type,objective:d.objective,start:d.start,end:d.end,budget:+d.budget||0,spent:0,audience:d.audience||'Sin definir',channels:d.channels,status:parse(d.start)>NOW?'Programada':'Activa',segment:d.segment||'General',m:{reach:0,impr:0,clicks:0,conv:0,revenue:0},seed:13};
+    const c={id:uid(),name:d.name,brand:d.brand,type:d.type,objective:d.objective,start:d.start,end:d.end,budget:+d.budget||0,spent:0,audience:d.audience||'Sin definir',channels:d.channels,personas:d.personas.slice(),status:parse(d.start)>NOW?'Programada':'Activa',segment:d.segment||'General',m:{reach:0,impr:0,clicks:0,conv:0,revenue:0},seed:13};
     M().campaigns.unshift(c); logAct(`Creaste la campaña ${c.name}`); closeLayer(); go('#/app/campanas/'+c.id); toast('Campaña creada'); }; };
-  const save=(validate)=>{ if(step===0){ const n=$('#wn'); d.name=n.value.trim(); d.brand=$('#wb').value; d.objective=$('#wo').value; d.start=$('#ws').value; d.end=$('#we').value; d.segment=$('#wg').value;
+  const save=(validate)=>{ if(step===0){ const n=$('#wn'); d.name=n.value.trim(); if(d.brand!==$('#wb').value) d.personas=[]; d.brand=$('#wb').value; d.objective=$('#wo').value; d.start=$('#ws').value; d.end=$('#we').value; d.segment=$('#wg').value;
      if(validate){ let ok=fieldErr(n,!d.name?'Poné un nombre a la campaña':''); ok=fieldErr($('#we'),d.end<d.start?'La fecha de fin es anterior al inicio':'')&&ok; return ok; } }
     if(step===1){ const b=$('#wbu'); if(b){ d.budget=b.value; if(validate&&d.type!=='Orgánica') return fieldErr(b,!(+b.value>0)?'Ingresá un presupuesto mayor a cero':''); } }
-    if(step===2){ d.audience=$('#wa').value; d.channels=$$('#layer .check input:checked').map(i=>i.value); if(validate) return fieldErr($('#layer .check input'),!d.channels.length?'Elegí al menos un canal':''); }
+    if(step===2){ d.audience=$('#wa').value; d.personas=$$('#wps input:checked').map(i=>i.value); d.channels=$$('#layer .check input:checked').filter(i=>!i.closest('#wps')).map(i=>i.value); if(validate) return fieldErr($$('#layer .check input').find(i=>!i.closest('#wps')),!d.channels.length?'Elegí al menos un canal':''); }
     return true; };
   draw();
 }
