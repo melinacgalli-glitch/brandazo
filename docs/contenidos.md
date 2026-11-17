@@ -1,6 +1,6 @@
 # Contenidos: planificación editorial y aprobaciones
 
-_Última actualización: 2026-11-17 · versión 0.3.0 (Fase 1)_
+_Última actualización: 2026-11-17 · versión 0.3.1 (Fase 1)_
 
 ## Dónde está el código
 | Archivo | Qué tiene |
@@ -36,6 +36,8 @@ _Última actualización: 2026-11-17 · versión 0.3.0 (Fase 1)_
 
 ## Reglas de la Fase 1
 - Para presentar una idea: título, fecha, canal, formato y campaña **u** objetivo. No se pide copy ni archivos.
+- Las ideas se guardan solas al escribir; además hay «Guardar borrador» y un indicador «Cambios guardados». Quedan en borrador hasta «Presentar planificación».
+- Si falta un dato al presentar: aviso fijo arriba de la tabla, cada idea dice qué le falta y el campo queda marcado. Si la marca no tiene campañas ni objetivos, se puede crear un objetivo desde la planificación (botón del aviso o «+ Crear objetivo…» en la columna Objetivo) y vincular las ideas.
 - Al elegir una campaña, la idea hereda el objetivo vinculado (también en el editor).
 - «Presentar planificación» sube la versión; las ideas presentadas no se editan mientras están en revisión.
 - El aprobador puede aprobar todas, aprobar seleccionadas, pedir ajuste (con comentario obligatorio) o comentar. Los ajustes no frenan a las demás ideas. Una idea corregida se re-presenta sola y sube la versión.

@@ -890,3 +890,17 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 .ed-acts-in{justify-content:flex-start;margin-top:6px}
 .ed-acts-in .btn{height:28px;font-size:12px;padding:0 10px}
 .ed-acts-in .icon-btn{width:28px;height:28px}
+
+/* Controles nativos (fecha, hora, selects) con el tema: el selector y su ícono se ven en oscuro */
+:root{color-scheme:light}
+[data-theme="dark"]{color-scheme:dark}
+input[type=date],input[type=time]{cursor:pointer}
+.ed-table .select{min-width:132px}
+.ed-table .is-missing{border-color:var(--danger)!important;box-shadow:0 0 0 2px var(--danger-soft)}
+.ed-miss{color:var(--danger);font-size:12px;font-weight:500;margin-top:4px}
+.ed-miss:empty{display:none}
+.ed-notice{margin-bottom:12px}
+.ed-notice .ico{flex:none}
+.ed-saved{display:inline-flex;align-items:center;gap:4px;color:var(--success);opacity:0;transition:opacity .3s}
+.ed-saved.on{opacity:1}
+.ed-saved .ico{width:14px;height:14px}
