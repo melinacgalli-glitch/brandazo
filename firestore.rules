@@ -1,11 +1,111 @@
 rules_version = '2';
-// Brandazo · Etapa de integración: la base solo la usa el servidor (Admin SDK), que no pasa por estas reglas.
-// Desde el navegador no se puede leer ni escribir nada hasta que exista el ingreso real con roles (Etapa 0),
-// donde cada usuario verá solo los datos de su empresa (tenants/{tenantId}).
+// Reglas de Brandazo (Etapa 0). Cada empresa es tenants/{tenantId}; solo sus miembros la ven.
+// Lo que escribe el servidor (cotizaciones, contactos, índices, idempotencia, límites, registro técnico)
+// no se puede crear ni borrar desde el navegador. Pruebas: rules-test/ (npm test con el emulador).
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+    function signedIn() { return request.auth != null; }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function memberPath(t) { return /databases/$(database)/documents/tenants/$(t)/members/$(request.auth.uid); }
+    function isMember(t) { return signedIn() && exists(memberPath(t)); }
+    function myRole(t) { return get(memberPath(t)).data.role; }
+    function isAdmin(t) { return isMember(t) && myRole(t) in ['Dueño', 'Admin']; }
+    function isPlatformAdmin() {
+      return verified() && myEmail() in get(/databases/$(database)/documents/config/platform).data.admins;
+    }
+    function onlyChanges(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+    function teamRole(r) { return r in ['Admin', 'Marketing', 'Ventas', 'Atención']; }
+
+    // Administradores de la plataforma (lo carga el script de alta, nunca el navegador)
+    match /config/platform {
+      allow get: if verified() && myEmail() in resource.data.admins;
+      allow write: if false;
+    }
+
+    // Invitaciones: id = "<email>__<tenantId>"
+    match /invites/{inviteId} {
+      allow read: if (verified() && resource.data.email == myEmail()) || isAdmin(resource.data.tenantId);
+      allow create: if isAdmin(request.resource.data.tenantId)
+        && inviteId == request.resource.data.email + '__' + request.resource.data.tenantId
+        && request.resource.data.email == request.resource.data.email.lower()
+        && teamRole(request.resource.data.role)
+        && request.resource.data.invitedBy == request.auth.uid
+        && request.resource.data.keys().hasOnly(['email', 'tenantId', 'tenantName', 'role', 'invitedBy', 'invitedByName', 'createdAt']);
+      allow update: if isAdmin(resource.data.tenantId) && onlyChanges(['role']) && teamRole(request.resource.data.role);
+      allow delete: if isAdmin(resource.data.tenantId) || (verified() && resource.data.email == myEmail());
+    }
+
+    // Búsqueda de "mis empresas" (collectionGroup members where uid == yo)
+    match /{path=**}/members/{uid} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    match /tenants/{t} {
+      allow get: if isMember(t);
+      allow create: if isPlatformAdmin() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if isAdmin(t) && onlyChanges(['name', 'country', 'industry', 'size', 'updatedAt']);
+      allow delete: if false;
+
+      match /members/{uid} {
+        allow read: if isMember(t);
+        // Alta: aceptando una invitación propia y verificada, o el creador de la empresa como Dueño
+        allow create: if signedIn() && uid == request.auth.uid
+          && request.resource.data.uid == uid
+          && request.resource.data.email == myEmail()
+          && (
+            (verified()
+              && exists(/databases/$(database)/documents/invites/$(myEmail() + '__' + t))
+              && get(/databases/$(database)/documents/invites/$(myEmail() + '__' + t)).data.role == request.resource.data.role)
+            || (request.resource.data.role == 'Dueño' && get(/databases/$(database)/documents/tenants/$(t)).data.ownerUid == request.auth.uid)
+          );
+        // Cambiar rol: Dueño/Admin, nunca hacia o desde Dueño (eso es "transferir la propiedad")
+        allow update: if isAdmin(t) && onlyChanges(['role']) && teamRole(request.resource.data.role) && resource.data.role != 'Dueño';
+        // Quitar: Dueño/Admin (no al Dueño), o la persona misma salvo que sea Dueño
+        allow delete: if resource.data.role != 'Dueño' && (isAdmin(t) || uid == request.auth.uid);
+      }
+
+      // Datos de la empresa guardados desde la app (JSON por partes)
+      match /state/{part} {
+        allow read: if isMember(t);
+        allow write: if isMember(t)
+          && request.resource.data.keys().hasOnly(['json', 'updatedAt', 'by'])
+          && request.resource.data.json is string
+          && request.resource.data.json.size() < 1000000
+          && request.resource.data.by == request.auth.uid;
+      }
+
+      // Cotizaciones convertidas en oportunidades: el equipo solo mueve el seguimiento
+      match /opportunities/{o} {
+        allow read: if isMember(t);
+        allow update: if isMember(t)
+          && onlyChanges(['stage', 'owner', 'lostReason', 'nextFollowUpAt', 'updatedAt', 'stageHistory'])
+          && request.resource.data.stage in ['nueva-cotizacion', 'contactado', 'propuesta-enviada', 'en-negociacion', 'ganada', 'perdida']
+          && (request.resource.data.stage != 'perdida' || request.resource.data.lostReason is string)
+          && request.resource.data.owner is string;
+        allow create, delete: if false;
+      }
+
+      match /settings/{s} {
+        allow read: if isMember(t);
+        allow write: if isAdmin(t) && s == 'cafelito-eventos'
+          && request.resource.data.keys().hasOnly(['brand', 'defaultOwner', 'assignByEventType', 'followUpHours', 'updatedAt', 'updatedBy'])
+          && request.resource.data.followUpHours is int && request.resource.data.followUpHours >= 1 && request.resource.data.followUpHours <= 168;
+      }
+
+      match /audit/{a} {
+        allow read: if isAdmin(t);
+        allow create: if isMember(t) && request.resource.data.by == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      // Solo lectura para el equipo; las escribe el servidor
+      match /contacts/{id} { allow read: if isMember(t); allow write: if false; }
+      match /eventQuotes/{id} { allow read: if isMember(t); allow write: if false; }
+      match /tasks/{id} { allow read: if isMember(t); allow write: if false; }
+      match /notifications/{id} { allow read: if isMember(t); allow write: if false; }
+      match /pipelines/{id} { allow read: if isMember(t); allow write: if false; }
+      // contactsByPhone, idempotency, rateLimits, integrationLog: sin acceso desde el navegador
     }
   }
 }

@@ -68,10 +68,11 @@ const SAVE_KEY='bz-data', SAVE_V=1; let saveOff=false;
 function persist(){
   if(saveOff) return;
   try{
-    const cs=S.companies.slice(); if(S.company&&!cs.includes(S.company)) cs.push(S.company);
+    const cs=S.companies.filter(c=>!c.cloud); if(S.company&&!S.company.cloud&&!cs.includes(S.company)) cs.push(S.company);
     localStorage.setItem(SAVE_KEY,JSON.stringify({v:SAVE_V,at:new Date().toISOString(),user:S.user,ci:cs.indexOf(S.company),companies:cs,stores:cs.map(c=>STORE.get(c)||null),
       ws:S.ws,brand:S.brand,collapsed:S.collapsed,notifs:S.notifs,waitlist:S.waitlist,onboard:S.onboard}));
   }catch(e){ if(!persist.warned){ persist.warned=true; setTimeout(()=>{ try{toast('No se pudieron guardar los datos en este navegador')}catch(_){} },0); } }
+  if(window.cloudSave) window.cloudSave();
 }
 (function restore(){
   try{
@@ -614,8 +615,12 @@ function bKit(){
 }
 
 /* ===================== Router ===================== */
+/* En la nube, no se dibuja nada hasta que cargue 6-nube.js (evita crear la empresa de ejemplo antes de saber quién entró) */
+const BZ_CLOUD=(()=>{ try{ return !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)||/[?&]emu=1\b/.test(location.search)||sessionStorage.getItem('bz-emu')==='1'; }catch(e){ return true; } })();
 function render(){
+  if(BZ_CLOUD&&!window.cloudGate) return;
   persist();
+  if(window.cloudGate&&window.cloudGate()) return;
   const h=location.hash.replace(/^#\/?/,''); const [a,b,c]=h.split('/');
   const root=$('#root'); window.scrollTo(0,0); closeLayer();
   const auth={login:[vLogin,bLogin],registro:[vRegistro,bRegistro],verificar:[vVerificar,bVerificar],recuperar:[vRecuperar,bRecuperar],'recuperar-enviado':[vRecEnviado,()=>{}],'nueva-clave':[vNuevaClave,bNuevaClave]};

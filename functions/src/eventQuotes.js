@@ -131,7 +131,7 @@ async function handleEventQuote(req, deps) {
       const settings = settingsSnap.exists ? settingsSnap.data() : {};
       const owner = (settings.assignByEventType || {})[body.event.type] || settings.defaultOwner || '';
       const followHours = Number(settings.followUpHours) > 0 ? Number(settings.followUpHours) : 24;
-      const brand = key.brand || settings.brand || 'Cafelito Ambulante';
+      const brand = settings.brand || key.brand || 'Cafelito Ambulante'; // la marca elegida en Brandazo manda sobre la de la clave
       const receiptId = rid('brz_q_');
       const oppRef = tenantRef.collection('opportunities').doc();
       const quoteRef = tenantRef.collection('eventQuotes').doc(receiptId);

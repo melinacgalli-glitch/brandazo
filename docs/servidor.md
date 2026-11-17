@@ -11,7 +11,7 @@ _Última actualización: 2026-11-17 · **Publicado** en `brandazo` (función `ap
 | Recepción de cotizaciones de Cafelito Ambulante | `functions/src/eventQuotes.js` |
 | Firma HMAC, teléfonos, recálculo del presupuesto | `functions/src/sign.js`, `phone.js`, `estimate.js` |
 | Copia exacta del contrato (esquemas y tarifas) | `functions/contract/` (una prueba verifica que sea idéntica a `docs/integraciones/cafelito-cotizador/`) |
-| Reglas de Firestore | `firestore.rules`: **todo cerrado desde el navegador** hasta la Etapa 0 (ingreso real). Solo escribe el servidor. |
+| Reglas de Firestore | `firestore.rules`: por empresa y por rol (ver `docs/etapa0.md`). Lo que escribe el servidor no se puede crear ni borrar desde el navegador. |
 | TTL (borrado automático) | `firestore.indexes.json`: `idempotency.expireAt` (30 días) y `rateLimits.expireAt`. |
 
 ## Modelo de datos (por empresa: `tenants/{tenantId}`)
@@ -68,4 +68,4 @@ Usar solo la clave de pruebas: todo queda en la empresa `cafelito-pruebas`.
 - Ver la clave de pruebas: Google Cloud → Secret Manager → `INTEGRATION_KEYS` → versión activa → Ver valor. Es un JSON: al equipo web se le pasa el `keyId` (`cafelito-web-test`) y el valor de `secret`, por un canal seguro.
 - Firebase avisó que no pudo limpiar imágenes de compilación viejas (puede generar centavos por mes): se pueden borrar en Artifact Registry o fijar una política de limpieza.
 - JSON mal formado: la plataforma responde `400` antes de llegar a Brandazo (sin el formato de error del contrato).
-- El ingreso real y las pantallas del CRM leyendo esta base son la Etapa 0 (siguiente paso).
+- El ingreso real y el tablero «Cafelito Eventos» están en `docs/etapa0.md`. La marca de las cotizaciones sale de `settings/cafelito-eventos.brand` y, si no hay, de la clave.

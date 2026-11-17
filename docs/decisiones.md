@@ -24,10 +24,12 @@ _Última actualización: 2026-11-17_
 | 2026-11-17 | Sin proyecto de pruebas aparte: todo en `brandazo`. Las pruebas usan la misma dirección con la clave `cafelito-web-test`, que escribe en la empresa ficticia `cafelito-pruebas`; la falla simulada solo funciona con esa clave. | Decisión de Melina: más simple y una sola facturación. Cuando haya clientes reales se evalúa un proyecto de pruebas. |
 | 2026-11-17 | Servidor publicado en `brandazo` (función `api`, southamerica-east1) con la dirección `www.brandazo.com.ar/api/v1/...`; reglas de Firestore publicadas (cerrada al navegador); clave `cafelito-web-test` en Secret Manager. Probado contra el servidor real: 18/18. | Autorizado por Melina («sí»). La clave de producción se crea después de la validación con el equipo web. |
 | 2026-11-17 | La clave de pruebas `cafelito-web-test` se la pasa Melina directamente al equipo web (sin herramientas extra). Se rota al terminar las pruebas; la de producción se entrega sin pasar por chat ni mail. | Decisión de Melina: por ahora es la única usuaria y la clave de pruebas solo escribe en la empresa ficticia. |
+| 2026-11-17 | **Etapa 0 en Firebase** (no Next.js/NestJS/PostgreSQL por ahora): ingreso con Firebase Auth (Google y email+contraseña con email verificado), registro cerrado por invitación, empresas = `tenants/{id}` con `members/{uid}` (roles Dueño, Admin, Marketing, Ventas, Atención) e `invites/{email__empresa}`. Los datos de cada empresa se guardan por partes (`tenants/{id}/state/*`, JSON). Las reglas de Firestore aíslan empresas y solo dejan al equipo mover el seguimiento de las cotizaciones (nunca el presupuesto). En localhost el prototipo sigue local salvo `?emu=1`. Ver `docs/etapa0.md`. | Aprobado por Melina («si avanza»). Usa lo que ya está pago y publicado; cero herramientas extra. Probado: reglas 12/12, recorrido completo en navegador 28/28, servidor 4+19. |
+| 2026-11-17 | La marca de las cotizaciones la elige el Dueño/Admin en el tablero (`settings/cafelito-eventos.brand`) y manda sobre la marca guardada en la clave. | Para poder cambiarla sin tocar secretos. |
 
 ## Pendientes de definir
 - Responsable comercial de eventos de Cafelito (regla de asignación inicial).
 - Validación con el equipo web usando `cafelito-web-test`; después, rotar la clave de pruebas y crear la de producción `cafelito-web`.
-- Stack definitivo de la Etapa 0 (propuesta: Next.js + NestJS + PostgreSQL + Better Auth).
+- Stack a largo plazo: se reevalúa cuando haya clientes externos (hoy Firebase alcanza).
 - Modelo multiempresa para agencias (Organización → Espacios de trabajo).
 - Servicio de email, textos de Términos y Privacidad.
