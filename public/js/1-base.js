@@ -150,7 +150,7 @@ function go(h){ location.hash=h; }
 function authShell(inner){
   return `<div class="auth"><main class="auth-form"><div class="logo-row"><a href="#/login" aria-label="Brandazo">${LOGO_WHITE}</a><a class="small" href="#/mapa">Mapa de pantallas</a></div><div class="inner">${inner}</div><p class="small muted" style="text-align:center">© 2026 Brandazo · <a href="#/">Términos</a> · <a href="#/">Privacidad</a></p></main>
   <aside class="auth-art" aria-hidden="true"><div>${LOGO_WHITE}</div><div class="bars"><i></i><i></i><i></i></div>
-  <div style="position:relative;z-index:1"><h2>Marketing y ventas, a un comando.</h2><p style="color:#A1A1AA;margin:16px 0 24px;max-width:400px">Contenidos, clientes, automatizaciones y ventas en una sola plataforma.</p>
+  <div style="position:relative;z-index:1"><h2>Marketing y ventas, en una misma plataforma.</h2><p style="color:#A1A1AA;margin:16px 0 24px;max-width:400px">Contenidos, clientes, automatizaciones y ventas en una sola plataforma.</p>
   <div class="cmdline"><span class="slash">/</span> armá la campaña de Black Friday <span class="caret"></span></div></div></aside></div>`;
 }
 const pwField=(id,label,extra='')=>`<div class="field"><label for="${id}">${label}</label><div class="pw"><input class="input" id="${id}" type="password" autocomplete="${id==='pw'?'current-password':'new-password'}" ${extra}><button type="button" class="icon-btn" aria-label="Mostrar contraseña" data-eye="${id}">${ic('eye')}</button></div><span class="err" role="alert"></span></div>`;
