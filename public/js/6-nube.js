@@ -10,7 +10,7 @@ const FB_CONFIG={apiKey:'AIzaSyBDerAhYZjkx7fl-cvC6IeK4F31rX9QL_0',authDomain:'br
 const CLOUD=(()=>{ const local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   let emu=false; try{ if(/[?&]emu=1\b/.test(location.search)) sessionStorage.setItem('bz-emu','1'); emu=sessionStorage.getItem('bz-emu')==='1'; }catch(e){}
   return { on: !local||emu, emu: local&&emu }; })();
-const C={ user:null, ready:false, loading:false, error:'', tenants:[], admin:false, unsub:[], last:{}, timer:null, saving:false, needVerify:false };
+const C={ local:[], user:null, ready:false, loading:false, error:'', tenants:[], admin:false, unsub:[], last:{}, timer:null, saving:false, needVerify:false };
 let fbAuth=null, fbDb=null;
 if(CLOUD.on&&window.firebase){
   firebase.initializeApp(FB_CONFIG); fbAuth=firebase.auth(); fbDb=firebase.firestore();
@@ -57,7 +57,7 @@ if(fbAuth){
   });
 }
 async function cloudSignOut(){ try{ await flushCloud(); }catch(e){} C.unsub.forEach(f=>{try{f()}catch(e){}}); C.unsub=[]; await fbAuth.signOut(); location.hash='#/login'; }
-function dropCloudCompanies(){ const keep=S.companies.filter(c=>!c.cloud); S.companies=keep; if(S.company&&S.company.cloud) S.company=keep[0]||null; C.tenants=[]; C.last={}; }
+function dropCloudCompanies(){ const keep=[...S.companies.filter(c=>!c.cloud),...C.local]; C.local=[]; S.companies=keep; if(S.company&&S.company.cloud) S.company=keep[0]||null; C.tenants=[]; C.last={}; }
 
 /* ---------- Carga de empresas y datos ---------- */
 async function acceptInvites(u){
@@ -81,10 +81,11 @@ async function loadCloud(){
     tenants.sort((a,b)=>(a.data.name||'').localeCompare(b.data.name||''));
     const companies=[];
     for(const t of tenants){ companies.push(await loadTenant(t)); }
-    const local=S.companies.filter(c=>!c.cloud);
-    S.companies=[...companies,...local];
+    const local=[...S.companies.filter(c=>!c.cloud),...C.local.filter(c=>!S.companies.includes(c))];
+    // Con empresas en la nube, las del navegador (y la de ejemplo) no se muestran: quedan guardadas solo para «Subir datos…»
+    if(companies.length){ C.local=local; S.companies=companies; } else { C.local=[]; S.companies=local; }
     let cur=null; try{ cur=localStorage.getItem('bz-cur'); }catch(e){}
-    S.company=companies.find(c=>c.tid===cur)||companies[0]||local[0]||null;
+    S.company=companies.find(c=>c.tid===cur)||companies[0]||S.companies[0]||null;
     if(S.company) S.brand=S.brands.length?Math.min(Math.max(S.brand,-1),S.brands.length-1):-1;
     C.tenants=tenants; C.loading=false;
     render();
@@ -190,7 +191,7 @@ if(CLOUD.on&&fbAuth){
     const m=$('#layer .menu'); if(!m) return;
     m.querySelector('[data-a=salir]').onclick=()=>{ closeLayer(); cloudSignOut(); };
     m.querySelector('[data-a=clave]').onclick=async()=>{ closeLayer(); if(!C.user||!C.user.email) return; try{ await fbAuth.sendPasswordResetEmail(C.user.email); toast('Te mandamos un enlace para cambiar la contraseña'); }catch(e){ toast(authErr(e)); } };
-    const local=S.companies.filter(c=>!c.cloud&&!(STORE.get(c)||{}).demo);
+    const local=importable();
     if(local.length&&C.tenants.some(t=>['Dueño','Admin'].includes(t.role))){
       m.querySelector('[data-a=reset]').insertAdjacentHTML('beforebegin',`<button class="menu-item" data-a="subir">${ic('upload')}<span class="grow">Subir datos de este navegador a la nube</span></button>`);
       m.querySelector('[data-a=subir]').onclick=()=>{ closeLayer(); importDialog(); };
@@ -199,12 +200,15 @@ if(CLOUD.on&&fbAuth){
 }
 
 /* ---------- Subir datos del navegador a una empresa en la nube ---------- */
+const hasData=c=>{ const st=STORE.get(c); if(!st) return false; const m=st.m||{}; return ['objectives','personas','funnels','contents','editorialPlans','campaigns'].some(k=>(m[k]||[]).length)||(st.brands||[]).length>0; };
+function importable(){ return [...C.local,...S.companies.filter(c=>!c.cloud&&!C.local.includes(c))].filter(c=>hasData(c)); }
+window.cloudHidden=()=>C.local;
 function importDialog(){
-  const local=S.companies.filter(c=>!c.cloud&&!(STORE.get(c)||{}).demo), targets=S.companies.filter(c=>c.cloud&&['Dueño','Admin'].includes(c.myRole));
-  const guess=l=>(targets.find(t=>t.name.toLowerCase()===l.name.toLowerCase())||{}).tid||'';
+  const local=importable(), targets=S.companies.filter(c=>c.cloud&&['Dueño','Admin'].includes(c.myRole));
+  const isDemo=c=>!!(STORE.get(c)||{}).demo, guess=l=>isDemo(l)?'':(targets.find(t=>t.name.toLowerCase()===l.name.toLowerCase())||{}).tid||'';
   const count=c=>{ const m=(STORE.get(c)||{}).m||{}; return ['objectives','personas','funnels','contents','editorialPlans','campaigns'].map(k=>`${(m[k]||[]).length} ${({objectives:'objetivos',personas:'buyer personas',funnels:'funnels',contents:'contenidos',editorialPlans:'planificaciones',campaigns:'campañas'})[k]}`).join(' · '); };
-  modal('Subir datos de este navegador',`<p class="small muted" style="margin-bottom:12px">Estas empresas están guardadas solo en este navegador. Elegí a qué empresa de la nube va cada una. Se copian marcas, estrategia, buyer personas, funnels, contenidos, planificaciones y campañas. Las de «Datos de ejemplo» no se suben.</p>
-   ${local.map((c,i)=>`<div class="field"><label for="imp${i}"><b>${esc(c.name)}</b> <span class="small muted">· ${count(c)}</span></label><select class="select" id="imp${i}"><option value="">No subir</option>${targets.map(t=>`<option value="${t.tid}" ${guess(c)===t.tid?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>`).join('')}
+  modal('Subir datos de este navegador',`<p class="small muted" style="margin-bottom:12px">Estas empresas están guardadas solo en este navegador. Elegí a qué empresa de la nube va cada una. Se copian marcas, estrategia, buyer personas, funnels, contenidos, planificaciones y campañas. La empresa de ejemplo queda en «No subir»: subila solo si trabajaste tus datos ahí.</p>
+   ${local.map((c,i)=>`<div class="field"><label for="imp${i}"><b>${esc(c.name)}</b>${isDemo(c)?' <span class="badge badge-warn">Empresa de ejemplo</span>':''} <span class="small muted">· ${count(c)}</span></label><select class="select" id="imp${i}"><option value="">No subir</option>${targets.map(t=>`<option value="${t.tid}" ${guess(c)===t.tid?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>`).join('')}
    <div class="alert alert-warn">${ic('alert')}<div>Los datos de la empresa de destino <b>se reemplazan</b> por los de este navegador (no se toca su equipo ni las cotizaciones recibidas). Antes se guarda una copia de seguridad en este navegador.</div></div>`,
    `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="impok">Subir</button>`);
   $('#impok').onclick=async e=>{
@@ -214,7 +218,7 @@ function importDialog(){
     try{ localStorage.setItem('bz-data-respaldo-'+new Date().toISOString().slice(0,19),localStorage.getItem(SAVE_KEY)||''); }catch(_){}
     for(const [lc,tid] of plan){ const target=S.companies.find(x=>x.tid===tid), src=STORE.get(lc), dst=STORE.get(target);
       const copy=JSON.parse(JSON.stringify(src)); copy.members=dst.members; copy.demo=false; STORE.set(target,copy);
-      S.companies=S.companies.filter(x=>x!==lc); if(S.company===lc) S.company=target; }
+      S.companies=S.companies.filter(x=>x!==lc); C.local=C.local.filter(x=>x!==lc); if(S.company===lc) S.company=target; }
     await flushCloud(); persist(); closeLayer(); render(); toast(`Listo: ${plan.length} empresa${plan.length>1?'s':''} en la nube. Quedó una copia de seguridad en este navegador.`);
   };
 }

@@ -58,6 +58,8 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   const cos = await page.evaluate(() => S.companies.map(c => (c.cloud ? '☁ ' : '') + c.name));
   ok(cos.includes('☁ Cafelito Coffee House') && !cos.some(n => n.includes('pruebas')), 'aceptó la invitación: ve Cafelito y no ve la empresa de pruebas · ' + cos.join(' | '));
   ok((await get(`invites/${EMAIL}__cafelito`)).error, 'la invitación usada se borró');
+  ok(!cos.some(n => !n.startsWith('☁')), 'con sesión iniciada, el selector solo muestra empresas de la nube (no «Estudio Norte» ni otras del navegador)');
+  await page.click('#ctx'); ok(!/Estudio Norte|Café del Centro/.test(await page.textContent('#layer')), 'el menú de empresas no muestra la de ejemplo'); await page.keyboard.press('Escape');
   ok(await page.isVisible('text=En la nube'), 'indicador "En la nube" visible');
 
   // 4) CRM → Cafelito Eventos
@@ -85,7 +87,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   // 6) Subir datos del navegador
   await page.click('#me'); await page.waitForSelector('[data-a=subir]'); ok(true, 'menú ofrece "Subir datos de este navegador"');
   await page.click('[data-a=subir]'); await page.waitForSelector('#impok');
-  const sel = await page.$$eval('#layer select', s => s.map(x => x.value)); ok(sel.includes('cafelito'), 'propone la empresa de la nube con el mismo nombre');
+  const sel = await page.$$eval('#layer select', s => s.map(x => x.value)); const labels = await page.textContent('#layer'); ok(/Estudio Norte[\s\S]*Empresa de ejemplo/.test(labels) && !/Café del Centro/.test(labels), 'la de ejemplo aparece marcada y las vacías no aparecen'); ok((await page.$$eval('#layer select', s => s.map(x => x.value))).filter(v => v).length === 1, 'la de ejemplo viene en «No subir»'); ok(sel.includes('cafelito'), 'propone la empresa de la nube con el mismo nombre');
   await page.click('#impok'); await page.waitForTimeout(2000);
   const parts = await list('tenants/cafelito/state'); const ids = (parts.documents || []).map(d => d.name.split('/').pop());
   ok(ids.includes('base') && ids.includes('m_objectives'), 'datos subidos por partes: ' + ids.length + ' partes');
@@ -96,6 +98,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.reload(); await page.waitForSelector('.app', { timeout: 20000 }); await page.waitForTimeout(800);
   ok(await page.evaluate(() => { const c = S.companies.find(x => x.cloud && x.tid === 'cafelito'); return c && STORE.get(c).m.objectives.some(o => o.name === 'Vender 10 eventos'); }), 'al recargar, los datos se leen de la nube');
   ok(await page.evaluate(() => !JSON.parse(localStorage.getItem('bz-data')).companies.some(c => c.cloud)), 'las empresas de la nube no se duplican en el navegador');
+  ok(await page.evaluate(() => JSON.parse(localStorage.getItem('bz-data')).companies.some(c => c.name === 'Estudio Norte')), 'las empresas ocultas siguen guardadas en el navegador');
   // edición → se guarda en la nube
   await page.evaluate(() => { M().personas.push({ id: 'p2', name: 'Novios' }); persist(); }); await page.waitForTimeout(1500);
   const per = JSON.parse((await get('tenants/cafelito/state/m_personas')).fields.json.stringValue); ok(per.some(p => p.name === 'Novios'), 'un cambio se guarda solo en la nube');

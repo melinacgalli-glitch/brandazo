@@ -28,6 +28,7 @@ _Última actualización: 2026-11-17_
 | 2026-11-17 | La marca de las cotizaciones la elige el Dueño/Admin en el tablero (`settings/cafelito-eventos.brand`) y manda sobre la marca guardada en la clave. | Para poder cambiarla sin tocar secretos. |
 | 2026-11-17 | Etapa 0 publicada: reglas e índices, función `api` (marca desde la configuración), sitio y alta de `cafelito` y `cafelito-pruebas` con invitación de la Dueña. Dominios `www.brandazo.com.ar` y `brandazo.com.ar` autorizados en Firebase Auth. | Autorizado por Melina («Ok» y confirmación del email). Verificado en el sitio real. |
 | 2026-11-17 | Responsable de las cotizaciones de eventos de Cafelito: **Melina Galli** (`defaultOwner` en `cafelito` y `cafelito-pruebas`), primer seguimiento a las 24 h. Se cambia desde CRM → Cafelito Eventos → Configurar. | Decisión de Melina. |
+| 2026-11-17 | Con sesión iniciada, el selector de empresas muestra **solo las de la nube**. Las que estaban solo en el navegador (incluida la de ejemplo «Estudio Norte») no se muestran, pero siguen guardadas en el navegador para «Subir datos de este navegador a la nube». La de ejemplo aparece marcada y viene en «No subir»; las vacías no aparecen. | Melina vio «Estudio Norte», una empresa de ejemplo que no existe en su sistema. |
 
 ## Pendientes de definir
 - Validación con el equipo web usando `cafelito-web-test`; después, rotar la clave de pruebas y crear la de producción `cafelito-web`.

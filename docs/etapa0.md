@@ -5,7 +5,7 @@ _Última actualización: 2026-11-17 · Estado: **publicado** (reglas, índices, 
 ## Qué cambia para la usuaria
 - En **www.brandazo.com.ar** hay que iniciar sesión de verdad: con Google o con email y contraseña (el email se verifica con un enlace).
 - **Registro cerrado:** solo entra quien fue invitado. Sin invitación ve «Todavía no tenés acceso a ninguna empresa» (y puede mirar la demo, que queda solo en su navegador).
-- Las empresas «En la nube» se guardan solas y las ve todo su equipo. Las que estaban en el navegador aparecen como «Solo en este navegador» y se suben con **menú de usuario → Subir datos de este navegador a la nube** (antes guarda una copia de seguridad en el navegador; la empresa de ejemplo no se sube).
+- Las empresas «En la nube» se guardan solas y las ve todo su equipo. Con sesión iniciada solo se ven esas; las que estaban en el navegador (y la de ejemplo «Estudio Norte») quedan ocultas y se suben con **menú de usuario → Subir datos de este navegador a la nube** (antes guarda una copia de seguridad en el navegador; la empresa de ejemplo no se sube).
 - **CRM → Cafelito Eventos:** tablero en vivo con las cotizaciones del sitio de Cafelito, ficha con contacto, evento, presupuesto, botón de WhatsApp, etapa, responsable, próximo seguimiento, motivo de pérdida e historial. «Configurar» (Dueño/Admin): marca de las cotizaciones, responsable por defecto y horas hasta el primer seguimiento.
 - **Configuración → Usuarios:** invitar, cambiar roles, cancelar invitaciones y quitar personas, todo real. Brandazo no manda el mail de invitación: se avisa a la persona por otro medio.
 

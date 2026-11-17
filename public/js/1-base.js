@@ -68,7 +68,7 @@ const SAVE_KEY='bz-data', SAVE_V=1; let saveOff=false;
 function persist(){
   if(saveOff) return;
   try{
-    const cs=S.companies.filter(c=>!c.cloud); if(S.company&&!S.company.cloud&&!cs.includes(S.company)) cs.push(S.company);
+    const cs=S.companies.filter(c=>!c.cloud).concat(window.cloudHidden?window.cloudHidden():[]); if(S.company&&!S.company.cloud&&!cs.includes(S.company)) cs.push(S.company);
     localStorage.setItem(SAVE_KEY,JSON.stringify({v:SAVE_V,at:new Date().toISOString(),user:S.user,ci:cs.indexOf(S.company),companies:cs,stores:cs.map(c=>STORE.get(c)||null),
       ws:S.ws,brand:S.brand,collapsed:S.collapsed,notifs:S.notifs,waitlist:S.waitlist,onboard:S.onboard}));
   }catch(e){ if(!persist.warned){ persist.warned=true; setTimeout(()=>{ try{toast('No se pudieron guardar los datos en este navegador')}catch(_){} },0); } }
