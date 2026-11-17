@@ -6,10 +6,16 @@ const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { getAuth } = require('firebase-admin/auth');
 const { handleEventQuote, loadKeys } = require('./src/eventQuotes');
+const conn = require('./src/connections');
 
 initializeApp();
 const INTEGRATION_KEYS = defineSecret('INTEGRATION_KEYS');
+// Conexiones con Meta y Google Ads: JSON en Secret Manager (ver docs/conexiones.md)
+const META_APP = defineSecret('META_APP');
+const GOOGLE_ADS = defineSecret('GOOGLE_ADS');
 
 exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KEYS], cors: false, maxInstances: 5, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
   const path = req.path.replace(/\/+$/, '');
@@ -21,4 +27,19 @@ exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KE
     keys: loadKeys(INTEGRATION_KEYS.value())
   });
   res.set(out.headers || {}).status(out.status).json(out.body);
+});
+
+/* Conexiones reales: Meta (Instagram y Facebook) y Google Ads. Hosting: /api/v1/connect/** */
+const connDeps = () => ({
+  db: getFirestore(), Timestamp, fetch: globalThis.fetch, now: () => Date.now(), env: process.env,
+  verifyIdToken: t => getAuth().verifyIdToken(t),
+  meta: conn.parseCfg(META_APP.value()), ads: conn.parseCfg(GOOGLE_ADS.value())
+});
+exports.conexiones = onRequest({ region: 'southamerica-east1', secrets: [META_APP, GOOGLE_ADS], cors: [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/], maxInstances: 3, timeoutSeconds: 120, memory: '256MiB' }, async (req, res) => {
+  await conn.handleConnect(req, res, connDeps());
+});
+// Todos los días a las 6 de la mañana (Córdoba) se actualizan redes y anuncios
+exports.sincronizarConexiones = onSchedule({ schedule: '0 6 * * *', timeZone: 'America/Argentina/Cordoba', region: 'southamerica-east1', secrets: [META_APP, GOOGLE_ADS], timeoutSeconds: 540, memory: '256MiB', retryCount: 1 }, async () => {
+  const r = await conn.syncAll(connDeps());
+  console.log('[conexiones] sincronización diaria', JSON.stringify(r));
 });

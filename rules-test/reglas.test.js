@@ -136,3 +136,20 @@ test('crear empresas: solo administradores de la plataforma, quedando como Dueñ
   await assertFails(getDoc(doc(db(dueno), 'config/platform')));
   await assertSucceeds(getDoc(doc(p, 'config/platform')));
 });
+
+test('redes y anuncios: el equipo ve los datos, nunca los permisos de acceso', async () => {
+  await env.withSecurityRulesDisabled(async ctx => { const a = ctx.firestore();
+    await setDoc(doc(a, 'tenants/cafelito/private/meta'), { userToken: 'secreto' });
+    await setDoc(doc(a, 'tenants/cafelito/connections/meta'), { status: 'ok' });
+    await setDoc(doc(a, 'tenants/cafelito/social/Instagram_1'), { followers: 10 });
+    await setDoc(doc(a, 'tenants/cafelito/ads/1'), { campaigns: [] }); });
+  await assertFails(getDoc(doc(db(dueno), 'tenants/cafelito/private/meta')));
+  await assertSucceeds(getDoc(doc(db(ventas), 'tenants/cafelito/connections/meta')));
+  await assertSucceeds(getDoc(doc(db(ventas), 'tenants/cafelito/social/Instagram_1')));
+  await assertSucceeds(getDoc(doc(db(ventas), 'tenants/cafelito/ads/1')));
+  await assertFails(updateDoc(doc(db(dueno), 'tenants/cafelito/social/Instagram_1'), { followers: 99999 }));
+  await assertFails(getDoc(doc(db(extrana), 'tenants/cafelito/social/Instagram_1')));
+  await assertFails(getDoc(doc(db(dueno), 'connectStates/x')));
+  await assertSucceeds(setDoc(doc(db(dueno), 'tenants/cafelito/settings/social'), { brandByAccount: { Instagram_1: 'Cafelito Ambulante' }, updatedAt: serverTimestamp(), updatedBy: 'u-dueno' }));
+  await assertFails(setDoc(doc(db(ventas), 'tenants/cafelito/settings/social'), { brandByAccount: {}, updatedAt: serverTimestamp(), updatedBy: 'u-ventas' }));
+});

@@ -217,7 +217,7 @@ function importDialog(){
     e.currentTarget.classList.add('is-loading');
     try{ localStorage.setItem('bz-data-respaldo-'+new Date().toISOString().slice(0,19),localStorage.getItem(SAVE_KEY)||''); }catch(_){}
     for(const [lc,tid] of plan){ const target=S.companies.find(x=>x.tid===tid), src=STORE.get(lc), dst=STORE.get(target);
-      const copy=JSON.parse(JSON.stringify(src)); copy.members=dst.members; copy.demo=false; STORE.set(target,copy);
+      const copy=JSON.parse(JSON.stringify(src)); copy.members=dst.members; copy.demo=false; copy.integrations={}; /* en el prototipo las conexiones eran simuladas */ STORE.set(target,copy);
       S.companies=S.companies.filter(x=>x!==lc); C.local=C.local.filter(x=>x!==lc); if(S.company===lc) S.company=target; }
     await flushCloud(); persist(); closeLayer(); render(); toast(`Listo: ${plan.length} empresa${plan.length>1?'s':''} en la nube. Quedó una copia de seguridad en este navegador.`);
   };

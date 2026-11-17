@@ -621,7 +621,7 @@ function render(){
   if(BZ_CLOUD&&!window.cloudGate) return;
   persist();
   if(window.cloudGate&&window.cloudGate()) return;
-  const h=location.hash.replace(/^#\/?/,''); const [a,b,c]=h.split('/');
+  const h=location.hash.replace(/^#\/?/,'').split('?')[0]; const [a,b,c]=h.split('/');
   const root=$('#root'); window.scrollTo(0,0); closeLayer();
   const auth={login:[vLogin,bLogin],registro:[vRegistro,bRegistro],verificar:[vVerificar,bVerificar],recuperar:[vRecuperar,bRecuperar],'recuperar-enviado':[vRecEnviado,()=>{}],'nueva-clave':[vNuevaClave,bNuevaClave]};
   if(auth[a]){ root.innerHTML=auth[a][0](); auth[a][1](); document.title='Brandazo · '+a; return; }

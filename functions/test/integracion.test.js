@@ -13,7 +13,7 @@ const { getFirestore } = require('firebase-admin/firestore');
 const { sign } = require('../src/sign');
 
 // Emulador por defecto. Contra el servidor real: BRANDAZO_URL, BRANDAZO_KEYS_FILE (JSON de claves) y BRANDAZO_PROJECT.
-const KEYS = process.env.BRANDAZO_KEYS_FILE ? JSON.parse(readFileSync(process.env.BRANDAZO_KEYS_FILE, 'utf8')) : JSON.parse(readFileSync(path.join(__dirname, '../.secret.local'), 'utf8').replace(/^INTEGRATION_KEYS=/, '').trim());
+const KEYS = process.env.BRANDAZO_KEYS_FILE ? JSON.parse(readFileSync(process.env.BRANDAZO_KEYS_FILE, 'utf8')) : JSON.parse(readFileSync(path.join(__dirname, '../.secret.local'), 'utf8').split('\n').find(l => l.startsWith('INTEGRATION_KEYS=')).replace(/^INTEGRATION_KEYS=/, '').replace(/^'|'$/g, '').trim());
 const KEY_ID = 'cafelito-web-test', SECRET = KEYS[KEY_ID].secret, TENANT = KEYS[KEY_ID].tenantId;
 const URL = process.env.BRANDAZO_URL || 'http://127.0.0.1:5001/demo-brandazo/southamerica-east1/api/api/v1/integrations/cafelito/event-quotes';
 const DOCS = path.join(__dirname, '../../docs/integraciones/cafelito-cotizador');

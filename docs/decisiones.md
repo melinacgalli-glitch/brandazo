@@ -30,9 +30,10 @@ _Última actualización: 2026-11-17_
 | 2026-11-17 | Responsable de las cotizaciones de eventos de Cafelito: **Melina Galli** (`defaultOwner` en `cafelito` y `cafelito-pruebas`), primer seguimiento a las 24 h. Se cambia desde CRM → Cafelito Eventos → Configurar. | Decisión de Melina. |
 | 2026-11-17 | Con sesión iniciada, el selector de empresas muestra **solo las de la nube**. Las que estaban solo en el navegador (incluida la de ejemplo «Estudio Norte») no se muestran, pero siguen guardadas en el navegador para «Subir datos de este navegador a la nube». La de ejemplo aparece marcada y viene en «No subir»; las vacías no aparecen. | Melina vio «Estudio Norte», una empresa de ejemplo que no existe en su sistema. |
 | 2026-11-17 | En la versión real, «Conectar» en Redes sociales e Integraciones **no simula**: avisa que la conexión todavía no está disponible y no guarda cuentas ni números inventados. La única integración real es el cotizador de Cafelito. Conectar Instagram/Facebook de verdad requiere una app de Meta aprobada (proyecto aparte, pendiente de aprobación). | Melina no pudo conectar sus redes: el prototipo solo simulaba la conexión. Regla del proyecto: ningún botón falso presentado como terminado. |
+| 2026-11-17 | Conexiones reales con **Meta (Instagram y Facebook)** y **Google Ads**, solo lectura: función `conexiones` + actualización diaria a las 6, permisos de acceso en `private/*` (cerrado al navegador), datos visibles en `social/*` y `ads/*`, dinero de Google Ads en centavos. Meta en modo desarrollo (alcanza para las cuentas propias de Melina, sin revisión). Ver `docs/conexiones.md`. | Aprobado por Melina («Si por favor, y sumemos Google ads»). Cafelito tiene cuenta de empresa y ella es propietaria. |
 
 ## Pendientes de definir
-- Conexión real con Meta (Instagram y Facebook): app de Meta, permisos y revisión de Meta. Requiere plan y aprobación.
+- Conexiones Meta y Google Ads: crear secretos y publicar (falta autorización); Melina crea la app de Meta, el cliente OAuth de Google y pide el token de desarrollador con acceso básico.
 - Validación con el equipo web usando `cafelito-web-test`; después, rotar la clave de pruebas y crear la de producción `cafelito-web`.
 - Stack a largo plazo: se reevalúa cuando haya clientes externos (hoy Firebase alcanza).
 - Modelo multiempresa para agencias (Organización → Espacios de trabajo).

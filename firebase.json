@@ -9,6 +9,13 @@
     "cleanUrls": true,
     "rewrites": [
       {
+        "source": "/api/v1/connect/**",
+        "function": {
+          "functionId": "conexiones",
+          "region": "southamerica-east1"
+        }
+      },
+      {
         "source": "/api/v1/**",
         "function": {
           "functionId": "api",
@@ -67,7 +74,8 @@
         "node_modules",
         "test",
         ".secret.local",
-        "*.log"
+        "*.log",
+        ".env.local"
       ]
     }
   ],
