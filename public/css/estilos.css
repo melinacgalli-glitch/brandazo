@@ -386,6 +386,11 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 .persona-top{display:flex;gap:12px;align-items:flex-start}
 .persona-top h3{overflow-wrap:anywhere}
 .persona-top .grow{flex:1}
+.persona-actions{display:flex;gap:4px;align-items:center;flex:none}
+.persona-name{all:unset;cursor:pointer;font:inherit}
+.persona-name:hover{color:var(--magenta-text)}
+.persona-name:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px;border-radius:4px}
+@media (max-width:420px){.persona-actions .btn{padding:0 10px}}
 .persona-units{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .persona-role{font-size:14px;line-height:21px;color:var(--ink-muted);margin:0}
 .persona-grid{grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr))}

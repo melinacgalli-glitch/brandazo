@@ -197,8 +197,8 @@ function avInk(hex){ const h=(hex||'#85858F').replace('#',''); const [r,g,b]=[0,
 function personaCard(p){
   pNorm(p); const col=brandOf(p.brands[0]).color, camps=pCamps(p);
   return `<article class="card persona"><div class="persona-top"><div class="persona-av" style="background:${col};color:${avInk(col)}">${initials(p.name)}</div>
-   <div class="grow" style="min-width:0"><h3>${esc(p.name)}${p.age?`, ${esc(p.age)}`:''}</h3><div class="persona-units">${p.brands.map(b=>`<span class="badge"><i class="sdot" style="background:${brandOf(b).color}"></i>${esc(b)}</span>`).join('')||'<span class="small muted">Sin unidad de negocio</span>'}</div></div>
-   <button class="icon-btn" data-pmenu="${p.id}" aria-label="Opciones de ${esc(p.name)}">${ic('more')}</button></div>
+   <div class="grow" style="min-width:0"><h3><button type="button" class="persona-name" data-pedit="${p.id}" title="Editar">${esc(p.name)}${p.age?`, ${esc(p.age)}`:''}</button></h3><div class="persona-units">${p.brands.map(b=>`<span class="badge"><i class="sdot" style="background:${brandOf(b).color}"></i>${esc(b)}</span>`).join('')||'<span class="small muted">Sin unidad de negocio</span>'}</div></div>
+   <div class="persona-actions"><button class="btn btn-sm" data-pedit="${p.id}">${ic('edit')} Editar</button><button class="icon-btn" data-pdel="${p.id}" aria-label="Eliminar a ${esc(p.name)}" title="Eliminar">${ic('trash')}</button></div></div>
   ${p.role?`<p class="persona-role">${esc(p.role)}</p>`:''}
   ${p.quote?`<div class="quote">“${esc(p.quote)}”</div>`:''}
   <dl>${p.goals?`<div><dt>Objetivos</dt><dd>${esc(p.goals)}</dd></div>`:''}${p.pains?`<div><dt>Frustraciones</dt><dd>${esc(p.pains)}</dd></div>`:''}
@@ -234,13 +234,10 @@ function personaForm(p){
     const sel=$$('#pcp input:checked').map(i=>i.value); M().campaigns.forEach(c=>{ const has=(c.personas||[]).includes(t.id), want=sel.includes(c.id); if(want&&!has) c.personas=(c.personas||[]).concat(t.id); if(!want&&has) c.personas=c.personas.filter(x=>x!==t.id); });
     closeLayer(); render(); toast(isNew?'Buyer persona creada':'Cambios guardados'); };
 }
-function personaMenu(btn){
-  const p=M().personas.find(x=>x.id===btn.dataset.pmenu); if(!p) return;
-  const m=popMenu(btn,`<button class="menu-item" data-a="edit">${ic('edit')}<span class="grow">Editar</span></button><button class="menu-item" data-a="del" style="color:var(--danger)">${ic('trash')}<span class="grow">Eliminar</span></button>`,'right');
-  m.querySelector('[data-a="edit"]').onclick=()=>{ closeLayer(); personaForm(p); };
-  m.querySelector('[data-a="del"]').onclick=()=>{ closeLayer(); const camps=pCamps(p);
-    modal('¿Eliminar la buyer persona?',`<p>Vas a eliminar a <b>${esc(p.name)}</b>.${camps.length?` Se va a desvincular de ${camps.length} campaña${camps.length>1?'s':''}.`:''}</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-danger" id="okdel">Eliminar</button>`);
-    $('#okdel').onclick=()=>{ const m2=M(); m2.personas=m2.personas.filter(x=>x!==p); m2.campaigns.forEach(c=>{ if(c.personas) c.personas=c.personas.filter(x=>x!==p.id); }); closeLayer(); render(); toast('Buyer persona eliminada'); }; };
+function personaDelete(p){
+  const camps=pCamps(p);
+  modal('¿Eliminar la buyer persona?',`<p>Vas a eliminar a <b>${esc(p.name)}</b>.${camps.length?` Se va a desvincular de ${camps.length} campaña${camps.length>1?'s':''}.`:''}</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-danger" id="okdel">Eliminar</button>`);
+  $('#okdel').onclick=()=>{ const m2=M(); m2.personas=m2.personas.filter(x=>x!==p); m2.campaigns.forEach(c=>{ if(c.personas) c.personas=c.personas.filter(x=>x!==p.id); }); closeLayer(); render(); toast('Buyer persona eliminada'); };
 }
 function stPos(){
   const b=curBrand(); const m=M();
@@ -293,7 +290,9 @@ function bEstrategia(tab){
   on('#newkpi',()=>ensureBrand(()=>{ modal('Agregar KPI',`${F('kn','Indicador','placeholder="Ej.: Alcance mensual"')}<div class="form-grid"><div class="field"><label for="kc">Canal</label><select class="select" id="kc">${CHANNELS.concat(['Meta Ads','Google Ads']).map(c=>`<option>${c}</option>`).join('')}</select></div>${F('kt','Meta','type="number" min="0"')}</div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="ok">Agregar</button>`);
    $('#ok').onclick=()=>{ if(!fieldErr($('#kn'),!$('#kn').value.trim()?'Escribí el indicador':''))return; M().kpis.push({name:$('#kn').value.trim(),channel:$('#kc').value,brand:(curBrand()||S.brands[0]||{name:''}).name,target:+$('#kt').value||0,actual:0,unit:''}); closeLayer(); render(); toast('KPI agregado'); }; }));
   on('#newpersona',()=>ensureBrand(()=>personaForm()));
-  $$('[data-pmenu]').forEach(b=>b.onclick=()=>personaMenu(b));
+  const pById=id=>M().personas.find(x=>x.id===id);
+  $$('[data-pedit]').forEach(b=>b.onclick=()=>{ const p=pById(b.dataset.pedit); if(p) personaForm(p); });
+  $$('[data-pdel]').forEach(b=>b.onclick=()=>{ const p=pById(b.dataset.pdel); if(p) personaDelete(p); });
   $$('[data-pickbrand]').forEach(b=>b.onclick=()=>{S.brand=+b.dataset.pickbrand;render()});
   if($('#fpos')){ const b=curBrand(); const m=M(); m.positioning[b.name]=m.positioning[b.name]||{statement:'',value:'',pillars:[],diff:''}; const p=m.positioning[b.name];
     $('#fpos').onsubmit=e=>{e.preventDefault(); p.statement=$('#ps').value; p.value=$('#pv').value; p.diff=$('#pd').value; render(); toast('Posicionamiento guardado'); };
