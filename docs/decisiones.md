@@ -23,10 +23,11 @@ _Última actualización: 2026-11-17_
 | 2026-11-17 | Servidor de la integración en Firebase Cloud Functions 2.ª gen (`southamerica-east1`, Node 22) con Firestore por empresa (`tenants/{id}`); una transacción por cotización; reglas de Firestore cerradas al navegador hasta la Etapa 0; claves en Secret Manager (`INTEGRATION_KEYS`). Ver `docs/servidor.md`. | Fase 2 aprobada por Melina. Probado en el emulador (22 pruebas); falta plan Blaze, `brandazo-staging` y permisos para publicar. |
 | 2026-11-17 | Sin proyecto de pruebas aparte: todo en `brandazo`. Las pruebas usan la misma dirección con la clave `cafelito-web-test`, que escribe en la empresa ficticia `cafelito-pruebas`; la falla simulada solo funciona con esa clave. | Decisión de Melina: más simple y una sola facturación. Cuando haya clientes reales se evalúa un proyecto de pruebas. |
 | 2026-11-17 | Servidor publicado en `brandazo` (función `api`, southamerica-east1) con la dirección `www.brandazo.com.ar/api/v1/...`; reglas de Firestore publicadas (cerrada al navegador); clave `cafelito-web-test` en Secret Manager. Probado contra el servidor real: 18/18. | Autorizado por Melina («sí»). La clave de producción se crea después de la validación con el equipo web. |
+| 2026-11-17 | La clave de pruebas `cafelito-web-test` se la pasa Melina directamente al equipo web (sin herramientas extra). Se rota al terminar las pruebas; la de producción se entrega sin pasar por chat ni mail. | Decisión de Melina: por ahora es la única usuaria y la clave de pruebas solo escribe en la empresa ficticia. |
 
 ## Pendientes de definir
 - Responsable comercial de eventos de Cafelito (regla de asignación inicial).
-- Validación con el equipo web usando `cafelito-web-test`; después, clave de producción `cafelito-web`.
+- Validación con el equipo web usando `cafelito-web-test`; después, rotar la clave de pruebas y crear la de producción `cafelito-web`.
 - Stack definitivo de la Etapa 0 (propuesta: Next.js + NestJS + PostgreSQL + Better Auth).
 - Modelo multiempresa para agencias (Organización → Espacios de trabajo).
 - Servicio de email, textos de Términos y Privacidad.
