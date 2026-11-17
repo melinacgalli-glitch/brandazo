@@ -50,7 +50,8 @@ function ajvDetails(errors) {
   });
 }
 
-/** Lee las claves de integración: JSON {"<keyId>": {"secret","tenantId","brand"}} guardado en Secret Manager. */
+/** Lee las claves de integración: JSON {"<keyId>": {"secret","tenantId","brand","test"}} guardado en Secret Manager.
+    «test: true» = clave de pruebas: escribe en una empresa ficticia y habilita la falla simulada. */
 function loadKeys(raw) { try { const k = JSON.parse(raw || '{}'); return k && typeof k === 'object' ? k : {}; } catch { return {}; } }
 
 /**
@@ -83,7 +84,7 @@ async function handleEventQuote(req, deps) {
     if (sigErr) throw new ApiError(401, sigErr, 'La firma no coincide con el cuerpo recibido.');
 
     // Solo en pruebas: simular una caída para probar los reintentos
-    if (deps.staging && req.get('x-brandazo-test-fail') === '503') throw new ApiError(503, 'UNAVAILABLE', 'Falla simulada (solo en pruebas). Reintentá.', { retryable: true });
+    if (key.test === true && req.get('x-brandazo-test-fail') === '503') throw new ApiError(503, 'UNAVAILABLE', 'Falla simulada (solo en pruebas). Reintentá.', { retryable: true });
 
     // Límite de uso por clave (por minuto)
     const minute = Math.floor(now.getTime() / 60000);

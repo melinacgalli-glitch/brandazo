@@ -18,8 +18,7 @@ exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KE
   }
   const out = await handleEventQuote(req, {
     db: getFirestore(), FieldValue, Timestamp,
-    keys: loadKeys(INTEGRATION_KEYS.value()),
-    staging: process.env.BRANDAZO_ENV === 'staging' || process.env.FUNCTIONS_EMULATOR === 'true'
+    keys: loadKeys(INTEGRATION_KEYS.value())
   });
   res.set(out.headers || {}).status(out.status).json(out.body);
 });

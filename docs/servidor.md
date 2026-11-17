@@ -30,7 +30,7 @@ _Última actualización: 2026-11-17 · Fase 2 de la integración del cotizador (
 Todo lo de una cotización se escribe en **una sola transacción**: o queda todo guardado, o nada. El éxito se responde después de confirmar.
 
 ## Secretos
-`INTEGRATION_KEYS` en **Secret Manager**: JSON `{"<keyId>": {"secret": "...", "tenantId": "...", "brand": "..."}}`. Para rotar una clave se agrega otra entrada con otro `keyId`. Nunca en el código, el repositorio, chats ni mails. En el emulador se usa `functions/.secret.local` (ignorado por git) con una clave de prueba.
+`INTEGRATION_KEYS` en **Secret Manager**: JSON `{"<keyId>": {"secret": "...", "tenantId": "...", "brand": "...", "test": true}}`. `test: true` marca la clave de pruebas (empresa ficticia y falla simulada habilitada). Para rotar una clave se agrega otra entrada con otro `keyId`. Nunca en el código, el repositorio, chats ni mails. En el emulador se usa `functions/.secret.local` (ignorado por git) con una clave de prueba.
 
 ## Pruebas
 ```bash
@@ -46,12 +46,12 @@ Cubren los pasos 2 a 9 del procedimiento de validación del contrato, 5 reenvío
 
 ## Para publicar (pendiente)
 1. Plan **Blaze** en el proyecto (pago por uso).
-2. Proyecto de pruebas `brandazo-staging` con Hosting, Firestore y Functions.
-3. Cuenta de servicio con permisos para Functions, Cloud Run, Firestore y Secret Manager.
+2. Base Firestore en `brandazo` (southamerica-east1, modo producción). **No hay proyecto de pruebas aparte**: la clave `cafelito-web-test` (`test: true`) escribe en la empresa ficticia `cafelito-pruebas`.
+3. Cuenta de servicio `claude-deploy` con Editor, Administrador de Cloud Functions, Administrador de Cloud Run, Administrador de Secret Manager y Usuario de cuenta de servicio; clave nueva (la anterior se borra).
 4. Crear el secreto `INTEGRATION_KEYS` y la clave `cafelito-web-test` (entrega al equipo web por canal seguro).
 5. Activar TTL en Firestore para `expireAt` (lo publica `firestore.indexes.json`).
 6. Agregar a `firebase.json` el rewrite de Hosting `/api/v1/**` → función `api` (región `southamerica-east1`) **recién cuando la función exista**, para no romper la publicación del sitio.
-7. Publicar primero en `brandazo-staging`, correr el procedimiento de validación con el equipo web y después en producción.
+7. Publicar, correr el procedimiento de validación con la clave de pruebas y recién después entregar la clave de producción (`cafelito-web`, empresa `cafelito`).
 
 ## Notas
 - JSON mal formado: la plataforma responde `400` antes de llegar a Brandazo (sin el formato de error del contrato).

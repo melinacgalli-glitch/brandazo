@@ -4,7 +4,7 @@ _Versión del contrato: **1.0 (borrador 2, con la revisión del equipo web)** ·
 
 Este documento es para el **equipo web de cafelito.com.ar**. Explica cómo enviar a Brandazo cada pedido de presupuesto del cotizador de la barra móvil para que entre como **oportunidad** en el CRM (pipeline **Cafelito Eventos**).
 
-> Estado: el equipo web ya implementó el envío según este contrato. Del lado de Brandazo falta publicar el endpoint y habilitar el ambiente de pruebas (ver sección 9).
+> Estado: el equipo web ya implementó el envío según este contrato. Del lado de Brandazo falta publicar el endpoint y entregar la clave de pruebas (ver sección 9).
 
 ## Cambios del borrador 2
 
@@ -12,6 +12,7 @@ Este documento es para el **equipo web de cafelito.com.ar**. Explica cómo envia
 - `consent` es la **aceptación de promociones**: la web manda el texto exacto de la casilla de promociones. El ejemplo anterior usaba otra frase.
 - Reintentos: se acepta como primera versión el esquema de la web (reintentos durante un minuto y medio y, si no se pudo, aviso por mail). La cola de 24 h queda como mejora.
 - Sección 1 actualizada: la persona ve la confirmación antes de pasar a WhatsApp.
+- No hay un proyecto de pruebas aparte: las pruebas usan la misma dirección con la clave `cafelito-web-test`, que escribe en una empresa ficticia separada.
 
 ## Archivos
 
@@ -43,8 +44,9 @@ Navegador ──► /api/ambulante (servidor web) ──► mail (como hoy)
 
 | | |
 |---|---|
-| Pruebas | `POST https://brandazo-staging.web.app/api/v1/integrations/cafelito/event-quotes` |
-| Producción | `POST https://www.brandazo.com.ar/api/v1/integrations/cafelito/event-quotes` |
+| Dirección | `POST https://www.brandazo.com.ar/api/v1/integrations/cafelito/event-quotes` |
+| Pruebas | La misma dirección con la clave **`cafelito-web-test`**: sus pedidos van a una empresa ficticia («Cafelito (pruebas)»), separada de los datos reales. |
+| Producción | La misma dirección con la clave de producción (se entrega después de validar). |
 | Formato | `Content-Type: application/json`, UTF-8, máximo 32 KB |
 
 ## 3. Autenticación (firma HMAC)
@@ -186,7 +188,7 @@ async function enviarABrandazo(cuerpo: object) {
 
 ## 9. Ambiente de pruebas y procedimiento de validación
 
-Pendiente del lado de Brandazo: proyecto `brandazo-staging`, con datos ficticios y su propia clave (`cafelito-web-test`). Requiere publicar el servidor de Brandazo (plan Blaze de Firebase, funciones y base de datos).
+Las pruebas usan la **misma dirección** con la clave `cafelito-web-test`. Todo lo que se envía con esa clave queda en una empresa ficticia, «Cafelito (pruebas)», separada de los datos reales, y solo esa clave acepta el encabezado de falla simulada (paso 9).
 
 **Entrega del secreto:** solo por un canal seguro (por ejemplo, un enlace de un gestor de contraseñas que se abre una sola vez). **Nunca por chat, mail ni en el repositorio.** El equipo web lo guarda como variable de entorno del servidor.
 
@@ -202,8 +204,8 @@ Pasos para validar (con `herramientas/firmar.mjs enviar …` o desde el servidor
 | 6 | `guests: 30` | `422` con `details` en `event.guests` |
 | 7 | Firma con otro secreto | `401 INVALID_SIGNATURE` |
 | 8 | Timestamp de hace 10 minutos | `401 TIMESTAMP_OUT_OF_RANGE` |
-| 9 | Encabezado `X-Brandazo-Test-Fail: 503` (solo en pruebas) | `503`, y el reintento posterior responde `201` |
-| 10 | Abrir Brandazo (pruebas) → CRM → Cafelito Eventos | La oportunidad aparece en «Nueva cotización» con todos los datos |
+| 9 | Encabezado `X-Brandazo-Test-Fail: 503` (solo con la clave de pruebas) | `503`, y el reintento posterior responde `201` |
+| 10 | Abrir Brandazo → empresa «Cafelito (pruebas)» → CRM → Cafelito Eventos | La oportunidad aparece en «Nueva cotización» con todos los datos |
 
 ## 10. Datos personales y seguridad
 
@@ -217,7 +219,7 @@ Pasos para validar (con `herramientas/firmar.mjs enviar …` o desde el servidor
 - [x] Revisión de este contrato por el equipo web (borrador 2).
 - [x] Reintentos: un minuto y medio y aviso por mail (primera versión).
 - [x] `fbclid` en `attribution` y significado de `consent` (promociones).
-- [ ] Brandazo: publicar el endpoint y habilitar `brandazo-staging` con la clave `cafelito-web-test`.
+- [ ] Brandazo: publicar el endpoint y entregar la clave `cafelito-web-test` por canal seguro.
 - [ ] Cola de pendientes con reintentos de 24 h en la web (mejora).
 - [ ] Cómo compartir futuras versiones de tarifas (propuesta: la web publica `tariffVersion` y avisa los cambios; Brandazo carga la versión nueva).
 - [ ] Responsable comercial de eventos (regla de asignación inicial).

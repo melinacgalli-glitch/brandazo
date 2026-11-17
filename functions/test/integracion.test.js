@@ -152,6 +152,15 @@ test('otros errores del contrato', async t => {
     assert.deepEqual(codes, ['ADDON_NOT_IN_PLAN', 'ESTIMATE_MISMATCH', 'PHONE_NOT_NORMALIZED', 'SHORT_NOTICE']);
     assert.equal(r.body.estimate.status, 'mismatch');
   });
+  await t.test('la clave de producción ignora la falla simulada', async () => {
+    const PROD = 'cafelito-web', q = ejemplo('solicitud-minima.json', { contact: { name: 'Producción', phone: '351 777-3333' } });
+    const raw = JSON.stringify(q), ts = Math.floor(Date.now() / 1000);
+    const res = await fetch(URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Brandazo-Key-Id': PROD, 'X-Brandazo-Timestamp': String(ts), 'X-Brandazo-Signature': sign(KEYS[PROD].secret, ts, Buffer.from(raw)), 'Idempotency-Key': q.quoteId, 'X-Brandazo-Test-Fail': '503' }, body: raw });
+    assert.equal(res.status, 201);
+    const b = await res.json();
+    assert.ok((await db.collection('tenants').doc(KEYS[PROD].tenantId).collection('opportunities').doc(b.opportunity.id).get()).exists, 'queda en la empresa real');
+    assert.ok(!(await T.collection('opportunities').doc(b.opportunity.id).get()).exists, 'no aparece en la empresa de pruebas');
+  });
   await t.test('registro técnico sin datos personales', async () => {
     const logs = await T.collection('integrationLog').get();
     assert.ok(logs.size > 10);
