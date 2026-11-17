@@ -1,6 +1,6 @@
 # Conexiones reales: Meta (Instagram y Facebook) y Google Ads
 
-_Última actualización: 2026-11-17 · Estado: programado y probado con simuladores (servidor 7/7, navegador 18/18). Falta: crear los secretos `META_APP` y `GOOGLE_ADS`, publicar, y que Melina cree las apps de Meta y Google (pasos abajo)._
+_Última actualización: 2026-11-17 · Estado: **publicado** (funciones `conexiones` y `sincronizarConexiones`, reglas, sitio). Secretos `META_APP` y `GOOGLE_ADS` creados con `{}`: falta que Melina cree las apps y cargue los datos (pasos abajo); después se vuelven a publicar las funciones._
 
 ## Qué hace
 - **Redes sociales** (empresa en la nube): botón «Conectar Instagram y Facebook». Trae, por cada página de Facebook y su Instagram profesional: seguidores, cantidad de publicaciones, últimas 25 publicaciones (me gusta, comentarios y, en Instagram, alcance de las 12 más recientes) y alcance diario de 28 días. Cada cuenta se asigna a una marca (filtra con el selector de marcas).

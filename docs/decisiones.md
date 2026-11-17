@@ -33,7 +33,7 @@ _Última actualización: 2026-11-17_
 | 2026-11-17 | Conexiones reales con **Meta (Instagram y Facebook)** y **Google Ads**, solo lectura: función `conexiones` + actualización diaria a las 6, permisos de acceso en `private/*` (cerrado al navegador), datos visibles en `social/*` y `ads/*`, dinero de Google Ads en centavos. Meta en modo desarrollo (alcanza para las cuentas propias de Melina, sin revisión). Ver `docs/conexiones.md`. | Aprobado por Melina («Si por favor, y sumemos Google ads»). Cafelito tiene cuenta de empresa y ella es propietaria. |
 
 ## Pendientes de definir
-- Conexiones Meta y Google Ads: crear secretos y publicar (falta autorización); Melina crea la app de Meta, el cliente OAuth de Google y pide el token de desarrollador con acceso básico.
+- Conexiones Meta y Google Ads (publicadas, autorizado por Melina): Melina crea la app de Meta, el cliente OAuth de Google y pide el token de desarrollador con acceso básico.
 - Validación con el equipo web usando `cafelito-web-test`; después, rotar la clave de pruebas y crear la de producción `cafelito-web`.
 - Stack a largo plazo: se reevalúa cuando haya clientes externos (hoy Firebase alcanza).
 - Modelo multiempresa para agencias (Organización → Espacios de trabajo).
