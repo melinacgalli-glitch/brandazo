@@ -106,7 +106,13 @@ service cloud.firestore {
       // Solo lectura para el equipo; las escribe el servidor
       match /contacts/{id} { allow read: if isMember(t); allow write: if false; }
       match /eventQuotes/{id} { allow read: if isMember(t); allow write: if false; }
-      match /tasks/{id} { allow read: if isMember(t); allow write: if false; }
+      match /tasks/{id} {
+        allow read: if isMember(t);
+        // El equipo solo marca la tarea como hecha
+        allow update: if isMember(t) && onlyChanges(['status', 'doneAt', 'doneBy', 'doneByName'])
+          && request.resource.data.status == 'hecha' && request.resource.data.doneBy == request.auth.uid;
+        allow create, delete: if false;
+      }
       match /notifications/{id} { allow read: if isMember(t); allow write: if false; }
       match /pipelines/{id} { allow read: if isMember(t); allow write: if false; }
       // Redes y anuncios conectados (los escribe el servidor). Los permisos de acceso van en private/*: nunca se leen desde el navegador.

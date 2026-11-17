@@ -153,3 +153,13 @@ test('redes y anuncios: el equipo ve los datos, nunca los permisos de acceso', a
   await assertSucceeds(setDoc(doc(db(dueno), 'tenants/cafelito/settings/social'), { brandByAccount: { Instagram_1: 'Cafelito Ambulante' }, updatedAt: serverTimestamp(), updatedBy: 'u-dueno' }));
   await assertFails(setDoc(doc(db(ventas), 'tenants/cafelito/settings/social'), { brandByAccount: {}, updatedAt: serverTimestamp(), updatedBy: 'u-ventas' }));
 });
+
+test('tareas: el equipo las marca como hechas, nada más', async () => {
+  await env.withSecurityRulesDisabled(async ctx => { await setDoc(doc(ctx.firestore(), 'tenants/cafelito/tasks/t1'), { title: 'Primer contacto', status: 'pendiente', assignee: 'Melina Galli' }); });
+  const ref = doc(db(ventas), 'tenants/cafelito/tasks/t1');
+  await assertFails(updateDoc(ref, { assignee: 'Otro' }));
+  await assertFails(updateDoc(ref, { status: 'hecha', doneAt: serverTimestamp(), doneBy: 'u-dueno' }));
+  await assertSucceeds(updateDoc(ref, { status: 'hecha', doneAt: serverTimestamp(), doneBy: 'u-ventas', doneByName: 'Ventas' }));
+  await assertFails(deleteDoc(ref));
+  await assertFails(updateDoc(doc(db(extrana), 'tenants/cafelito/tasks/t1'), { status: 'hecha', doneAt: serverTimestamp(), doneBy: 'u-ext' }));
+});

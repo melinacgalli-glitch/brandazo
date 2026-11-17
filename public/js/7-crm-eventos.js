@@ -28,11 +28,15 @@ function evListen(){
     Promise.all(miss.map(id=>fbDb.doc(`tenants/${c.tid}/contacts/${id}`).get().then(s=>{ if(s.exists) EV.contacts[id]={id,...s.data()}; }).catch(()=>{}))).then(()=>evRefresh());
     evRefresh();
   },e=>{ EV.loaded=true; EV.err=e.code==='permission-denied'?'No tenés permiso para ver las cotizaciones de esta empresa.':'No se pudo conectar con la nube.'; evRefresh(); });
+  (EV.more||[]).forEach(f=>f()); EV.tasks=[]; EV.contactsLoaded=false; EV.tasksLoaded=false;
+  EV.more=[ fbDb.collection(`tenants/${c.tid}/contacts`).onSnapshot(sn=>{ sn.forEach(d=>EV.contacts[d.id]={id:d.id,...d.data()}); EV.contactsLoaded=true; evRefresh(); },()=>{ EV.contactsLoaded=true; evRefresh(); }),
+    fbDb.collection(`tenants/${c.tid}/tasks`).onSnapshot(sn=>{ EV.tasks=sn.docs.map(d=>({id:d.id,...d.data()})); EV.tasksLoaded=true; evRefresh(); },()=>{ EV.tasksLoaded=true; evRefresh(); }) ];
+  C.unsub.push(()=>{ (EV.more||[]).forEach(f=>f()); EV.more=[]; });
   C.unsub.push(()=>{ if(EV.unsub){ EV.unsub(); EV.unsub=null; EV.tid=null; } });
   fbDb.doc(`tenants/${c.tid}/settings/cafelito-eventos`).get().then(s=>{ EV.settings=s.exists?s.data():{}; evRefresh(); }).catch(()=>{ EV.settings={}; });
 }
 function evRefresh(){
-  if(!/^#\/app\/crm(\/eventos)?\/?$/.test(location.hash)) return;
+  if(!/^#\/app\/crm(\/(eventos|contactos|actividades))?\/?$/.test(location.hash)) return;
   if($('#layer').children.length){ EV.dirty=true; return; } // no cerrar la ficha abierta
   render();
 }
@@ -59,10 +63,12 @@ function vEventos(){
   return stats+bar+`<div class="kanban">${EV_STAGES.map(([id,name])=>{ const items=all.filter(o=>o.stage===id);
     return `<section class="kcol" aria-label="${name}"><div class="kcol-h"><b>${name}<span class="badge">${items.length}</span></b><div class="small muted">${evMoney(sum(items))}</div></div><div class="kcol-b">
     ${items.map(o=>{ const t=evTs(o.nextFollowUpAt), lt=!['ganada','perdida'].includes(o.stage)&&t&&t.getTime()<now, ev=o.event||{};
-      return `<button class="kcard ${lt?'late':''}" data-op="${o.id}"><b>${esc(evName(o))}</b>
-       <div class="row"><span>${esc(ev.type||'Evento')} · ${ev.guests||'?'} inv.</span><span class="amt">${evMoney(o.estimate?.brandazoSubtotalMinor)}</span></div>
-       <div class="row"><span>${evDate(ev.date)}</span>${o.owner?`<span class="avatar sm" title="${esc(o.owner)}" style="width:22px;height:22px;font-size:10px">${initials(o.owner)}</span>`:'<span class="small muted">Sin asignar</span>'}</div>
-       ${lt?`<span class="tagc" style="color:var(--warning)">Seguimiento vencido</span>`:''}${(o.warnings||[]).map(w=>`<span class="tagc">${esc(EV_WARN[w]||w)}</span>`).join('')}${o.lostReason?`<span class="tagc">${esc(o.lostReason)}</span>`:''}</button>`; }).join('')||'<p class="small muted" style="text-align:center;padding:16px 0">Sin cotizaciones</p>'}</div></section>`; }).join('')}</div>`;
+      const tags=[lt?`<span class="tagc ev-tag" style="color:var(--warning)">Seguimiento vencido</span>`:'',...(o.warnings||[]).map(w=>`<span class="tagc ev-tag">${esc(EV_WARN[w]||w)}</span>`),o.lostReason?`<span class="tagc ev-tag">${esc(o.lostReason)}</span>`:''].join('');
+      return `<button class="kcard ev-card ${lt?'late':''}" data-op="${o.id}"><b class="ev-name">${esc(evName(o))}</b>
+       <span class="ev-amt">${evMoney(o.estimate?.brandazoSubtotalMinor)}</span>
+       <span class="ev-meta">${esc(ev.type||'Evento')} · ${ev.guests||'?'} invitados</span>
+       <span class="ev-meta">${evDate(ev.date)} · ${o.owner?esc(o.owner):'Sin asignar'}</span>
+       ${tags?`<span class="ev-tags">${tags}</span>`:''}</button>`; }).join('')||'<p class="small muted" style="text-align:center;padding:16px 0">Sin cotizaciones</p>'}</div></section>`; }).join('')}</div>`;
 }
 function bEventos(){
   const s=$('#evow'); if(s) s.onchange=()=>{ EV.owner=s.value; render(); };
@@ -147,15 +153,64 @@ function evConfig(){
     catch(err){ e.currentTarget.classList.remove('is-loading'); toast(err.code==='permission-denied'?'Solo el Dueño o un Admin pueden cambiar esto.':'No se pudo guardar.'); } };
 }
 
+/* ---------- Contactos y actividades reales (empresas en la nube) ---------- */
+const CRM_NUBE_TABS=[['eventos','Cafelito Eventos'],['contactos','Contactos'],['actividades','Actividades']];
+let evQ='', evType='';
+const evWon=c=>EV.ops.some(o=>o.contactId===c.id&&o.stage==='ganada');
+function vContactosNube(){
+  if(!EV.contactsLoaded) return `<div class="card empty"><p class="muted">Cargando contactos…</p></div>`;
+  const all=Object.values(EV.contacts), q=evQ.toLowerCase();
+  const list=all.filter(c=>(!evType||(evType==='Cliente'?evWon(c):!evWon(c)))&&(!q||((c.name||'')+(c.email||'')+(c.phoneDisplay||c.phoneRaw||'')).toLowerCase().includes(q))).sort((a,b)=>((b.lastQuoteAt&&b.lastQuoteAt.toMillis())||0)-((a.lastQuoteAt&&a.lastQuoteAt.toMillis())||0));
+  const consent=all.filter(c=>c.marketingConsent&&c.marketingConsent.granted).length;
+  if(!all.length) return `<div class="card empty"><div class="eico">${ic('users')}</div><h3>Todavía no hay contactos</h3><p class="muted small">Cada persona que pide presupuesto en cafelito.com.ar queda acá como contacto, sin duplicarse aunque pida varias veces.</p></div>`;
+  return `<div class="stat-grid"><div class="stat"><div class="l">Contactos</div><div class="v">${all.length}</div></div><div class="stat"><div class="l">Clientes</div><div class="v">${all.filter(evWon).length}</div><div class="d">con un evento ganado</div></div><div class="stat"><div class="l">Leads</div><div class="v">${all.filter(c=>!evWon(c)).length}</div><div class="d">todavía sin evento ganado</div></div><div class="stat"><div class="l">Aceptan promociones</div><div class="v">${consent}</div><div class="d">de ${all.length}</div></div></div>
+  <div class="toolbar"><label class="search-in">${ic('search')}<span class="sr">Buscar</span><input class="input" id="evq" placeholder="Buscar por nombre, email o teléfono" value="${esc(evQ)}"></label>
+   <div class="seg">${[['','Todos'],['Lead','Leads'],['Cliente','Clientes']].map(([k,l])=>`<button data-evty="${k}" aria-pressed="${evType===k}">${l}</button>`).join('')}</div></div>
+  <div class="table-wrap"><table class="t"><thead><tr><th>Contacto</th><th class="hide-m">Teléfono</th><th>Tipo</th><th class="hide-m">Origen</th><th style="text-align:right">Pedidos</th><th class="hide-m">Último pedido</th></tr></thead><tbody>
+  ${list.map(c=>`<tr data-evc="${c.id}" style="cursor:pointer"><td><div class="person"><span class="avatar sm">${initials(c.name)}</span><div><b>${esc(c.name||'Sin nombre')}</b><div class="small muted">${esc(c.email||'Sin email')}</div></div></div></td><td class="hide-m small">${esc(c.phoneDisplay||c.phoneRaw||'Sin datos')}</td><td><span class="badge ${evWon(c)?'badge-ok':''}">${evWon(c)?'Cliente':'Lead'}</span></td><td class="hide-m small">${esc((c.firstSource&&c.firstSource.channel)||'Sin datos')}</td><td style="text-align:right">${c.quoteCount||1}</td><td class="hide-m small muted">${evWhen(c.lastQuoteAt)}</td></tr>`).join('')||`<tr><td colspan="6"><p class="small muted" style="padding:12px">No hay contactos con esos filtros.</p></td></tr>`}
+  </tbody></table></div>`;
+}
+function evContacto(id){
+  const c=EV.contacts[id]; if(!c) return; const ops=EV.ops.filter(o=>o.contactId===id).sort((a,b)=>String(b.event?.date).localeCompare(String(a.event?.date)));
+  const digits=(c.phoneE164||'').replace(/\D/g,''), fs=c.firstSource||{}, at=fs.attribution||{};
+  drawerWide(`<div class="dr-head"><span class="avatar">${initials(c.name)}</span><div style="flex:1;min-width:0"><b style="font-size:16px">${esc(c.name||'Sin nombre')}</b><div class="small muted">${evWon(c)?'Cliente':'Lead'} · ${esc(c.brand||'')}</div></div><button class="icon-btn" data-close aria-label="Cerrar">${ic('x')}</button></div>
+  <div style="flex:1;overflow:auto;padding:20px;display:grid;gap:16px;align-content:start">
+   <section class="card"><h3 style="margin-bottom:12px">Datos</h3><dl class="kv"><dt>Teléfono</dt><dd>${esc(c.phoneDisplay||c.phoneRaw||'Sin datos')}</dd><dt>Email</dt><dd>${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'<span class="muted">Sin datos</span>'}</dd><dt>Acepta promociones</dt><dd>${c.marketingConsent?(c.marketingConsent.granted?'Sí':'No'):'<span class="muted">Sin datos</span>'}</dd><dt>Primer contacto</dt><dd>${evWhen(c.createdAt)}</dd><dt>Llegó por</dt><dd>${esc(fs.channel||'Sin datos')}${at.utmSource?' · '+esc(at.utmSource):''}${at.utmCampaign?' · '+esc(at.utmCampaign):''}</dd></dl>
+   ${digits?`<a class="btn btn-primary" style="margin-top:12px" href="https://wa.me/${digits}" target="_blank" rel="noopener">${ic('message')} Escribir por WhatsApp</a>`:''}</section>
+   <section class="card"><h3 style="margin-bottom:12px">Pedidos de presupuesto (${ops.length})</h3>${ops.map(o=>`<button class="kcard ev-card" data-evop="${o.id}" style="margin-bottom:8px;cursor:pointer"><b class="ev-name">${esc(o.event?.type||'Evento')} · ${evDate(o.event?.date)}</b><span class="ev-amt">${evMoney(o.estimate?.brandazoSubtotalMinor)}</span><span class="ev-meta">${esc((EV_STAGES.find(s=>s[0]===o.stage)||[,o.stage])[1])} · ${o.event?.guests||'?'} invitados</span></button>`).join('')||'<p class="small muted">Sin pedidos.</p>'}</section></div>`);
+  $$('[data-evop]').forEach(b=>b.onclick=()=>{ closeLayer(); evFicha(b.dataset.evop); });
+}
+function vActividadesNube(){
+  if(!EV.tasksLoaded) return `<div class="card empty"><p class="muted">Cargando actividades…</p></div>`;
+  const now=Date.now(), due=t=>t.dueAt&&t.dueAt.toMillis?t.dueAt.toMillis():Infinity;
+  const pend=EV.tasks.filter(t=>t.status!=='hecha').sort((a,b)=>due(a)-due(b)), done=EV.tasks.filter(t=>t.status==='hecha').sort((a,b)=>((b.doneAt&&b.doneAt.toMillis())||0)-((a.doneAt&&a.doneAt.toMillis())||0)).slice(0,20);
+  if(!EV.tasks.length) return `<div class="card empty"><div class="eico">${ic('check')}</div><h3>No hay actividades</h3><p class="muted small">Cuando llega una cotización se crea sola la tarea «Primer contacto» con su vencimiento.</p></div>`;
+  const row=t=>{ const late=t.status!=='hecha'&&due(t)<now, op=EV.ops.find(o=>o.id===t.opportunityId);
+    return `<div class="settings-row" style="gap:12px;align-items:center"><div style="flex:1;min-width:0"><b>${esc(t.title||'Tarea')}</b><div class="small ${late?'':'muted'}" style="${late?'color:var(--warning)':''}">${t.status==='hecha'?`Hecha ${evWhen(t.doneAt)}${t.doneByName?' · '+esc(t.doneByName):''}`:`${late?'Vencida · ':'Vence '}${evWhen(t.dueAt)}`} · ${esc(t.assignee||'Sin asignar')}</div></div>
+     ${op?`<button class="btn btn-sm" data-evop="${op.id}">Ver cotización</button>`:''}${t.status!=='hecha'?`<button class="btn btn-sm btn-primary" data-evdone="${t.id}">${ic('check')} Hecha</button>`:''}</div>`; };
+  return `<div class="stat-grid"><div class="stat"><div class="l">Pendientes</div><div class="v">${pend.length}</div></div><div class="stat"><div class="l">Vencidas</div><div class="v" style="${pend.some(t=>due(t)<now)?'color:var(--warning)':''}">${pend.filter(t=>due(t)<now).length}</div></div><div class="stat"><div class="l">Hechas</div><div class="v">${EV.tasks.length-pend.length}</div></div></div>
+  <section class="card" style="margin-bottom:16px"><h3 style="margin-bottom:8px">Pendientes</h3>${pend.map(row).join('')||'<p class="small muted">Nada pendiente.</p>'}</section>
+  ${done.length?`<section class="card"><h3 style="margin-bottom:8px">Hechas</h3>${done.map(row).join('')}</section>`:''}`;
+}
+function bCrmNube(tab){
+  const q=$('#evq'); if(q) q.oninput=()=>{ evQ=q.value; const pos=q.selectionStart; render(); const n=$('#evq'); n.focus(); n.setSelectionRange(pos,pos); };
+  $$('[data-evty]').forEach(b=>b.onclick=()=>{ evType=b.dataset.evty; render(); });
+  $$('[data-evc]').forEach(r=>r.onclick=()=>evContacto(r.dataset.evc));
+  $$('[data-evop]').forEach(b=>b.onclick=()=>evFicha(b.dataset.evop));
+  $$('[data-evdone]').forEach(b=>b.onclick=async()=>{ b.classList.add('is-loading');
+    try{ await fbDb.doc(`tenants/${EV.tid}/tasks/${b.dataset.evdone}`).update({status:'hecha',doneAt:TS(),doneBy:C.user.uid,doneByName:S.user.name||C.user.email}); toast('Actividad hecha'); }
+    catch(e){ b.classList.remove('is-loading'); toast('No se pudo marcar como hecha'); } });
+}
+
 /* ---------- Conexión con el CRM ---------- */
 (function(){
   if(!CLOUD.on) return;
   const _v=vCrm, _b=bCrm;
-  const sync=()=>{ const i=CRM_TABS.findIndex(t=>t[0]==='eventos'), want=!!(S.company&&S.company.cloud);
-    if(want&&i<0) CRM_TABS.unshift(['eventos','Cafelito Eventos']); if(!want&&i>=0) CRM_TABS.splice(i,1); };
-  vCrm=function(tab){ sync(); if(S.company&&S.company.cloud&&(!tab||tab==='eventos')){
-      return pageHead('CRM','Cotizaciones de eventos que llegan desde cafelito.com.ar, en vivo.','')+subTabs('crm',CRM_TABS,'eventos')+vEventos(); }
-    return _v(tab); };
-  bCrm=function(tab){ if(S.company&&S.company.cloud&&(!tab||tab==='eventos')) return bEventos(); return _b(tab); };
+  const cloud=()=>!!(S.company&&S.company.cloud);
+  const tabOf=tab=>CRM_NUBE_TABS.some(t=>t[0]===tab)?tab:'eventos';
+  vCrm=function(tab){ if(!cloud()) return _v(tab); evListen(); const t=tabOf(tab);
+    const sub={eventos:'Cotizaciones de eventos que llegan desde cafelito.com.ar, en vivo.',contactos:'Las personas que pidieron presupuesto, sin duplicados.',actividades:'Tareas de seguimiento de las cotizaciones.'}[t];
+    return pageHead('CRM',sub,'')+subTabs('crm',CRM_NUBE_TABS,t)+(t==='eventos'?vEventos():t==='contactos'?vContactosNube():vActividadesNube()); };
+  bCrm=function(tab){ if(!cloud()) return _b(tab); const t=tabOf(tab); if(t==='eventos') return bEventos(); bCrmNube(t); };
   VIEWS.crm.view=vCrm; VIEWS.crm.bind=bCrm;
 })();

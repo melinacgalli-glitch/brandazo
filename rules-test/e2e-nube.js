@@ -23,7 +23,8 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await put('tenants/cafelito/opportunities/op1', { pipeline: 'cafelito-eventos', stage: 'nueva-cotizacion', title: 'Corporativo · Estudio Contable Ruiz · 2026-12-12', contactId: 'c1', brand: 'Cafelito Ambulante', owner: '',
     event: { type: 'Corporativo', date: '2026-12-12', startTime: '18:00', durationHours: 5, inCapital: true, place: 'Nueva Córdoba', guests: 80 }, selection: { plan: 'full', addonIds: ['cookies'], customizationIds: [], wantsCake: false, wantsColdBrew: true }, dietary: ['Celíacos'], notes: 'Brindis',
     estimate: { status: 'match', tariffVersion: 'web-2026-11', brandazoSubtotalMinor: 142000000, webSubtotalMinor: 142000000, lines: [{ code: 'plan', label: 'Plan Full', quantity: 80, unitMinor: 700000, totalMinor: 56000000 }], transfer: 'included' },
-    source: { channel: 'Web · Cotizador Cafelito Ambulante' }, attribution: { utmSource: 'instagram', utmCampaign: 'eventos-fin-de-ano' }, warnings: ['SHORT_NOTICE'], lostReason: null, nextFollowUpAt: past, createdAt: new Date() });
+    source: { channel: 'Web · Cotizador Cafelito Ambulante' }, attribution: { utmSource: 'instagram', utmCampaign: 'eventos-fin-de-ano' }, warnings: ['SHORT_NOTICE', 'ADDON_NOT_IN_PLAN', 'PHONE_NOT_NORMALIZED', 'ESTIMATE_MISMATCH'], lostReason: null, nextFollowUpAt: past, createdAt: new Date() });
+  await put('tenants/cafelito/tasks/t1', { type: 'primer-contacto', title: 'Primer contacto: Estudio Contable Ruiz', opportunityId: 'op1', contactId: 'c1', assignee: 'Melina Galli', dueAt: past, status: 'pendiente' });
   await put('tenants/cafelito-pruebas/opportunities/opx', { pipeline: 'cafelito-eventos', stage: 'nueva-cotizacion', title: 'Boda · NO DEBE VERSE · 2026-12-20', owner: '', event: { type: 'Boda', date: '2026-12-20', guests: 10 }, estimate: { brandazoSubtotalMinor: 1 } });
 
   const browser = await chromium.launch();
@@ -69,6 +70,22 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok(/1\.420\.000/.test(await page.textContent('.stat-grid')), 'presupuesto en pesos desde centavos ($ 1.420.000)');
   ok(await page.isVisible('text=Seguimiento vencido'), 'marca el seguimiento vencido');
   await page.screenshot({ path: require('os').tmpdir() + '/e2e-tablero.png' });
+  // tarjetas sin desborde en celular
+  await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);
+  ok(await page.evaluate(() => [...document.querySelectorAll('.ev-card, .ev-card *')].every(e => e.scrollWidth <= e.clientWidth + 1 || getComputedStyle(e).overflow === 'visible' && e.getBoundingClientRect().right <= e.closest('.ev-card').getBoundingClientRect().right + 1)), 'tarjeta con 4 avisos: nada sale de la tarjeta en celular');
+  await page.screenshot({ path: require('os').tmpdir() + '/e2e-tarjeta-movil.png' });
+  await page.setViewportSize({ width: 1280, height: 860 });
+  // Contactos y Actividades reales
+  await page.goto(BASE + '#/app/crm/contactos'); await page.waitForSelector('[data-evc=c1]', { timeout: 15000 });
+  ok(!/Tu CRM está vacío/.test(await page.textContent('#root')), 'Contactos muestra los contactos reales (no la pantalla vacía del prototipo)');
+  ok(!(await page.$('[data-demo]')), 'en la empresa real no se ofrecen datos de ejemplo');
+  await page.click('[data-evc=c1]'); await page.waitForSelector('[data-evop=op1]'); ok(true, 'la ficha del contacto lista sus pedidos'); await page.keyboard.press('Escape');
+  await page.goto(BASE + '#/app/crm/actividades'); await page.waitForSelector('[data-evdone=t1]', { timeout: 15000 });
+  ok(/Vencida/.test(await page.textContent('#root')), 'Actividades: «Primer contacto» vencida');
+  await page.click('[data-evdone=t1]'); await page.waitForTimeout(1500);
+  const tk = await get('tenants/cafelito/tasks/t1'); ok(tk.fields.status.stringValue === 'hecha', 'marcar como hecha se guarda');
+  await page.goto(BASE + '#/app/crm/leads'); await page.waitForSelector('.kanban', { timeout: 15000 }); ok(true, 'una solapa vieja (Leads) cae en Cafelito Eventos en vez de la pantalla vacía');
+  await page.goto(BASE + '#/app/crm'); await page.waitForSelector('.kanban');
   await page.click('[data-op=op1]'); await page.waitForSelector('#evsave');
   const href = await page.getAttribute('a[href^="https://wa.me/"]', 'href'); ok(href && href.startsWith('https://wa.me/5493515550187'), 'botón de WhatsApp con el teléfono normalizado');
   await page.waitForTimeout(600); await page.screenshot({ path: require('os').tmpdir() + '/e2e-ficha.png' }); await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); await page.screenshot({ path: require('os').tmpdir() + '/e2e-ficha-movil.png' }); await page.setViewportSize({ width: 1280, height: 860 });

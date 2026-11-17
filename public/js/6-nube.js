@@ -275,6 +275,9 @@ shell=function(active,title,inner){
   return CLOUD.on?h.replace('<button class="search" id="cmdk">',tag.replace('class="badge','class="desk badge')+'<button class="search" id="cmdk">'):h;
 };
 
+/* En empresas de la nube no se ofrece cargar datos de ejemplo: se mezclarían con los reales y los vería el equipo */
+if(CLOUD.on){ const _demoBtn=demoBtn; demoBtn=function(){ return S.company&&S.company.cloud?'':_demoBtn(); }; }
+
 /* ---------- Conexiones con redes y servicios: todavía no hay ninguna real ----------
    En el prototipo se simulaban (cuentas y seguidores inventados). En la versión real no se simula:
    se avisa con claridad y no se guarda nada. La única integración real hoy es el cotizador de Cafelito. */

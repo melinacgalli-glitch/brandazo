@@ -904,3 +904,11 @@ input[type=date],input[type=time]{cursor:pointer}
 .ed-saved{display:inline-flex;align-items:center;gap:4px;color:var(--success);opacity:0;transition:opacity .3s}
 .ed-saved.on{opacity:1}
 .ed-saved .ico{width:14px;height:14px}
+
+/* CRM · Cafelito Eventos: tarjetas que no se desbordan (nombre, importe, datos y avisos en líneas propias) */
+.ev-card{gap:4px;min-width:0}
+.ev-card .ev-name{overflow-wrap:anywhere}
+.ev-card .ev-amt{font-family:var(--font-mono);font-size:14px;color:var(--ink)}
+.ev-card .ev-meta{font-size:12px;color:var(--ink-muted);overflow-wrap:anywhere}
+.ev-card .ev-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.ev-card .ev-tag{white-space:normal;max-width:100%;line-height:16px;padding:2px 7px}
