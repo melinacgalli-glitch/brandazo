@@ -4,6 +4,9 @@ Plataforma SaaS de marketing y ventas: **marketing y ventas, a un comando.**
 
 ## Estado
 
+Publicado en **https://www.brandazo.com.ar** (también `brandazo.com.ar`, que redirige a www, y `brandazo.web.app`).
+DNS en Cloudflare (solo DNS, sin proxy), dominio delegado desde NIC Argentina.
+
 Versión 0.3 — **prototipo navegable** publicado en Firebase Hosting.
 Lo que se carga queda guardado **en el navegador** de quien lo usa (no se comparte entre
 computadoras ni personas). Desde el menú de usuario se pueden borrar esos datos.

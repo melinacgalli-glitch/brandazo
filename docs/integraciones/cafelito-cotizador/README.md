@@ -39,7 +39,7 @@ Navegador ──► /api/ambulante (servidor web) ──► mail (como hoy)
 | | |
 |---|---|
 | Pruebas | `POST https://brandazo-staging.web.app/api/v1/integrations/cafelito/event-quotes` |
-| Producción | `POST https://brandazo.web.app/api/v1/integrations/cafelito/event-quotes` |
+| Producción | `POST https://www.brandazo.com.ar/api/v1/integrations/cafelito/event-quotes` |
 | Formato | `Content-Type: application/json`, UTF-8, máximo 32 KB |
 
 ## 3. Autenticación (firma HMAC)

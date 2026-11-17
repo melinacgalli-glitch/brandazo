@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://brandazo.web.app/schemas/integrations/error.v1.json",
+  "$id": "https://www.brandazo.com.ar/schemas/integrations/error.v1.json",
   "title": "Error de integración",
   "description": "Formato único de error para todos los endpoints de integración de Brandazo.",
   "type": "object",

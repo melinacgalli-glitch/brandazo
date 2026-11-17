@@ -20,7 +20,7 @@ info:
 servers:
   - url: https://brandazo-staging.web.app/api/v1
     description: Ambiente de pruebas (datos ficticios, clave de pruebas)
-  - url: https://brandazo.web.app/api/v1
+  - url: https://www.brandazo.com.ar/api/v1
     description: Producción
 security:
   - firmaHmac: []

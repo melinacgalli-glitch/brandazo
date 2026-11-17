@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://brandazo.web.app/schemas/integrations/cafelito/event-quote.request.v1.json",
+  "$id": "https://www.brandazo.com.ar/schemas/integrations/cafelito/event-quote.request.v1.json",
   "title": "Cotización de Cafelito Ambulante (solicitud)",
   "description": "Cuerpo que el servidor de cafelito.com.ar envía a Brandazo por cada pedido de presupuesto del cotizador de la barra móvil. Los campos de 'event', 'selection', 'dietary', 'notes' y 'contact' corresponden 1 a 1 a los que el cotizador ya arma hoy (inspeccionado el 2026-11-17). 'estimate', 'attribution', 'consent' y 'contact.email' NO existen hoy en el cotizador: son opcionales y quedan para que el equipo web los agregue.",
   "type": "object",

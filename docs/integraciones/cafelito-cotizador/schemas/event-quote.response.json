@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://brandazo.web.app/schemas/integrations/cafelito/event-quote.response.v1.json",
+  "$id": "https://www.brandazo.com.ar/schemas/integrations/cafelito/event-quote.response.v1.json",
   "title": "Cotización de Cafelito Ambulante (respuesta de éxito)",
   "description": "Se devuelve SOLO después de guardar la cotización, el contacto y la oportunidad. 201 la primera vez; 200 con status «duplicate» si llega de nuevo el mismo Idempotency-Key con el mismo cuerpo.",
   "type": "object",
