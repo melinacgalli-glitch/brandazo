@@ -18,6 +18,16 @@ const F_TEMPLATES={
   pauta:{t:'Pauta completa',d:'Clics → Leads → Oportunidades → Ventas.',st:[['Clics','clic'],['Leads','lead'],['Oportunidades','oportunidad'],['Ventas','conversion']]},
   blank:{t:'En blanco',d:'Solo la conversión final. Sumás las etapas que quieras.',st:[['Conversiones','conversion']]}
 };
+/* Tasas de referencia (promedios generales de marketing digital) para que el funnel calcule desde el primer momento.
+   Se muestran como «referencia» hasta que la persona las reemplace por las suyas. */
+const F_REF={'alcance>clic':1.5,'clic>lead':3,'lead>oportunidad':25,'oportunidad>conversion':20,'lead>conversion':20,'clic>conversion':2,'clic>oportunidad':1,'alcance>lead':0.05,'alcance>conversion':0.03,'alcance>oportunidad':0.02};
+const F_SCF={cons:0.7,esp:1,opt:1.3};
+function fRefRate(prevType,type,k){ const r=F_REF[prevType+'>'+type]; if(!r) return null; return Math.min(100,Math.round(r*F_SCF[k]*100)/100); }
+function fFillRef(f,ids){   // completa solo tasas vacías; ids: limitar a esas etapas
+  let n=0; F_SC.forEach(([k])=>{ const sc=f.scenarios[k]; sc.ref=sc.ref||{};
+    f.stages.forEach((st,i)=>{ if(!i||(ids&&!ids.includes(st.id))||sc.rates[st.id]>0) return; const r=fRefRate(f.stages[i-1].type,st.type,k); if(r){ sc.rates[st.id]=r; sc.ref[st.id]=true; if(k==='esp') n++; } }); });
+  return n; }
+const fIsRef=(f,sid)=>!!((f.scenarios[f.active].ref||{})[sid]);
 const FN=()=>{ const m=M(); if(!Array.isArray(m.funnels)) m.funnels=[]; return m.funnels; };
 const fObj=f=>M().objectives.find(o=>o.id===f.objectiveId)||null;
 const fBrand=f=>(fObj(f)||{}).brand||'';
@@ -109,11 +119,12 @@ function fNew({name,objectiveId,goal,goalType,tpl}){
   const stages=F_TEMPLATES[tpl||'simple'].st.map(([n,t])=>({id:uid(),name:n,type:t,source:'manual',campOnly:false,real:null}));
   const sc=()=>({rates:{},costs:{cpc:null,cpl:null,cpa:null}});
   const f={id:uid(),name,objectiveId,goal,goalType,stages,scenarios:{cons:sc(),esp:sc(),opt:sc()},active:'esp',campaigns:[],history:[],created:new Date().toISOString()};
-  fLog(f,'Creaste el funnel',null,`Meta: ${num(goal)} ${goalType.toLowerCase()}`); return f;
+  fLog(f,'Creaste el funnel',null,`Meta: ${num(goal)} ${goalType.toLowerCase()}`);
+  if(fFillRef(f)) fLog(f,'Se cargaron tasas de referencia',null,'Reemplazalas por las tuyas cuando tengas datos'); return f;
 }
 function fDuplicate(f){
   const map={}; const stages=f.stages.map(s=>{ const id=uid(); map[s.id]=id; return {...s,id,real:null}; });
-  const scenarios={}; F_SC.forEach(([k])=>{ const sc=f.scenarios[k]; const rates={}; Object.entries(sc.rates).forEach(([sid,v])=>{ if(map[sid]) rates[map[sid]]=v; }); scenarios[k]={rates,costs:{...sc.costs}}; });
+  const scenarios={}; F_SC.forEach(([k])=>{ const sc=f.scenarios[k]; const rates={}; Object.entries(sc.rates).forEach(([sid,v])=>{ if(map[sid]) rates[map[sid]]=v; }); const ref={}; Object.keys(sc.ref||{}).forEach(sid=>{ if(map[sid]) ref[map[sid]]=true; }); scenarios[k]={rates,costs:{...sc.costs},ref}; });
   const g={id:uid(),name:f.name+' (copia)',objectiveId:f.objectiveId,goal:f.goal,goalType:f.goalType,stages,scenarios,active:f.active,campaigns:[],history:[],created:new Date().toISOString()};
   fLog(g,`Duplicaste «${f.name}»`,null,'Sin campañas vinculadas ni resultados reales'); FN().unshift(g); return g;
 }
@@ -137,7 +148,7 @@ function fStageRow(f,c,s,i){
   return `<tr><td class="mono small muted fz-c-n">${i+1}</td><td class="fz-c-name"><b>${esc(s.name)}</b><div class="small muted">${fTypeLabel(s.type)}${i===n-1?' · <span class="badge badge-brand" style="padding:0 6px">final</span>':''}</div></td>
    <td class="num" data-l="Meta calculada"><b>${fNum(c.metas[i])}</b>${c.metas[i]==null?`<div class="small" style="color:var(--warning)">Falta una tasa</div>`:''}</td>
    <td class="num" data-l="Resultado real">${manual?`<input class="input fz-real" id="real-${s.id}" inputmode="numeric" data-real="${s.id}" value="${s.real==null?'':s.real}" placeholder="Sin dato" aria-label="Resultado real de ${esc(s.name)}">`:`<b>${fNum(c.real[i])}</b>`}<div class="small muted">${esc(fSrcLabel(s.source))}</div></td>
-   <td class="num" data-l="Tasa estimada">${i===0?'<span class="small muted">Inicio</span>':est>0?`${fPctTxt(est)}<div><span class="badge fz-est">estimada</span></div>`:'<span class="small" style="color:var(--warning)">Sin tasa</span>'}</td>
+   <td class="num" data-l="Tasa estimada">${i===0?'<span class="small muted">Inicio</span>':est>0?`${fPctTxt(est)}<div><span class="badge fz-est">${fIsRef(f,s.id)?'referencia':'estimada'}</span></div>`:'<span class="small" style="color:var(--warning)">Sin tasa</span>'}</td>
    <td class="num" data-l="Tasa real">${i===0?'—':c.realRate[i]==null?'<span class="small muted">Sin datos</span>':fPctTxt(c.realRate[i])}</td>
    <td class="num" data-l="Cumplimiento">${cu==null?'<span class="small muted">—</span>':`<span class="badge ${cu>=100?'badge-ok':cu>=60?'badge-warn':'badge-err'}">${fPctTxt(cu)}</span>`}</td>
    <td class="fz-c-acts"><div class="fz-acts"><button class="icon-btn" data-sup="${i}" aria-label="Subir ${esc(s.name)}" ${i===0?'disabled':''}>${ic('up')}</button><button class="icon-btn" data-sdown="${i}" aria-label="Bajar ${esc(s.name)}" ${i===n-1?'disabled':''}>${ic('chev')}</button><button class="icon-btn" data-sedit="${i}" aria-label="Editar ${esc(s.name)}">${ic('edit')}</button><button class="icon-btn" data-sdel="${i}" aria-label="Eliminar ${esc(s.name)}" ${n===1?'disabled':''}>${ic('trash')}</button></div></td></tr>`;
@@ -146,10 +157,15 @@ function fVisual(f,c){
   const n=f.stages.length, vals=c.metas.filter(v=>v!=null), max=Math.max(1,...vals,...c.real.filter(v=>v!=null));
   const w=v=>v==null?0:Math.round(32+68*(Math.log10(v+1)/Math.log10(max+1)));   // escala logarítmica: siempre se ven todas las etapas
   const sc=f.scenarios[f.active];
-  return `<div class="fz-funnel" role="list">${f.stages.map((s,i)=>{ const m=c.metas[i], r=c.real[i], cu=c.cumpl[i], est=sc.rates[s.id];
-    const rate=i===0?'':`<div class="fz-rate"><label for="rt-${s.id}" class="small muted">Tasa desde «${esc(f.stages[i-1].name)}»</label>
-      <div class="fz-rate-in"><input class="input" id="rt-${s.id}" data-rate="${s.id}" inputmode="decimal" value="${est>0?String(est).replace('.',','):''}" placeholder="—" aria-describedby="rte-${s.id}"><span>%</span></div>
-      ${est>0?'<span class="badge fz-est">estimada</span>':''}${c.realRate[i]!=null?`<span class="small">Real: <b>${fPctTxt(c.realRate[i])}</b></span>`:''}<span class="small fz-rerr" id="rte-${s.id}" role="alert">${c.missing[i]?'Cargá la tasa para calcular las etapas de arriba':''}</span></div>`;
+  const need=c.missing.findIndex(x=>x), noRates=f.stages.slice(1).every(x=>!(sc.rates[x.id]>0));
+  const anyRef=f.stages.some(x=>fIsRef(f,x.id)), canRef=f.stages.some((x,i)=>i>0&&!(sc.rates[x.id]>0)&&fRefRate(f.stages[i-1].type,x.type,f.active));
+  const refNote=need>=0||!anyRef?'':`<div class="alert alert-info fz-help">${ic('info')}<div><b>Calculado con tasas de referencia.</b> Son promedios generales del marketing digital, marcadas como «referencia». Cambialas por tus propios porcentajes cuando los tengas: el funnel se recalcula al instante.</div></div>`;
+  const help=need<0?refNote:`<div class="alert alert-info fz-help">${ic('info')}<div><b>${noRates?'Para calcular, falta la tasa de conversión de cada paso.':`Falta la tasa entre «${esc(f.stages[need-1].name)}» y «${esc(f.stages[need].name)}».`}</b> Escribí qué porcentaje pasa de una etapa a la siguiente. Por ejemplo: si de cada 100 ${esc(f.stages[need-1].name.toLowerCase())} se convierten 20 en ${esc(f.stages[need].name.toLowerCase())}, poné <b>20</b>. Con la meta de ${num(f.goal)} ${esc(f.goalType.toLowerCase())}, el funnel calcula solo cuánto necesitás en cada etapa.
+   <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">${canRef?'<button type="button" class="btn btn-sm btn-primary" data-fillref>Completar con tasas de referencia</button>':''}<button type="button" class="btn btn-sm ${canRef?'':'btn-primary'}" data-gorate="rt-${f.stages[need].id}">Cargar mi tasa</button></div></div></div>`;
+  return `${help}<div class="fz-funnel" role="list">${f.stages.map((s,i)=>{ const m=c.metas[i], r=c.real[i], cu=c.cumpl[i], est=sc.rates[s.id];
+    const rate=i===0?'':`<div class="fz-rate"><label for="rt-${s.id}" class="small muted">De «${esc(f.stages[i-1].name)}» pasa a «${esc(s.name)}» el</label>
+      <div class="fz-rate-in"><input class="input ${est>0?'':c.missing[i]?'is-need':'is-empty'}" id="rt-${s.id}" data-rate="${s.id}" inputmode="decimal" value="${est>0?String(est).replace('.',','):''}" placeholder="Ej.: 20" aria-describedby="rte-${s.id}"><span>%</span></div>
+      ${est>0?`<span class="badge fz-est">${fIsRef(f,s.id)?'referencia':'estimada'}</span>`:''}${c.realRate[i]!=null?`<span class="small">Real: <b>${fPctTxt(c.realRate[i])}</b></span>`:''}<span class="small fz-rerr" id="rte-${s.id}" role="alert">${c.missing[i]?`Escribí este porcentaje para calcular ${i>1?'las etapas de arriba':`cuántos «${esc(f.stages[i-1].name)}» necesitás`}`:''}</span></div>`;
     return `${rate}<div class="fz-stage" role="listitem"><div class="fz-name"><b>${esc(s.name)}</b><span class="small muted">${fTypeLabel(s.type)}</span></div>
      <div class="fz-barwrap"><div class="fz-bar ${m==null?'is-empty':''}" style="width:${m==null?100:w(m)}%" title="${esc(s.name)} · meta ${fNum(m)} · real ${fNum(r)}"><i style="width:${cu==null?0:Math.min(100,cu)}%"></i><span class="mono">${m==null?'Sin meta':num(m)}</span></div></div>
      <div class="fz-res"><span class="mono">${r==null?'—':num(r)}</span><span class="small muted">${r==null?'sin dato real':cu==null?'real':`real · ${fPctTxt(cu)}`}</span></div></div>`; }).join('')}
@@ -216,6 +232,7 @@ function fDetailInner(f){
 }
 function vFunnelDetail(id){
   const f=FN().find(x=>x.id===id);
+  if(f&&!f.refChecked){ f.refChecked=true; const none=F_SC.every(([k])=>!Object.keys(f.scenarios[k].rates).length); if(none&&fFillRef(f)) fLog(f,'Se cargaron tasas de referencia',null,'Reemplazalas por las tuyas cuando tengas datos'); }
   if(!f) return `<div class="card empty"><div class="eico">${ic('funnel')}</div><h3>No encontramos ese funnel</h3><p class="muted small">Puede que se haya eliminado o que pertenezca a otra empresa.</p><a class="btn" href="#/app/estrategia/funnel">Ver todos los funnels</a></div>`;
   return `<nav class="breadcrumbs" style="margin-bottom:8px"><a href="#/app/estrategia/funnel">Funnels</a>${ic('chevr')}<span>${esc(f.name)}</span></nav>
   <div class="page-head" style="margin-bottom:16px"><div style="min-width:0"><h2 class="fz-title">${esc(f.name)}</h2><div class="small muted fz-meta" style="margin-top:4px"><i class="sdot" style="background:${brandOf(fBrand(f)).color}"></i>${esc(fBrand(f)||'Sin marca')} · ${esc(fPeriod(f)||'Sin período')} · ${fObj(f)?`Objetivo: ${esc(fObj(f).title)}`:'Objetivo eliminado'}</div></div>
@@ -263,7 +280,7 @@ function fStageForm(f,i){
   if(isNew&&f.stages.length) $('#spos').value=String(f.stages.length-1);
   $('#sok').onclick=()=>{ const nm=$('#sn').value.trim(); if(!fieldErr($('#sn'),!nm?'Poné un nombre':''))return;
     const data={name:nm,type:$('#sty').value,source:$('#ssrc').value,campOnly:$('#sco').checked};
-    if(isNew){ const pos=+$('#spos').value; f.stages.splice(pos,0,{id:uid(),real:null,...data}); fLog(f,'Agregaste una etapa',null,nm); }
+    if(isNew){ const pos=+$('#spos').value; const ns={id:uid(),real:null,...data}; f.stages.splice(pos,0,ns); fLog(f,'Agregaste una etapa',null,nm); const nx=f.stages[pos+1]; fFillRef(f,[ns.id].concat(nx?[nx.id]:[])); }
     else { const ch=[]; if(s.name!==nm) ch.push(`nombre «${s.name}» → «${nm}»`); if(s.type!==data.type) ch.push(`tipo ${fTypeLabel(s.type)} → ${fTypeLabel(data.type)}`); if((s.source||'manual')!==data.source) ch.push(`fuente → ${fSrcLabel(data.source)}`); Object.assign(s,data); if(ch.length) fLog(f,`Editaste la etapa «${nm}»`,null,ch.join(' · ')); }
     closeLayer(); fRedraw(f); toast(isNew?'Etapa agregada':'Etapa actualizada'); };
 }
@@ -295,7 +312,7 @@ function bFunnelDetail(f){
   $$('[data-rate]').forEach(inp=>{ const sid=inp.dataset.rate, key=()=>f.id+':rate:'+f.active+':'+sid;
     const errEl=()=>document.getElementById('rte-'+sid);
     inp.oninput=()=>{ const r=fParseRate(inp.value); if(r.err){ errEl().textContent=r.err; inp.classList.add('is-bad'); return; } inp.classList.remove('is-bad');
-      const cur=sc().rates[sid]; if(cur===r.v||(cur==null&&r.v==null)){ errEl().textContent=''; return; } fMark(key(),cur); if(r.v==null) delete sc().rates[sid]; else sc().rates[sid]=r.v; fRedraw(f,inp.id); };
+      const cur=sc().rates[sid]; if(cur===r.v||(cur==null&&r.v==null)){ errEl().textContent=''; return; } fMark(key(),cur); if(sc().ref) delete sc().ref[sid]; if(r.v==null) delete sc().rates[sid]; else sc().rates[sid]=r.v; fRedraw(f,inp.id); };
     inp.onblur=()=>{ if(fRedrawing||!inp.isConnected) return; const now=sc().rates[sid], s=f.stages.find(x=>x.id===sid);
       if(fCommit(key(),now,old=>fLog(f,`Tasa de «${s?s.name:''}»`,old>0?fPctTxt(old):'sin tasa',now>0?fPctTxt(now):'sin tasa'))) setTimeout(()=>fRedraw(f),0); }; });
   // Costos del simulador
@@ -305,11 +322,13 @@ function bFunnelDetail(f){
   // Resultados reales (carga manual): recalcula al escribir
   $$('[data-real]').forEach(inp=>{ const s=f.stages.find(x=>x.id===inp.dataset.real);
     inp.oninput=()=>{ const r=fParseInt(inp.value); if(r.err){ inp.classList.add('is-bad'); inp.title=r.err; return; } inp.classList.remove('is-bad'); inp.title=''; if(s.real!==r.v){ s.real=r.v; fRedraw(f,inp.id); } }; });
+  $$('[data-fillref]').forEach(b=>b.onclick=()=>{ const n=fFillRef(f); if(n) fLog(f,'Se cargaron tasas de referencia',null,`${n} tasa${n>1?'s':''}`); fRedraw(f); toast(n?'Listo: el funnel ya calcula cada etapa':'No hay tasas de referencia para estas etapas'); });
+  $$('[data-gorate]').forEach(b=>b.onclick=()=>{ const el=document.getElementById(b.dataset.gorate); if(el){ el.scrollIntoView({block:'center',behavior:'smooth'}); el.focus(); } });
   // Escenarios
   $$('[data-sc]').forEach(b=>b.onclick=()=>{ if(f.active===b.dataset.sc) return; const prev=f.active; f.active=b.dataset.sc; fLog(f,'Cambiaste el escenario activo',fScName(prev),fScName(f.active)); fRedraw(f); });
   on('#fcopy',()=>{ const others=F_SC.filter(([k])=>k!==f.active);
     modal('Copiar tasas',`<p class="muted" style="margin-bottom:12px">Se reemplazan las tasas y los costos del escenario <b>${fScName(f.active).toLowerCase()}</b>.</p><div style="display:flex;flex-direction:column;gap:8px">${others.map(([k,l],i)=>`<label class="radio"><input type="radio" name="cpf" value="${k}" ${i===0?'checked':''}> Desde ${l.toLowerCase()}</label>`).join('')}</div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="cok">Copiar</button>`);
-    $('#cok').onclick=()=>{ const from=$$('#layer input[name=cpf]:checked')[0].value, src=f.scenarios[from]; f.scenarios[f.active]={rates:{...src.rates},costs:{...(src.costs||{})}}; fLog(f,`Copiaste tasas de ${fScName(from).toLowerCase()}`,null,`a ${fScName(f.active).toLowerCase()}`); closeLayer(); fRedraw(f); toast('Tasas copiadas'); }; });
+    $('#cok').onclick=()=>{ const from=$$('#layer input[name=cpf]:checked')[0].value, src=f.scenarios[from]; f.scenarios[f.active]={rates:{...src.rates},costs:{...(src.costs||{})},ref:{...(src.ref||{})}}; fLog(f,`Copiaste tasas de ${fScName(from).toLowerCase()}`,null,`a ${fScName(f.active).toLowerCase()}`); closeLayer(); fRedraw(f); toast('Tasas copiadas'); }; });
   // Período (pertenece al objetivo)
   on('#fper',()=>{ const o=fObj(f); if(!o) return; const others=FN().filter(x=>x.objectiveId===o.id&&x!==f);
     modal('Cambiar período del objetivo',`<div class="field"><label for="pp2">Período</label><select class="select" id="pp2">${periodOptions(o.period).map(p=>`<option ${p===o.period?'selected':''}>${p}</option>`).join('')}</select></div><p class="small muted">El período es del objetivo «${esc(o.title)}»${others.length?` y también cambia en sus otros ${others.length} funnel${others.length>1?'s':''}`:''}. La meta no se reparte sola: cambia qué resultados reales cuentan.</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pok">Cambiar</button>`);

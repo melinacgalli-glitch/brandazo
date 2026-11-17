@@ -769,7 +769,6 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 .fz-res{display:flex;flex-direction:column;align-items:flex-end;text-align:right}
 .fz-res .mono{font-size:18px}
 .fz-rate{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:2px 0 2px 166px;margin-right:126px}
-.fz-rate label{white-space:nowrap}
 .fz-rate-in{display:flex;align-items:center;gap:4px}
 .fz-rate-in .input{width:72px;height:32px;text-align:right;font-family:var(--font-mono)}
 .fz-rate-in .input.is-bad,.fz-real.is-bad{border-color:var(--danger)}
@@ -832,3 +831,11 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
   .fz-table .fz-real{margin-left:0}
   .fz-table tbody tr:hover{background:transparent}
 }
+
+.fz-help{margin-bottom:16px}
+.fz-help .ico{flex:none}
+.fz-rate-in .input.is-need{border-color:var(--magenta);box-shadow:0 0 0 3px var(--magenta-soft)}
+.fz-rate-in .input.is-empty{border-style:dashed}
+.fz-rate-in .input::placeholder{color:var(--ink-muted);opacity:.7}
+.fz-rate label{white-space:normal;text-align:right}
+@media (max-width:767px){ .fz-rate label{text-align:left} }

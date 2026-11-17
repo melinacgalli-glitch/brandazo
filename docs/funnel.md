@@ -1,6 +1,6 @@
 # Funnel de conversión
 
-_Última actualización: 2026-11-17 · versión 0.2.0_
+_Última actualización: 2026-11-17 · versión 0.2.1_
 
 Pertenece a **Estrategia** (solapa «Funnel de conversión», después de Buyer personas). Las campañas usan sus proyecciones; el funnel no es parte del módulo de Campañas.
 
@@ -32,6 +32,12 @@ Pertenece a **Estrategia** (solapa «Funnel de conversión», después de Buyer 
 - Tasa real = real etapa / real etapa anterior. Las tasas cargadas a mano se muestran como **estimadas**.
 - Inversión: se usa el costo más cercano al resultado (CPA, luego CPL, luego CPC). Si falta un dato, se explica qué falta («Sin datos»), nunca `$ 0`.
 - Inversión real = gasto de las campañas vinculadas (cada campaña una vez).
+
+## Tasas de referencia
+Para que el funnel calcule apenas se pone la meta, cada paso arranca con una tasa de referencia según el tipo de las dos etapas (`F_REF` en `4-funnel.js`), marcada «referencia» hasta que la persona la cambie:
+alcance→clic 1,5 % · clic→lead 3 % · lead→oportunidad 25 % · oportunidad→venta 20 % · lead→venta 20 % · clic→venta 2 %.
+Conservador = referencia × 0,7; optimista = × 1,3. Los costos (CPC, CPL, CPA) no tienen referencia: sin dato se muestra «Sin datos».
+Los funnels creados antes de esta versión sin ninguna tasa se completan una vez al abrirlos (queda en el historial).
 
 ## Sin duplicar conversiones
 El resultado real se guarda **una vez por etapa**. El «real informado» de cada campaña es solo referencia y no se suma al total. Desde el CRM, cada contacto u oportunidad se cuenta una sola vez (por id), dentro del período del objetivo.
