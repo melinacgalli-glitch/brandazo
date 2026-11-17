@@ -839,3 +839,54 @@ table.t{width:100%;border-collapse:collapse;font-size:14px}
 .fz-rate-in .input::placeholder{color:var(--ink-muted);opacity:.7}
 .fz-rate label{white-space:normal;text-align:right}
 @media (max-width:767px){ .fz-rate label{text-align:left} }
+
+/* ===== Planificación editorial y aprobaciones ===== */
+.ed-count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--magenta);color:var(--on-magenta);font-size:11px;font-weight:600;margin-left:4px}
+.ed-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px}
+.ed-table{font-size:13px}
+.ed-table th{white-space:nowrap}
+.ed-table td{vertical-align:top;padding:8px 10px}
+.ed-table .input,.ed-table .select{height:34px;font-size:13px;padding:0 8px}
+.ed-table .select{padding-right:28px;background-position:right 8px center;min-width:110px}
+.ed-table input[type=date].input{min-width:132px}
+.ed-c-idea{min-width:240px}
+.ed-title{font-weight:600}
+.ed-desc{height:auto!important;padding:6px 8px!important;margin-top:6px;resize:vertical;min-height:34px}
+.ed-desc-ro{white-space:pre-wrap;max-width:320px}
+.ed-ro{display:inline-block;padding-top:6px}
+.ed-row.ed-bad{box-shadow:inset 3px 0 0 var(--danger);background:var(--danger-soft)}
+.ed-acts{display:flex;gap:4px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.ed-acts .icon-btn{position:relative}
+.ed-cmn{position:absolute;top:2px;right:0;font-size:10px;line-height:14px;min-width:14px;border-radius:7px;background:var(--surface-sunken);color:var(--ink);padding:0 3px}
+.ed-c-sel{width:32px}
+.ed-bulk{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;margin-bottom:12px;border:1px solid var(--magenta);background:var(--magenta-soft);border-radius:var(--radius-lg)}
+.ed-bulk-g{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ed-bulk .select,.ed-bulk .input{height:32px;width:auto;min-width:140px;font-size:13px}
+.ed-foot{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.ed-agroup{margin-bottom:16px;padding:16px}
+.ed-agroup .card-head{flex-wrap:wrap}
+.ed-adj{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.ed-adj:last-child{border-bottom:0}
+.ed-aplist{margin:0;padding-left:18px;max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:4px}
+.ed-flow-note{flex-basis:100%;text-align:right}
+@media (max-width:767px){
+  .ed-table thead{display:none}
+  .ed-table,.ed-table tbody{display:block}
+  .ed-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;padding:14px 12px;border-bottom:1px solid var(--line)}
+  .ed-table td{display:block;padding:0;border:0}
+  .ed-table td[data-l]::before{content:attr(data-l);display:block;font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:2px}
+  .ed-table .ed-c-sel{grid-column:1/-1;grid-row:1;width:auto}
+  .ed-table .ed-c-idea{grid-column:1/-1;min-width:0}
+  .ed-table .ed-c-acts{grid-column:1/-1}
+  .ed-table .ed-c-acts .ed-acts{justify-content:flex-start}
+  .ed-table .select,.ed-table .input{width:100%;min-width:0}
+  .ed-flow-note{text-align:left}
+}
+.ed-table td[data-l="Objetivo"],.ed-table td[data-l="Campaña"]{max-width:170px}
+.ed-table td[data-l="Estado"]{white-space:nowrap}
+.ed-table .ed-c-acts{white-space:nowrap}
+.ed-table .ed-c-acts .ed-acts{flex-wrap:nowrap}
+@media (max-width:767px){ .ed-table td[data-l="Objetivo"],.ed-table td[data-l="Campaña"]{max-width:none} .ed-table .ed-c-acts .ed-acts{flex-wrap:wrap} }
+.ed-acts-in{justify-content:flex-start;margin-top:6px}
+.ed-acts-in .btn{height:28px;font-size:12px;padding:0 10px}
+.ed-acts-in .icon-btn{width:28px;height:28px}

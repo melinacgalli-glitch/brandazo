@@ -4,7 +4,7 @@ Plataforma SaaS de marketing y ventas: **marketing y ventas, a un comando.**
 
 ## Estado
 
-Versión 0.2 — **prototipo navegable** publicado en Firebase Hosting.
+Versión 0.3 — **prototipo navegable** publicado en Firebase Hosting.
 Lo que se carga queda guardado **en el navegador** de quien lo usa (no se comparte entre
 computadoras ni personas). Desde el menú de usuario se pueden borrar esos datos.
 Todavía no hay servidor, base de datos ni ingreso real.
@@ -19,6 +19,7 @@ public/
   js/2-modulos.js     estrategia, contenidos, campañas, redes, marca
   js/3-modulos.js     CRM, automatizaciones, comunicaciones, métricas, integraciones
   js/4-funnel.js      Estrategia → Funnel de conversión (ver docs/funnel.md)
+  js/5-editorial.js   Contenidos → Planificaciones y Aprobaciones (ver docs/contenidos.md)
   favicon.svg
 firebase.json         configuración de Firebase Hosting
 .firebaserc           proyecto de Firebase asociado
