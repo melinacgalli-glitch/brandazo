@@ -18,10 +18,12 @@ _Última actualización: 2026-11-17_
 | 2026-11-17 | Contenidos Fase 1 (ver `docs/contenidos.md`): una idea es un contenido con `planId` (sin entidad duplicada); planificaciones en `editorialPlans`; registro único de aprobaciones en `approvals`; estados separados con `status` conservado para compatibilidad; migración idempotente con copia de seguridad y contenidos anteriores marcados «Anterior al flujo» sin inventar aprobaciones. | Aprobado por Melina («dale») tras la auditoría. Preserva todos los contenidos y el funcionamiento actual. |
 | 2026-11-17 | La campaña suma `objectiveId` (objetivo estratégico); se completa solo cuando el vínculo es único y los contenidos lo heredan al elegir la campaña. | El campo `objective` de la campaña era un texto («Ventas») sin vínculo con Estrategia. |
 | 2026-11-17 | En el prototipo, Dueño y Admin pueden aprobar en nombre del aprobador asignado; queda registrado. Las ideas creadas desde el calendario no pasan a producción sin aprobación estratégica. | El prototipo tiene un solo usuario real hasta el ingreso real (Etapa 0). |
+| 2026-11-17 | Tagline: «Marketing y ventas, en un mismo lugar.» (antes «a un comando»), en el sitio y en el manual de marca 2.1. La idea de marca «todo tu negocio, a un comando» y el concepto de la barra se mantienen. | Pedido de Melina. |
+| 2026-11-17 | Contrato del cotizador, borrador 2 (revisión del equipo web): se agrega `attribution.fbclid`; `consent` = aceptación de promociones con el texto exacto de la casilla; reintentos de la web durante 1,5 min y aviso por mail como primera versión (cola de 24 h, mejora futura). | Respuesta del equipo de Cafelito Web. La web ya envía según el contrato; falta el endpoint de Brandazo y `brandazo-staging`. |
 
 ## Pendientes de definir
 - Responsable comercial de eventos de Cafelito (regla de asignación inicial).
-- Revisión del contrato de integración por el equipo web y fecha del ambiente de pruebas.
+- Publicar el endpoint de la integración y `brandazo-staging` (requiere plan Blaze, funciones y base de datos) y entregar la clave `cafelito-web-test` por un canal seguro.
 - Stack definitivo de la Etapa 0 (propuesta: Next.js + NestJS + PostgreSQL + Better Auth).
 - Modelo multiempresa para agencias (Organización → Espacios de trabajo).
 - Servicio de email, textos de Términos y Privacidad.

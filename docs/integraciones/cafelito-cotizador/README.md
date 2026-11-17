@@ -1,10 +1,17 @@
 # Integración: cotizador de Cafelito Ambulante → Brandazo
 
-_Versión del contrato: **1.0 (borrador para revisar)** · Última actualización: 2026-11-17_
+_Versión del contrato: **1.0 (borrador 2, con la revisión del equipo web)** · Última actualización: 2026-11-17_
 
 Este documento es para el **equipo web de cafelito.com.ar**. Explica cómo enviar a Brandazo cada pedido de presupuesto del cotizador de la barra móvil para que entre como **oportunidad** en el CRM (pipeline **Cafelito Eventos**).
 
-> Estado: el endpoint **todavía no está publicado**. Primero acordamos este contrato; después se habilita el ambiente de pruebas.
+> Estado: el equipo web ya implementó el envío según este contrato. Del lado de Brandazo falta publicar el endpoint y habilitar el ambiente de pruebas (ver sección 9).
+
+## Cambios del borrador 2
+
+- Se agrega `attribution.fbclid` (identificador de anuncios de Meta).
+- `consent` es la **aceptación de promociones**: la web manda el texto exacto de la casilla de promociones. El ejemplo anterior usaba otra frase.
+- Reintentos: se acepta como primera versión el esquema de la web (reintentos durante un minuto y medio y, si no se pudo, aviso por mail). La cola de 24 h queda como mejora.
+- Sección 1 actualizada: la persona ve la confirmación antes de pasar a WhatsApp.
 
 ## Archivos
 
@@ -19,13 +26,11 @@ Este documento es para el **equipo web de cafelito.com.ar**. Explica cómo envia
 | `herramientas/firmar.mjs` | Firma HMAC de referencia, vector de prueba y envío con reintentos. |
 | `herramientas/recalcular.mjs` | Recálculo de referencia del presupuesto. |
 
-## 1. Cómo funciona hoy y qué cambia
+## 1. Cómo funciona
 
-Hoy, al tocar **«Pedir presupuesto por WhatsApp»**, el navegador:
-1. abre WhatsApp con el resumen, y
-2. manda los datos a `POST /api/ambulante` del servidor de la web, que envía un mail. Si falla, solo queda en la consola del navegador.
+Al pedir presupuesto, la persona **ve una confirmación en la web y después pasa a WhatsApp**. Los datos van a `POST /api/ambulante` del servidor de la web, que envía el mail y **reenvía a Brandazo** desde el servidor, firmado y con reintentos.
 
-**Cambio propuesto:** que `/api/ambulante` **además reenvíe a Brandazo** desde el servidor, firmado y con reintentos. El navegador no cambia (salvo generar el `quoteId`, ver abajo).
+(La primera versión de este contrato describía el funcionamiento anterior, en el que WhatsApp se abría directamente y el envío se hacía sin esperar respuesta.)
 
 ```
 Navegador ──► /api/ambulante (servidor web) ──► mail (como hoy)
@@ -106,9 +111,9 @@ Correspondencia con el estado actual del cotizador (`t` en el código de la web,
 | Bloque | Para qué |
 |---|---|
 | `estimate` | Presupuesto que vio la persona (subtotal y desglose en **centavos**, sin IVA, versión de tarifas). Brandazo lo compara con su recálculo. |
-| `attribution` | UTM (`utmSource`, `utmMedium`, `utmCampaign`, `utmContent`, `utmTerm`), `gclid`, `gbraid`, `wbraid`, `landingPage`, `referrer`. Se capturan al entrar al sitio (primer toque de la visita) y se guardan en la sesión del navegador. |
+| `attribution` | UTM (`utmSource`, `utmMedium`, `utmCampaign`, `utmContent`, `utmTerm`), `gclid`, `gbraid`, `wbraid`, **`fbclid`** (anuncios de Meta), `landingPage`, `referrer`. Se capturan al entrar al sitio (primer toque de la visita) y se guardan en la sesión del navegador. |
 | `source.pageUrl` | Página donde se completó el cotizador. |
-| `consent` | Si la persona acepta comunicaciones de marketing (texto exacto y fecha). Sin esto, Brandazo solo permite **responder el pedido**. |
+| `consent` | **Aceptación de promociones**: `marketing` = si marcó la casilla de promociones; `text` = el texto exacto de esa casilla; `capturedAt` = cuándo. Responder el pedido no necesita consentimiento (lo inició la persona). Sin este bloque o con `marketing: false`, Brandazo no le envía promociones. |
 | `contact.email` | Si en el futuro se pide el email. |
 
 Ejemplos: `ejemplos/solicitud-minima.json` (solo lo que la web ya tiene) y `ejemplos/solicitud-completa.json`.
@@ -137,7 +142,8 @@ Todos los errores tienen el mismo formato (`schemas/error.json`) con `code`, `me
 - Reintentar **solo** si `retryable: true`, ante `429`, `5xx` o si no hubo respuesta (timeout de 10 s).
 - En cada intento: **mismo cuerpo y mismo `Idempotency-Key`**, **timestamp y firma nuevos**.
 - Espera creciente: 1 s, 4 s, 16 s, 64 s… (o lo que indique `Retry-After`).
-- Como `/api/ambulante` hoy se llama sin esperar respuesta (`keepalive`), recomendamos que el servidor web **guarde el pedido en una cola o tabla** y reintente durante hasta 24 h. Si después de eso no se pudo enviar, que avise por mail para cargarlo a mano.
+- **Acordado para la primera versión:** el servidor web reintenta durante **un minuto y medio** (1 s, 4 s, 16 s, 64 s) y, si no lo logra, **avisa por mail** con los datos del pedido para cargarlo a mano en Brandazo. Como el `quoteId` es el mismo, si después se carga o se reenvía no se duplica.
+- **Mejora futura:** guardar los pedidos pendientes (cola o tabla) y reintentar hasta 24 h, para no depender del mail.
 
 Ejemplo para la ruta de Next.js (App Router), solo como referencia:
 
@@ -177,7 +183,9 @@ async function enviarABrandazo(cuerpo: object) {
 
 ## 9. Ambiente de pruebas y procedimiento de validación
 
-Se habilita cuando aprobemos este contrato: proyecto `brandazo-staging`, con datos ficticios y su propia clave (`cafelito-web-test`). El secreto de pruebas se entrega por un canal seguro.
+Pendiente del lado de Brandazo: proyecto `brandazo-staging`, con datos ficticios y su propia clave (`cafelito-web-test`). Requiere publicar el servidor de Brandazo (plan Blaze de Firebase, funciones y base de datos).
+
+**Entrega del secreto:** solo por un canal seguro (por ejemplo, un enlace de un gestor de contraseñas que se abre una sola vez). **Nunca por chat, mail ni en el repositorio.** El equipo web lo guarda como variable de entorno del servidor.
 
 Pasos para validar (con `herramientas/firmar.mjs enviar …` o desde el servidor web):
 
@@ -203,8 +211,10 @@ Pasos para validar (con `herramientas/firmar.mjs enviar …` o desde el servidor
 
 ## 11. Pendiente de definir
 
-- [ ] Revisión de este contrato por el equipo web.
-- [ ] Si la web suma `quoteId` en el navegador y el reenvío con cola en el servidor.
-- [ ] Si la web suma `estimate`, `attribution` y `consent` (opcionales).
+- [x] Revisión de este contrato por el equipo web (borrador 2).
+- [x] Reintentos: un minuto y medio y aviso por mail (primera versión).
+- [x] `fbclid` en `attribution` y significado de `consent` (promociones).
+- [ ] Brandazo: publicar el endpoint y habilitar `brandazo-staging` con la clave `cafelito-web-test`.
+- [ ] Cola de pendientes con reintentos de 24 h en la web (mejora).
 - [ ] Cómo compartir futuras versiones de tarifas (propuesta: la web publica `tariffVersion` y avisa los cambios; Brandazo carga la versión nueva).
 - [ ] Responsable comercial de eventos (regla de asignación inicial).

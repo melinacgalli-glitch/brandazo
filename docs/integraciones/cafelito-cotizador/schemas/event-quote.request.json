@@ -108,7 +108,7 @@
     "attribution": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Opcional. NO se captura hoy en la web. Origen de la visita en la que se pidió el presupuesto. Brandazo lo guarda en la cotización sin pisar el origen histórico del contacto.",
+      "description": "Opcional. Origen de la visita en la que se pidió el presupuesto. Brandazo lo guarda en la cotización sin pisar el origen histórico del contacto.",
       "properties": {
         "utmSource": { "type": "string", "maxLength": 200 },
         "utmMedium": { "type": "string", "maxLength": 200 },
@@ -118,6 +118,7 @@
         "gclid": { "type": "string", "maxLength": 300 },
         "gbraid": { "type": "string", "maxLength": 300 },
         "wbraid": { "type": "string", "maxLength": 300 },
+        "fbclid": { "type": "string", "maxLength": 500, "description": "Identificador de clic de anuncios de Meta (parámetro fbclid de la URL de llegada)." },
         "landingPage": { "type": "string", "format": "uri", "maxLength": 2000, "description": "Primera página de la visita." },
         "referrer": { "type": "string", "maxLength": 2000 },
         "capturedAt": { "type": "string", "format": "date-time", "description": "Cuándo se capturaron estos parámetros (inicio de la visita)." }
@@ -126,10 +127,10 @@
     "consent": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Opcional. NO existe hoy en el cotizador. Sin este bloque, Brandazo solo habilita responder la consulta (contacto iniciado por la persona), no enviar comunicaciones de marketing.",
+      "description": "Opcional. Aceptación de PROMOCIONES (casilla de promociones del cotizador). Responder el pedido de presupuesto no necesita consentimiento: lo inició la persona. Sin este bloque, o con marketing=false, Brandazo no envía promociones a ese contacto.",
       "properties": {
-        "marketing": { "type": "boolean" },
-        "text": { "type": "string", "maxLength": 500, "description": "Texto exacto que aceptó la persona." },
+        "marketing": { "type": "boolean", "description": "true si la persona marcó la casilla de promociones; false si la dejó sin marcar." },
+        "text": { "type": "string", "maxLength": 500, "description": "Texto exacto de la casilla de promociones tal como lo vio la persona (se guarda como prueba del consentimiento)." },
         "capturedAt": { "type": "string", "format": "date-time" }
       }
     }

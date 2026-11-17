@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Brandazo · Integración Cafelito Ambulante
-  version: 1.0.0-borrador
+  version: 1.0.0-borrador.2
   summary: Recepción de cotizaciones del cotizador de la barra móvil de cafelito.com.ar
   description: |
     El servidor de **cafelito.com.ar** (ruta `/api/ambulante`) reenvía a Brandazo cada pedido de presupuesto del

@@ -95,11 +95,12 @@
     "utmContent": "reel-barra",
     "landingPage": "https://www.cafelito.com.ar/?utm_source=instagram&utm_medium=paid_social&utm_campaign=eventos-fin-de-ano&utm_content=reel-barra",
     "referrer": "https://l.instagram.com/",
-    "capturedAt": "2026-11-17T15:58:02-03:00"
+    "capturedAt": "2026-11-17T15:58:02-03:00",
+    "fbclid": "IwAR_ejemplo_fbclid_0123456789"
   },
   "consent": {
-    "marketing": false,
-    "text": "Acepto que Cafelito me contacte por WhatsApp para responder este pedido.",
+    "marketing": true,
+    "text": "(texto exacto de la casilla de promociones de la web)",
     "capturedAt": "2026-11-17T16:05:44-03:00"
   }
 }
