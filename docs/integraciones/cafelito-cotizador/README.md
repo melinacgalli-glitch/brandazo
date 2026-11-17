@@ -4,7 +4,7 @@ _Versión del contrato: **1.0 (borrador 2, con la revisión del equipo web)** ·
 
 Este documento es para el **equipo web de cafelito.com.ar**. Explica cómo enviar a Brandazo cada pedido de presupuesto del cotizador de la barra móvil para que entre como **oportunidad** en el CRM (pipeline **Cafelito Eventos**).
 
-> Estado: el equipo web ya implementó el envío según este contrato. Del lado de Brandazo falta publicar el endpoint y entregar la clave de pruebas (ver sección 9).
+> Estado: **el endpoint está publicado** y probado con la clave de pruebas. Falta que el equipo web corra el procedimiento de validación (sección 9) con `cafelito-web-test`; después se entrega la clave de producción.
 
 ## Cambios del borrador 2
 
@@ -219,7 +219,9 @@ Pasos para validar (con `herramientas/firmar.mjs enviar …` o desde el servidor
 - [x] Revisión de este contrato por el equipo web (borrador 2).
 - [x] Reintentos: un minuto y medio y aviso por mail (primera versión).
 - [x] `fbclid` en `attribution` y significado de `consent` (promociones).
-- [ ] Brandazo: publicar el endpoint y entregar la clave `cafelito-web-test` por canal seguro.
+- [x] Brandazo: endpoint publicado y clave `cafelito-web-test` creada (se entrega por canal seguro).
+- [ ] Equipo web: correr el procedimiento de validación con la clave de pruebas.
+- [ ] Brandazo: crear y entregar la clave de producción `cafelito-web`.
 - [ ] Cola de pendientes con reintentos de 24 h en la web (mejora).
 - [ ] Cómo compartir futuras versiones de tarifas (propuesta: la web publica `tariffVersion` y avisa los cambios; Brandazo carga la versión nueva).
 - [ ] Responsable comercial de eventos (regla de asignación inicial).

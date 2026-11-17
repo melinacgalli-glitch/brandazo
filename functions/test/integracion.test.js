@@ -12,11 +12,12 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const { sign } = require('../src/sign');
 
-const KEYS = JSON.parse(readFileSync(path.join(__dirname, '../.secret.local'), 'utf8').replace(/^INTEGRATION_KEYS=/, '').trim());
+// Emulador por defecto. Contra el servidor real: BRANDAZO_URL, BRANDAZO_KEYS_FILE (JSON de claves) y BRANDAZO_PROJECT.
+const KEYS = process.env.BRANDAZO_KEYS_FILE ? JSON.parse(readFileSync(process.env.BRANDAZO_KEYS_FILE, 'utf8')) : JSON.parse(readFileSync(path.join(__dirname, '../.secret.local'), 'utf8').replace(/^INTEGRATION_KEYS=/, '').trim());
 const KEY_ID = 'cafelito-web-test', SECRET = KEYS[KEY_ID].secret, TENANT = KEYS[KEY_ID].tenantId;
-const URL = 'http://127.0.0.1:5001/demo-brandazo/southamerica-east1/api/api/v1/integrations/cafelito/event-quotes';
+const URL = process.env.BRANDAZO_URL || 'http://127.0.0.1:5001/demo-brandazo/southamerica-east1/api/api/v1/integrations/cafelito/event-quotes';
 const DOCS = path.join(__dirname, '../../docs/integraciones/cafelito-cotizador');
-initializeApp({ projectId: 'demo-brandazo' });
+initializeApp({ projectId: process.env.BRANDAZO_PROJECT || 'demo-brandazo' });
 const db = getFirestore();
 const T = db.collection('tenants').doc(TENANT);
 
@@ -152,7 +153,7 @@ test('otros errores del contrato', async t => {
     assert.deepEqual(codes, ['ADDON_NOT_IN_PLAN', 'ESTIMATE_MISMATCH', 'PHONE_NOT_NORMALIZED', 'SHORT_NOTICE']);
     assert.equal(r.body.estimate.status, 'mismatch');
   });
-  await t.test('la clave de producción ignora la falla simulada', async () => {
+  await t.test('la clave de producción ignora la falla simulada', { skip: !KEYS['cafelito-web'] && 'sin clave de producción (todavía no se creó)' }, async () => {
     const PROD = 'cafelito-web', q = ejemplo('solicitud-minima.json', { contact: { name: 'Producción', phone: '351 777-3333' } });
     const raw = JSON.stringify(q), ts = Math.floor(Date.now() / 1000);
     const res = await fetch(URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Brandazo-Key-Id': PROD, 'X-Brandazo-Timestamp': String(ts), 'X-Brandazo-Signature': sign(KEYS[PROD].secret, ts, Buffer.from(raw)), 'Idempotency-Key': q.quoteId, 'X-Brandazo-Test-Fail': '503' }, body: raw });

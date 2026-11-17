@@ -22,10 +22,11 @@ _Última actualización: 2026-11-17_
 | 2026-11-17 | Contrato del cotizador, borrador 2 (revisión del equipo web): se agrega `attribution.fbclid`; `consent` = aceptación de promociones con el texto exacto de la casilla; reintentos de la web durante 1,5 min y aviso por mail como primera versión (cola de 24 h, mejora futura). | Respuesta del equipo de Cafelito Web. La web ya envía según el contrato; falta el endpoint de Brandazo y `brandazo-staging`. |
 | 2026-11-17 | Servidor de la integración en Firebase Cloud Functions 2.ª gen (`southamerica-east1`, Node 22) con Firestore por empresa (`tenants/{id}`); una transacción por cotización; reglas de Firestore cerradas al navegador hasta la Etapa 0; claves en Secret Manager (`INTEGRATION_KEYS`). Ver `docs/servidor.md`. | Fase 2 aprobada por Melina. Probado en el emulador (22 pruebas); falta plan Blaze, `brandazo-staging` y permisos para publicar. |
 | 2026-11-17 | Sin proyecto de pruebas aparte: todo en `brandazo`. Las pruebas usan la misma dirección con la clave `cafelito-web-test`, que escribe en la empresa ficticia `cafelito-pruebas`; la falla simulada solo funciona con esa clave. | Decisión de Melina: más simple y una sola facturación. Cuando haya clientes reales se evalúa un proyecto de pruebas. |
+| 2026-11-17 | Servidor publicado en `brandazo` (función `api`, southamerica-east1) con la dirección `www.brandazo.com.ar/api/v1/...`; reglas de Firestore publicadas (cerrada al navegador); clave `cafelito-web-test` en Secret Manager. Probado contra el servidor real: 18/18. | Autorizado por Melina («sí»). La clave de producción se crea después de la validación con el equipo web. |
 
 ## Pendientes de definir
 - Responsable comercial de eventos de Cafelito (regla de asignación inicial).
-- Publicar el endpoint de la integración en `brandazo` y entregar la clave `cafelito-web-test` por un canal seguro.
+- Validación con el equipo web usando `cafelito-web-test`; después, clave de producción `cafelito-web`.
 - Stack definitivo de la Etapa 0 (propuesta: Next.js + NestJS + PostgreSQL + Better Auth).
 - Modelo multiempresa para agencias (Organización → Espacios de trabajo).
 - Servicio de email, textos de Términos y Privacidad.

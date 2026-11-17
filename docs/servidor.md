@@ -1,6 +1,8 @@
 # Servidor de Brandazo (Firebase)
 
-_Última actualización: 2026-11-17 · Fase 2 de la integración del cotizador (en desarrollo, sin publicar)_
+_Última actualización: 2026-11-17 · **Publicado** en `brandazo` (función `api`, southamerica-east1). Dirección: `https://www.brandazo.com.ar/api/v1/integrations/cafelito/event-quotes`_
+
+**Estado:** publicado y probado contra el servidor real con la clave de pruebas (18 de 18 pruebas). Claves creadas: `cafelito-web-test` (empresa `cafelito-pruebas`). Falta la clave de producción `cafelito-web` (después de validar con el equipo web).
 
 ## Qué hay
 | Pieza | Dónde |
@@ -44,7 +46,7 @@ cd .. && firebase emulators:exec --only functions,firestore --project demo-brand
 ```
 Cubren los pasos 2 a 9 del procedimiento de validación del contrato, 5 reenvíos simultáneos sin duplicar, contacto existente con el teléfono escrito distinto, origen histórico sin pisar, atribución con `fbclid`, consentimiento, avisos que no frenan, errores y registro técnico sin datos personales.
 
-## Para publicar (pendiente)
+## Cómo se publicó (y cómo repetirlo)
 1. Plan **Blaze** en el proyecto (pago por uso).
 2. Base Firestore en `brandazo` (southamerica-east1, modo producción). **No hay proyecto de pruebas aparte**: la clave `cafelito-web-test` (`test: true`) escribe en la empresa ficticia `cafelito-pruebas`.
 3. Cuenta de servicio `claude-deploy` con Editor, Administrador de Cloud Functions, Administrador de Cloud Run, Administrador de Secret Manager y Usuario de cuenta de servicio; clave nueva (la anterior se borra).
@@ -53,6 +55,17 @@ Cubren los pasos 2 a 9 del procedimiento de validación del contrato, 5 reenvío
 6. Agregar a `firebase.json` el rewrite de Hosting `/api/v1/**` → función `api` (región `southamerica-east1`) **recién cuando la función exista**, para no romper la publicación del sitio.
 7. Publicar, correr el procedimiento de validación con la clave de pruebas y recién después entregar la clave de producción (`cafelito-web`, empresa `cafelito`).
 
+## Probar contra el servidor real
+```bash
+cd functions
+```
+```bash
+NODE_USE_ENV_PROXY=1 BRANDAZO_URL=https://www.brandazo.com.ar/api/v1/integrations/cafelito/event-quotes BRANDAZO_KEYS_FILE=<json con las claves, fuera del repo> BRANDAZO_PROJECT=brandazo GOOGLE_APPLICATION_CREDENTIALS=<clave de la cuenta de servicio> node --test test/integracion.test.js
+```
+Usar solo la clave de pruebas: todo queda en la empresa `cafelito-pruebas`.
+
 ## Notas
+- Ver la clave de pruebas: Google Cloud → Secret Manager → `INTEGRATION_KEYS` → versión activa → Ver valor. Es un JSON: al equipo web se le pasa el `keyId` (`cafelito-web-test`) y el valor de `secret`, por un canal seguro.
+- Firebase avisó que no pudo limpiar imágenes de compilación viejas (puede generar centavos por mes): se pueden borrar en Artifact Registry o fijar una política de limpieza.
 - JSON mal formado: la plataforma responde `400` antes de llegar a Brandazo (sin el formato de error del contrato).
 - El ingreso real y las pantallas del CRM leyendo esta base son la Etapa 0 (siguiente paso).
