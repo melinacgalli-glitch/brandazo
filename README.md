@@ -1,6 +1,6 @@
 # Brandazo
 
-Plataforma SaaS de marketing y ventas: **marketing y ventas, en una misma plataforma.**
+Plataforma SaaS de marketing y ventas: **marketing y ventas, en un mismo lugar.**
 
 ## Estado
 
