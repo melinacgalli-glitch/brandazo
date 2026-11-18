@@ -12,8 +12,8 @@ before(async () => {
     firestore: { host: '127.0.0.1', port: 8080, rules: fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8') },
     storage: { host: '127.0.0.1', port: 9199, rules: fs.readFileSync(path.join(__dirname, '..', 'storage.rules'), 'utf8') } });
   // Miembros cargados por REST con permisos de administrador del emulador (sin pasar por las reglas)
-  for (const [p, uid] of [['tenants/cafelito/members/u-dueno', 'u-dueno'], ['tenants/otra/members/u-ext', 'u-ext']])
-    await fetch(`http://127.0.0.1:8080/v1/projects/demo-brandazo/databases/(default)/documents/${p}`, { method: 'PATCH', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { uid: { stringValue: uid }, role: { stringValue: 'Dueño' } } }) });
+  for (const [p, uid, role] of [['tenants/cafelito/members/u-dueno', 'u-dueno', 'Dueño'], ['tenants/otra/members/u-ext', 'u-ext', 'Dueño'], ['tenants/cafelito/members/u-ventas', 'u-ventas', 'Ventas']])
+    await fetch(`http://127.0.0.1:8080/v1/projects/demo-brandazo/databases/(default)/documents/${p}`, { method: 'PATCH', headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { uid: { stringValue: uid }, role: { stringValue: role } } }) });
 });
 after(async () => { await env.cleanup(); });
 
@@ -38,4 +38,14 @@ test('tipos y tamaños fuera de lo permitido', async () => {
   await assertFails(uploadBytes(ref(s, 'tenants/cafelito/marcas/x/script.js'), png, { contentType: 'application/javascript' }));
   await assertFails(uploadBytes(ref(s, 'tenants/cafelito/marcas/x/grande.png'), new Uint8Array(25 * 1024 * 1024 + 1), { contentType: 'image/png' }));
   await assertFails(uploadBytes(ref(s, 'tenants/cafelito/otra-carpeta/logo.png'), png, { contentType: 'image/png' }));
+});
+
+test('logo de la empresa: Dueño/Admin lo cambian, el resto del equipo solo lo ve', async () => {
+  const d = st('u-dueno', 'duena@cafelito.test'), v = st('u-ventas', 'ventas@cafelito.test');
+  await assertSucceeds(uploadBytes(ref(d, 'tenants/cafelito/empresa/1-logo.png'), png, { contentType: 'image/png' }));
+  await assertSucceeds(getBytes(ref(v, 'tenants/cafelito/empresa/1-logo.png')));
+  await assertFails(uploadBytes(ref(v, 'tenants/cafelito/empresa/2-logo.png'), png, { contentType: 'image/png' }));
+  await assertFails(uploadBytes(ref(d, 'tenants/cafelito/empresa/3-doc.pdf'), png, { contentType: 'application/pdf' }));
+  await assertFails(deleteObject(ref(v, 'tenants/cafelito/empresa/1-logo.png')));
+  await assertSucceeds(deleteObject(ref(d, 'tenants/cafelito/empresa/1-logo.png')));
 });

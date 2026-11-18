@@ -6,6 +6,7 @@
    - Un solo mail por persona y día (tenants/{t}/reminders/{fecha}_{hash}), aunque la función se reintente.
    - Envío con Resend (secreto RESEND = {"apiKey","from"}). Sin configurar: no manda nada y lo deja anotado. */
 const crypto = require('node:crypto');
+const { sendMail } = require('./mailer');
 const OPEN = ['nueva-cotizacion', 'contactado', 'propuesta-enviada', 'en-negociacion'];
 const STAGE = { 'nueva-cotizacion': 'Nueva cotización', contactado: 'Contactado', 'propuesta-enviada': 'Propuesta enviada', 'en-negociacion': 'En negociación' };
 const TZ_OFFSET_H = 3; // Córdoba: UTC−3 todo el año
@@ -77,10 +78,10 @@ async function sendReminders(deps) {
       const subject = `${items.length === 1 ? 'Hoy tenés 1 seguimiento' : `Hoy tenés ${items.length} seguimientos`}${late ? ` (${late} vencido${late > 1 ? 's' : ''})` : ''} · ${company}`;
       const html = emailHtml({ who: (m.name || email).split(' ')[0], company, items, today });
       if (!configured) { out.push({ tid, email, items: items.length, skipped: 'falta configurar el envío' }); continue; }
-      const r = await deps.fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `${tid}-${key}` }, body: JSON.stringify({ from: cfg.from, to: [email], subject, html }) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) { out.push({ tid, email, error: `${r.status} ${j.message || j.name || ''}`.trim() }); continue; }
-      await ref.set({ at: deps.Timestamp.fromMillis(now), to: email, count: items.length, opportunities: items.length, providerId: j.id || null });
+      let sentId; try { sentId = (await sendMail(deps, cfg, { to: email, subject, html, idempotencyKey: `${tid}-${key}` })).id; }
+      catch (e) { out.push({ tid, email, error: e.message.replace(/^(Resend|SendGrid) /, '') }); continue; }
+
+      await ref.set({ at: deps.Timestamp.fromMillis(now), to: email, count: items.length, opportunities: items.length, providerId: sentId || null });
       out.push({ tid, email, sent: items.length });
     }
   }

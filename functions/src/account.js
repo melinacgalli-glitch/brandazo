@@ -6,6 +6,7 @@
    - Se manda con Resend (secreto RESEND). Si no está configurado responde {fallback:true} y el navegador usa el mail de Firebase.
    - Recuperar responde igual exista o no la cuenta (no revela quién está registrado). Límite: 3 por email por hora. */
 const crypto = require('node:crypto');
+const { sendMail } = require('./mailer');
 const APP = 'https://www.brandazo.com.ar';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 class HttpError extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
@@ -27,10 +28,7 @@ function mailHtml({ title, text, button, link, foot }) {
    <tr><td style="padding-top:20px;border-top:1px solid #E4E4E7;margin-top:20px;font:12px/18px Arial,sans-serif;color:#5C5C66">${foot}</td></tr>
   </table></td></tr></table></body></html>`;
 }
-async function send(deps, to, subject, html) {
-  const r = await deps.fetch(deps.resendUrl || 'https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${deps.resend.apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: deps.resend.from, to: [to], subject, html }) });
-  if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(`Resend ${r.status} ${j.message || ''}`.trim()); }
-}
+async function send(deps, to, subject, html) { await sendMail(deps, deps.resend, { to, subject, html }); }
 async function limit(deps, email) {
   const hour = Math.floor(deps.now() / 36e5), id = crypto.createHash('sha256').update(email).digest('hex').slice(0, 24) + '_' + hour;
   const ref = deps.db.doc(`accountMailLimits/${id}`);

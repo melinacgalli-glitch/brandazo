@@ -50,6 +50,23 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= 392), 'sin desborde en celular');
   await page.screenshot({ path: path.join(os.tmpdir(), 'e2e-biblioteca-movil.png') });
   await page.setViewportSize({ width: 1280, height: 900 }); await page.goto(BASE + '#/app/marca/identidad'); await page.waitForSelector('.logo-card img'); await page.screenshot({ path: path.join(os.tmpdir(), 'e2e-logos.png') });
+  // Nueva marca con logo desde la ventana
+  await page.goto(BASE + '#/app/marca'); await page.waitForSelector('#newbrand'); await page.click('#newbrand'); await page.waitForSelector('#layer .upload');
+  await page.fill('#bnm', 'Cafelito Coffee');
+  const [fc3] = await Promise.all([page.waitForEvent('filechooser'), page.click('#layer .upload')]); await fc3.setFiles(path.join(dir, 'logo-cafelito.png'));
+  ok(/logo-cafelito\.png/.test(await page.textContent('#layer .upload')), 'la ventana «Nueva marca» muestra el logo elegido');
+  await page.click('#ok'); await page.waitForTimeout(2500);
+  const kits2 = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue);
+  ok(kits2['Cafelito Coffee'] && kits2['Cafelito Coffee'].logos && kits2['Cafelito Coffee'].logos.principal && kits2['Cafelito Coffee'].logos.principal.url, 'la marca nueva quedó con su logo principal');
+  ok((await objs()).some(n => /marcas\/cafelito-coffee\/\d+-logo-cafelito\.png$/.test(n)), 'el logo de la marca nueva está en su carpeta');
+  // Configuración → Empresa: logo y nombre
+  await page.goto(BASE + '#/app/config/empresa'); await page.waitForSelector('#logo');
+  const [fc4] = await Promise.all([page.waitForEvent('filechooser'), page.click('#logo')]); await fc4.setFiles(path.join(dir, 'logo-cafelito.png'));
+  await page.waitForSelector('#fe img', { timeout: 20000 }); ok(true, 'logo de la empresa subido y visible');
+  ok(await page.isVisible('.side img.mark'), 'el logo aparece en el menú lateral');
+  await page.fill('#en', 'Cafelito Coffee House SRL'); await page.click('#fe button.btn-primary'); await page.waitForTimeout(1500);
+  const ten = await get('tenants/cafelito'); ok(ten.fields.name.stringValue === 'Cafelito Coffee House SRL', 'el nombre de la empresa se guarda en la nube');
+  const base = JSON.parse((await get('tenants/cafelito/state/base')).fields.json.stringValue); ok(base.logo && /empresa\//.test(base.logo.path), 'el logo de la empresa quedó guardado');
   ok(!errs.length, 'sin errores de JavaScript' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
   await b.close(); console.log(fails.length ? `\n${fails.length} FALLAS` : '\nTODO OK'); process.exit(fails.length ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

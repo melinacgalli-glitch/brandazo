@@ -56,6 +56,13 @@ test('sin configurar el envío no manda nada ni falla', async () => {
 test('si Resend rechaza, no marca como enviado (se reintenta)', async () => {
   const fetch = async () => ({ ok: false, status: 403, json: async () => ({ message: 'domain not verified' }) });
   const r = await sendReminders({ db, Timestamp: TS, fetch, now: () => NOW + 2 * 864e5, resend: { apiKey: 'k', from: 'x <a@b.c>' }, tenantIds: ['cafelito'] });
-  assert.ok(r.some(x => /403 domain not verified/.test(x.error || '')));
+  assert.ok(r.some(x => /403 domain not verified/.test(x.error || '')), JSON.stringify(r));
   const d = await db.collection('tenants/cafelito/reminders').get(); assert.strictEqual(d.size, 2, 'solo los del primer día');
+});
+
+test('también manda con SendGrid (clave «SG.»)', async () => {
+  const sent = []; const fetch = async (url, o) => { sent.push({ url, b: JSON.parse(o.body) }); return { ok: true, status: 202, headers: { get: () => 'sg-1' }, json: async () => ({}) }; };
+  const r = await sendReminders({ db, Timestamp: TS, fetch, now: () => NOW + 3 * 864e5, resend: { apiKey: 'SG.prueba', from: 'Brandazo <avisos@brandazo.com.ar>' }, tenantIds: ['cafelito'] });
+  assert.ok(sent.length >= 1, JSON.stringify(r)); assert.strictEqual(sent[0].url, 'https://api.sendgrid.com/v3/mail/send');
+  assert.deepStrictEqual(sent[0].b.from, { name: 'Brandazo', email: 'avisos@brandazo.com.ar' }); assert.strictEqual(sent[0].b.content[0].type, 'text/html');
 });

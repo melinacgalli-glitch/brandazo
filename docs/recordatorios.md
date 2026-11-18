@@ -13,6 +13,13 @@ _Última actualización: 2026-11-18 · Estado: función `recordatoriosSeguimient
 `functions/src/reminders.js`, `functions/index.js` (`recordatoriosSeguimiento`), `functions/test/recordatorios.test.js` (4 pruebas, envío simulado).
 
 ## Configurar el envío (una vez, lo hace Melina)
+
+**Con SendGrid** (la cuenta que ya usa la web): en SendGrid → *Settings → Sender Authentication → Authenticate Your Domain* → `brandazo.com.ar` (DNS en Cloudflare, nube gris) → *API Keys → Create* con permiso **Mail Send** → en Secret Manager `RESEND` → nueva versión:
+```json
+{"provider":"sendgrid","apiKey":"SG....","from":"Brandazo <avisos@brandazo.com.ar>"}
+```
+
+**Con Resend:**
 1. Crear cuenta en **resend.com**.
 2. **Domains → Add domain** → `brandazo.com.ar`, región **São Paulo (sa-east-1)**.
 3. Resend muestra 3 registros DNS (MX y TXT de `send`, TXT `resend._domainkey`). Cargarlos en **Cloudflare → DNS** tal cual, con la nube **gris** (solo DNS). Volver a Resend → **Verify**.

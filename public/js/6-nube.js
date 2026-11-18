@@ -171,7 +171,7 @@ async function loadMembers(tid,isAdmin){
 /* ---------- Guardado en la nube (solo las partes que cambiaron) ---------- */
 const PART_SKIP=new Set(['contentsBackupV1']);
 function tenantParts(st){
-  const parts={ base:{workspaces:st.workspaces,brands:st.brands,integrations:st.integrations,activity:(st.activity||[]).slice(0,200),plan:st.plan,demo:!!st.demo,audit:(st.audit||[]).slice(0,200)} };
+  const parts={ base:{workspaces:st.workspaces,brands:st.brands,integrations:st.integrations,activity:(st.activity||[]).slice(0,200),plan:st.plan,demo:!!st.demo,audit:(st.audit||[]).slice(0,200),logo:st.logo||null} };
   Object.keys(st.m||{}).forEach(k=>{ if(!PART_SKIP.has(k)) parts['m_'+k]=st.m[k]; });
   if(st.x) parts.x=st.x;
   return parts;

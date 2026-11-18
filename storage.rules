@@ -18,6 +18,14 @@ service firebase.storage {
       allow delete: if member(t);
     }
 
+    // Logo de la empresa: lo ven los miembros, lo cambian Dueño o Admin
+    match /tenants/{t}/empresa/{archivo} {
+      allow read: if member(t);
+      allow create, update, delete: if member(t)
+        && firestore.get(/databases/(default)/documents/tenants/$(t)/members/$(request.auth.uid)).data.role in ['Dueño', 'Admin']
+        && (request.resource == null || (request.resource.size < 25 * 1024 * 1024 && request.resource.contentType.matches('image/.*')));
+    }
+
     // Todo lo demás, cerrado
     match /{todo=**} {
       allow read, write: if false;

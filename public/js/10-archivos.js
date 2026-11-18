@@ -107,3 +107,49 @@ function uploadDialog(b,k){
     $$('[data-share]').forEach(x=>x.onclick=()=>toast('Compartir el manual todavía no está disponible'));
   };
 })();
+
+
+/* ---------- Logo al crear o editar una marca (ventana «Nueva marca») ---------- */
+(function(){
+  if(!CLOUD.on) return;
+  const _brandModal=brandModal;
+  brandModal=function(i){
+    _brandModal(i); if(!cloudCo()) return;
+    const edit=i!=null, prev=edit?(kitFor(S.brands[i]).logos||{}).principal:null; let pending=null;
+    const up=$('#layer .upload'); if(!up) return;
+    const paint=()=>{ up.innerHTML=pending?`<img src="${URL.createObjectURL(pending)}" alt="" style="max-height:56px;max-width:80%;object-fit:contain"><div class="small muted" style="margin-top:6px">${esc(pending.name)} · tocá para cambiarlo</div>`:prev?`<img src="${esc(prev.url)}" alt="" style="max-height:56px;max-width:80%;object-fit:contain"><div class="small muted" style="margin-top:6px">Tocá para cambiarlo</div>`:`${ic('upload')} Subir logo <span class="small muted">· PNG, SVG o JPG, hasta 25 MB</span>`; };
+    up.setAttribute('role','button'); up.tabIndex=0; up.style.cursor='pointer'; paint();
+    const pick=async()=>{ const [f]=await pickFiles(false,'image/*'); if(!f) return; if(!/^image\//.test(f.type)) return toast('El logo tiene que ser una imagen'); if(f.size>FILE_MAX) return toast('El logo pesa más de 25 MB'); pending=f; paint(); };
+    up.onclick=pick; up.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pick(); } };
+    up.ondragover=e=>{ e.preventDefault(); }; up.ondrop=e=>{ e.preventDefault(); const f=e.dataTransfer.files[0]; if(f&&/^image\//.test(f.type)){ pending=f; paint(); } };
+    const ok=$('#ok'), orig=ok.onclick;
+    ok.onclick=async ev=>{ const name=$('#bnm').value.trim(); orig(ev); if($('#layer .modal')||!pending) return; // validación falló o no hay logo
+      const b=S.brands.find(x=>x.name===name); if(!b) return; const k=kitFor(b); k.logos=k.logos||{};
+      toast('Subiendo el logo…');
+      try{ const f=await uploadBrandFile(b,pending); const old=k.logos.principal; k.logos.principal=f; render(); toast('Logo guardado'); if(old) deleteBrandFile(old).catch(()=>{}); }
+      catch(e){ toast(e.message); } };
+  };
+})();
+
+/* ---------- Configuración → Empresa: logo real y nombre guardado en la nube ---------- */
+(function(){
+  if(!CLOUD.on) return;
+  const _bConfig=bConfig;
+  bConfig=function(tab){
+    _bConfig(tab); if(!cloudCo()||!$('#fe')) return;
+    const c=S.company, d=D(), admin=['Dueño','Admin'].includes(c.myRole);
+    const mark=$('#fe .mark'); if(mark&&d.logo) mark.outerHTML=`<img src="${esc(d.logo.url)}" alt="Logo de ${esc(c.name)}" style="width:56px;height:56px;border-radius:12px;object-fit:contain;background:var(--surface-sunken)">`;
+    const lb=$('#logo'); if(lb){ if(!admin){ lb.remove(); } else { if(d.logo) lb.innerHTML=`${ic('upload')} Cambiar logo`;
+      lb.onclick=async()=>{ const [f]=await pickFiles(false,'image/*'); if(!f) return; if(!/^image\//.test(f.type)) return toast('El logo tiene que ser una imagen'); if(f.size>FILE_MAX) return toast('El logo pesa más de 25 MB');
+        lb.classList.add('is-loading');
+        try{ const path=`tenants/${c.tid}/empresa/${Date.now()}-${fileSlug(f.name)}`, ref=fbSt.ref(path); await ref.put(f,{contentType:f.type});
+          const url=await ref.getDownloadURL(), old=d.logo; d.logo={path,url,name:f.name}; render(); toast('Logo de la empresa guardado'); if(old) fbSt.ref(old.path).delete().catch(()=>{}); }
+        catch(e){ lb.classList.remove('is-loading'); toast(e.code==='storage/unauthorized'?'Solo el Dueño o un Admin pueden cambiar el logo':'No se pudo subir el logo'); } }; } }
+    const fe=$('#fe'), orig=fe.onsubmit;
+    fe.onsubmit=async e=>{ orig(e); if(!admin) return; try{ await fbDb.doc(`tenants/${c.tid}`).update({name:c.name,country:c.country||'Argentina',industry:c.industry||'',updatedAt:TS()}); }catch(err){ toast(err.code==='permission-denied'?'Solo el Dueño o un Admin pueden cambiar los datos de la empresa':'No se pudo guardar en la nube'); } };
+  };
+  // Menú lateral: el logo de la empresa en lugar de las iniciales
+  const _shellLogo=shell;
+  shell=function(a,t,i){ const h=_shellLogo(a,t,i); const d=S.company&&S.company.cloud?D():null; if(!d||!d.logo) return h;
+    return h.replace(/<div class="mark" style="background:var\(--negro\)">[^<]*<\/div>/,`<img class="mark" src="${esc(d.logo.url)}" alt="" style="object-fit:contain;background:var(--surface-sunken)">`); };
+})();
