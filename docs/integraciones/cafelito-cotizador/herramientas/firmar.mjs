@@ -23,6 +23,16 @@ export function verificar(secreto, timestamp, cuerpoCrudo, firma, ahora = Math.f
   return { ok: true };
 }
 
+/** Disponibilidad (GET): firma sobre `${timestamp}.GET ${ruta}?${consulta}` con la ruta y la consulta tal como viajan (codificadas). */
+export async function disponibilidad({ base, keyId, secreto, desde, hasta }) {
+  const url = new URL(base.replace(/\/$/, '') + '/availability');
+  if (desde) url.searchParams.set('from', desde); if (hasta) url.searchParams.set('to', hasta);
+  const ts = Math.floor(Date.now() / 1000);
+  const firma = 'v1=' + createHmac('sha256', secreto).update(`${ts}.GET ${url.pathname}${url.search}`, 'utf8').digest('hex');
+  const r = await fetch(url, { headers: { 'X-Brandazo-Key-Id': keyId, 'X-Brandazo-Timestamp': String(ts), 'X-Brandazo-Signature': firma } });
+  return r.json();
+}
+
 /** Envío con reintentos seguros: mismo cuerpo e Idempotency-Key; timestamp y firma nuevos en cada intento. */
 export async function enviar({ url, keyId, secreto, cuerpoCrudo, intentos = 5, esperaBaseMs = 1000 }) {
   const quoteId = JSON.parse(cuerpoCrudo).quoteId;
@@ -61,7 +71,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const cuerpoCrudo = JSON.stringify(JSON.parse(readFileSync(archivo, 'utf8')));
     const r = await enviar({ url, keyId, secreto, cuerpoCrudo });
     process.exit(r.ok ? 0 : 1);
+  } else if (cmd === 'disponibilidad') {
+    // node firmar.mjs disponibilidad [desde] [hasta]   (fechas AAAA-MM-DD; sin fechas: el próximo año)
+    const { BRANDAZO_URL: base, BRANDAZO_KEY_ID: keyId, BRANDAZO_SECRET: secreto } = process.env;
+    if (!keyId || !secreto) { console.error('Faltan BRANDAZO_KEY_ID o BRANDAZO_SECRET'); process.exit(1); }
+    const desde = archivo, hasta = process.argv[4];
+    const r = await disponibilidad({ base: (base || 'https://www.brandazo.com.ar/api/v1/integrations/cafelito/event-quotes').replace(/\/event-quotes\/?$/, ''), keyId, secreto, desde, hasta });
+    console.log(JSON.stringify(r, null, 2)); process.exit(r.error ? 1 : 0);
   } else {
-    console.log('Uso: node firmar.mjs vector | node firmar.mjs enviar <archivo.json>');
+    console.log('Uso: node firmar.mjs vector | enviar <archivo.json> | disponibilidad [desde] [hasta]');
   }
 }

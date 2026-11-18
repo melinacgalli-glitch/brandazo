@@ -40,7 +40,7 @@
       "items": {
         "type": "object", "additionalProperties": false, "required": ["code", "message"],
         "properties": {
-          "code": { "enum": ["SHORT_NOTICE", "PHONE_NOT_NORMALIZED", "ADDON_NOT_IN_PLAN", "ESTIMATE_MISMATCH", "POSSIBLE_SPAM"] },
+          "code": { "enum": ["SHORT_NOTICE", "PHONE_NOT_NORMALIZED", "ADDON_NOT_IN_PLAN", "ESTIMATE_MISMATCH", "POSSIBLE_SPAM", "DATE_UNAVAILABLE"] },
           "message": { "type": "string" },
           "field": { "type": "string" }
         }

@@ -45,6 +45,19 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok((await get('tenants/cafelito/opportunities/a2')).fields.campaignId.stringValue === 'k1', 'asignar la campaña desde la ficha se guarda');
   await page.keyboard.press('Escape'); await page.goto(BASE + '#/app/campanas/k1'); await page.waitForSelector('#campsales .stat-grid');
   ok(/Cotizaciones\s*2/.test(await page.textContent('#campsales')), 'la campaña suma la cotización asignada a mano');
+  // Disponibilidad: aviso al confirmar un día ya tomado y fechas bloqueadas
+  await page.goto(BASE + '#/app/crm/eventos'); await page.waitForSelector('[data-op="a2"]'); await page.click('[data-op="a2"]'); await page.waitForSelector('[data-evmove="ganada"]');
+  await page.click('[data-evmove="ganada"]'); await page.waitForSelector('#samt');
+  ok(/ya está tomado/.test(await page.textContent('#layer')) && /Estudio Ruiz/.test(await page.textContent('#layer')), 'al pasar a Ganada avisa que ese día ya tiene un evento con seña');
+  await page.click('#layer .modal-foot [data-close]'); await page.waitForTimeout(300); if (await page.$('[data-discard]')) await page.click('[data-discard]');
+  await page.goto(BASE + '#/app/crm/eventos'); await page.waitForSelector('#evcfg'); await page.click('#evcfg'); await page.waitForSelector('#blkd');
+  ok(/Ocupadas \(con seña\):[\s\S]*12 dic[\s\S]*Estudio Ruiz/.test(await page.textContent('#layer')), 'Configurar muestra las fechas ocupadas con seña');
+  await page.fill('#blkd', '2026-12-24'); await page.fill('#blkn', 'Nochebuena'); await page.click('#blkok'); await page.waitForTimeout(1200);
+  const stt = await get('tenants/cafelito/settings/cafelito-eventos'); const bl = (((stt.fields || {}).blockedDates || {}).arrayValue || {}).values || [];
+  ok(bl.some(v => v.mapValue.fields.date.stringValue === '2026-12-24'), 'bloquear una fecha se guarda');
+  ok(/24 dic[\s\S]*Nochebuena/.test(await page.textContent('.blk-list')), 'la fecha bloqueada aparece en la lista');
+  await page.click('[data-unblock="2026-12-24"]'); await page.waitForTimeout(1000); ok(!/24 dic/.test(await page.textContent('.blk-list')), 'desbloquear la quita');
+  await page.click('#layer .modal-foot [data-close]'); await page.waitForTimeout(200); if (await page.$('[data-discard]')) await page.click('[data-discard]');
   // Funnel con datos reales
   await page.evaluate(() => { S.brand = -1; }); await page.goto(BASE + '#/app/estrategia/funnel/f1'); await page.waitForTimeout(2500);
   const real = await page.evaluate(() => { const f = M().funnels.find(x => x.id === 'f1'); return fCalc(f).real; });

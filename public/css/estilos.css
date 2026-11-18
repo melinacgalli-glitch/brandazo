@@ -983,3 +983,10 @@ input[type=date],input[type=time]{cursor:pointer}
 .camp-link #clout{font-size:13px}
 .ev-card .ev-camp{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--magenta-text);overflow-wrap:anywhere}
 .ev-card .ev-camp svg{width:12px;height:12px;flex:none}
+
+/* Configurar Cafelito Eventos: fechas bloqueadas */
+.blk-box{border-top:1px solid var(--line);margin-top:12px;padding-top:8px}
+.blk-list{list-style:none;padding:0;margin:4px 0 8px;display:grid;gap:4px;font-size:13px}
+.blk-list li{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.blk-add{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:8px;align-items:center}
+@media (max-width:520px){.blk-add{grid-template-columns:1fr}}

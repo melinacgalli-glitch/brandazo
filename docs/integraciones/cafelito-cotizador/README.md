@@ -140,7 +140,7 @@ Ejemplos: `ejemplos/solicitud-minima.json` (solo lo que la web ya tiene) y `ejem
 
 Todos los errores tienen el mismo formato (`schemas/error.json`) con `code`, `message`, `requestId`, `retryable` y, si corresponde, `details`. Al reportar un problema, pasá el `requestId`.
 
-**Avisos que no frenan** (`warnings` en la respuesta de éxito): `SHORT_NOTICE` (menos de 7 días), `PHONE_NOT_NORMALIZED`, `ADDON_NOT_IN_PLAN` (jarabe con plan Full), `ESTIMATE_MISMATCH`, `POSSIBLE_SPAM`. La cotización se guarda igual y queda marcada para revisión en el CRM.
+**Avisos que no frenan** (`warnings` en la respuesta de éxito): `SHORT_NOTICE` (menos de 7 días), `DATE_UNAVAILABLE` (la fecha ya estaba tomada: evento con seña o bloqueo), `PHONE_NOT_NORMALIZED`, `ADDON_NOT_IN_PLAN` (jarabe con plan Full), `ESTIMATE_MISMATCH`, `POSSIBLE_SPAM`. La cotización se guarda igual y queda marcada para revisión en el CRM.
 
 ## 7. Reintentos seguros
 
@@ -185,6 +185,38 @@ async function enviarABrandazo(cuerpo: object) {
 4. Recalcula el presupuesto con `tarifas/web-2026-11.json` y lo marca «A validar» si no coincide con el de la web.
 5. Asigna responsable según reglas configurables, crea la tarea de **primer contacto**, registra la fecha del próximo seguimiento y notifica al equipo.
 6. Suma la cotización a los resultados reales del **Funnel de conversión** de Estrategia.
+
+## 8 bis. Fechas no disponibles (calendario del cotizador)
+
+Para que el calendario **no ofrezca fechas que ya no se pueden tomar**, el servidor de la web consulta a Brandazo antes de mostrarlo.
+
+`GET https://www.brandazo.com.ar/api/v1/integrations/cafelito/availability?from=AAAA-MM-DD&to=AAAA-MM-DD`
+
+- `from` y `to` son opcionales (por defecto: hoy y un año). Máximo 400 días por consulta.
+- **Misma clave** que el envío de cotizaciones (`BRANDAZO_KEY_ID`, `BRANDAZO_SECRET`) y mismos encabezados: `X-Brandazo-Key-Id`, `X-Brandazo-Timestamp`, `X-Brandazo-Signature`.
+- **Firma:** `v1=` + hex(HMAC-SHA256(secreto, `${timestamp}.GET ${ruta}?${consulta}`)), con la ruta y la consulta **tal como viajan** (codificadas). Ejemplo de texto firmado: `1795000000.GET /api/v1/integrations/cafelito/availability?from=2026-12-01&to=2027-01-31`. Referencia: `herramientas/firmar.mjs` → `disponibilidad()`.
+- Siempre **desde el servidor** de la web (el secreto nunca va al navegador). Se puede guardar la respuesta **hasta 5 minutos**.
+
+Respuesta `200` (solo fechas, sin datos de clientes):
+```json
+{
+  "from": "2026-11-18", "to": "2027-11-18", "today": "2026-11-18",
+  "earliestBookableDate": "2026-11-25", "minNoticeDays": 7, "dailyCapacity": 1,
+  "unavailableDates": ["2026-11-18", "…", "2026-11-24", "2026-12-12", "2026-12-24"],
+  "unavailable": [ { "date": "2026-11-18", "reason": "min_notice" }, { "date": "2026-12-12", "reason": "booked" }, { "date": "2026-12-24", "reason": "blocked" } ]
+}
+```
+- `min_notice`: dentro de la anticipación mínima (hoy son 7 días: el cotizador no debería ofrecer fechas antes de `earliestBookableDate`).
+- `booked`: ya hay un evento confirmado con la seña cobrada (hoy, 1 evento por día).
+- `blocked`: la fecha se bloqueó a mano en Brandazo (vacaciones, mantenimiento, evento cerrado por otra vía).
+
+**En el calendario:** deshabilitar todas las fechas de `unavailableDates` (y cualquier fecha anterior a `earliestBookableDate`). Texto sugerido al pasar el cursor: «Fecha no disponible».
+
+**Si la consulta falla** (Brandazo no responde o error): mostrar el calendario igual, con solo la regla de los 7 días calculada en la web. Brandazo igual va a recibir la cotización y avisar si la fecha estaba tomada.
+
+**Aviso nuevo en las cotizaciones:** si alguien cotiza una fecha que ya estaba tomada (por ejemplo, se ocupó entre que abrió el calendario y envió), la cotización **se registra igual** (`201`) con el aviso `DATE_UNAVAILABLE` en `warnings`. No hay que hacer nada distinto en la web.
+
+Errores: `401` (`MISSING_SIGNATURE`, `UNKNOWN_KEY`, `INVALID_SIGNATURE`, `TIMESTAMP_OUT_OF_RANGE`), `405` si no es GET, `422 VALIDATION_FAILED` si las fechas son inválidas.
 
 ## 9. Ambiente de pruebas y procedimiento de validación
 

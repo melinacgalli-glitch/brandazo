@@ -195,3 +195,10 @@ test('oportunidades: el equipo puede asignar la campaña que la trajo', async ()
   await assertSucceeds(updateDoc(ref, { campaignId: null }));
   await assertFails(updateDoc(ref, { campaignId: 123 }));
 });
+
+test('fechas bloqueadas: solo Dueño/Admin, en la configuración del tablero', async () => {
+  const base = { brand: 'Cafelito Ambulante', defaultOwner: '', followUpHours: 24, updatedAt: serverTimestamp(), updatedBy: 'x' };
+  await assertSucceeds(setDoc(doc(db(dueno), 'tenants/cafelito/settings/cafelito-eventos'), { ...base, blockedDates: [{ date: '2026-12-24', note: 'Nochebuena' }] }));
+  await assertFails(setDoc(doc(db(ventas), 'tenants/cafelito/settings/cafelito-eventos'), { ...base, blockedDates: [] }));
+  await assertFails(setDoc(doc(db(dueno), 'tenants/cafelito/settings/cafelito-eventos'), { ...base, blockedDates: 'no-es-lista' }));
+});

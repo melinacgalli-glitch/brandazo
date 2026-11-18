@@ -12,6 +12,7 @@ const { handleEventQuote, loadKeys } = require('./src/eventQuotes');
 const conn = require('./src/connections');
 const reminders = require('./src/reminders');
 const account = require('./src/account');
+const availability = require('./src/availability');
 
 initializeApp();
 const INTEGRATION_KEYS = defineSecret('INTEGRATION_KEYS');
@@ -23,6 +24,10 @@ const RESEND = defineSecret('RESEND');
 
 exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KEYS], cors: false, maxInstances: 5, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
   const path = req.path.replace(/\/+$/, '');
+  if (/\/integrations\/cafelito\/availability$/.test(path)) { // fechas no disponibles para el calendario del cotizador
+    const out = await availability.handleAvailability(req, { db: getFirestore(), keys: loadKeys(INTEGRATION_KEYS.value()), now: () => new Date() });
+    res.set(out.headers || {}).status(out.status).json(out.body); return;
+  }
   if (path !== '/api/v1/integrations/cafelito/event-quotes' && path !== '/v1/integrations/cafelito/event-quotes') {
     res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Ruta inexistente.', requestId: 'req_sin_ruta', retryable: false } }); return;
   }

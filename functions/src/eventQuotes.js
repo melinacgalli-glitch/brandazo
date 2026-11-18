@@ -107,6 +107,8 @@ async function handleEventQuote(req, deps) {
     const est = recalcular(body);
     const warnings = [...est.warnings];
     if (daysBetween(today, body.event.date) < 7) warnings.push({ code: 'SHORT_NOTICE', field: 'event.date', message: 'El evento es en menos de 7 días.' });
+    try { const taken = await require('./availability').dateTaken(deps.db, key.tenantId, body.event.date); // fecha ya tomada: avisa, no frena
+      if (taken) warnings.push({ code: 'DATE_UNAVAILABLE', field: 'event.date', message: taken === 'blocked' ? 'La fecha está bloqueada en Brandazo.' : 'Ya hay un evento confirmado (con seña) ese día.' }); } catch (e) { console.warn('[event-quotes] disponibilidad', e.message); }
     if (!phone.normalized) warnings.push({ code: 'PHONE_NOT_NORMALIZED', field: 'contact.phone', message: 'No se pudo llevar el teléfono a formato internacional: revisarlo a mano.' });
     const estimateStatus = !body.estimate ? 'not_sent' : body.estimate.subtotalMinor === est.subtotalMinor ? 'match' : 'mismatch';
     if (estimateStatus === 'mismatch') warnings.push({ code: 'ESTIMATE_MISMATCH', field: 'estimate.subtotalMinor', message: `La web informó ${body.estimate.subtotalMinor} y Brandazo calcula ${est.subtotalMinor} (centavos, sin IVA).` });

@@ -100,8 +100,9 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['brandByAccount', 'updatedAt', 'updatedBy'])
           && request.resource.data.brandByAccount is map;
         allow write: if isAdmin(t) && s == 'cafelito-eventos'
-          && request.resource.data.keys().hasOnly(['brand', 'defaultOwner', 'assignByEventType', 'followUpHours', 'updatedAt', 'updatedBy'])
-          && request.resource.data.followUpHours is int && request.resource.data.followUpHours >= 1 && request.resource.data.followUpHours <= 168;
+          && request.resource.data.keys().hasOnly(['brand', 'defaultOwner', 'assignByEventType', 'followUpHours', 'blockedDates', 'dailyCapacity', 'minNoticeDays', 'updatedAt', 'updatedBy'])
+          && (!('blockedDates' in request.resource.data) || (request.resource.data.blockedDates is list && request.resource.data.blockedDates.size() <= 366))
+          && (!('followUpHours' in request.resource.data) || (request.resource.data.followUpHours is int && request.resource.data.followUpHours >= 1 && request.resource.data.followUpHours <= 168));
       }
 
       // Historia de cada cotización: se agrega a nombre propio, no se edita ni se borra
