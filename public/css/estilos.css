@@ -977,3 +977,9 @@ input[type=date],input[type=time]{cursor:pointer}
 .unit-filter .select{border:0;background:transparent;height:36px;padding-left:2px;color:var(--ink);font-weight:500;max-width:230px}
 .unit-filter svg{width:16px;height:16px;flex:none}
 .obj-edit-row{display:flex;justify-content:flex-end;margin-top:8px}
+
+/* Campañas → ventas */
+.camp-link{background:var(--surface-sunken);border-radius:var(--radius-md);padding:12px;margin-top:8px}
+.camp-link #clout{font-size:13px}
+.ev-card .ev-camp{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--magenta-text);overflow-wrap:anywhere}
+.ev-card .ev-camp svg{width:12px;height:12px;flex:none}

@@ -188,3 +188,10 @@ test('historia (actividades): se agrega a nombre propio y no se borra', async ()
   await assertSucceeds(getDoc(doc(db(dueno), 'tenants/cafelito/activities/a1')));
   await assertFails(getDoc(doc(db(extrana), 'tenants/cafelito/activities/a1')));
 });
+
+test('oportunidades: el equipo puede asignar la campaña que la trajo', async () => {
+  const ref = doc(db(ventas), 'tenants/cafelito/opportunities/op1');
+  await assertSucceeds(updateDoc(ref, { campaignId: 'k1', updatedAt: serverTimestamp() }));
+  await assertSucceeds(updateDoc(ref, { campaignId: null }));
+  await assertFails(updateDoc(ref, { campaignId: 123 }));
+});

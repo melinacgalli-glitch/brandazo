@@ -8,6 +8,11 @@
 const ED_INTENTS=[['atraer','Atraer'],['posicionar','Posicionar'],['convertir','Convertir']];
 const ED_IDEA={ 'sin-presentar':['Sin presentar','badge'], presentada:['En revisión','badge badge-warn'], aprobada:['Aprobada','badge badge-ok'], ajustes:['Ajustes pedidos','badge badge-err'] };
 const edIntentLabel=k=>(ED_INTENTS.find(x=>x[0]===k)||['','—'])[1];
+/* Planificación de toda la marca (p. ej. Cafelito): cada idea elige su unidad de negocio */
+const MARCA_PLAN='__marca';
+const isMarcaPlan=p=>p&&p.brand===MARCA_PLAN;
+const edBrandName=b=>b===MARCA_PLAN?(typeof mainName==='function'?mainName():'Toda la marca'):b;
+const edUnitOK=b=>!!b&&b!==MARCA_PLAN;
 const edPlans=()=>{ const m=M(); if(!Array.isArray(m.editorialPlans)) m.editorialPlans=[]; return m.editorialPlans; };
 const edLog=()=>{ const m=M(); if(!Array.isArray(m.approvals)) m.approvals=[]; return m.approvals; };
 const edIdeas=p=>M().contents.filter(c=>c.planId===p.id).map(cNorm).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.order||0)-(b.order||0));
@@ -63,8 +68,8 @@ function edPeriod(type,dateIso){
 const edRange=p=>`${fdate(p.start)} – ${fdate(p.end)} ${parse(p.end).getFullYear()}`;
 
 /* ---------- Validación para presentar ---------- */
-function edMissing(c){ const f=[]; if(!c.title.trim()) f.push('title'); if(!c.date) f.push('date'); if(!c.channel) f.push('channel'); if(!c.format) f.push('format'); if(!c.campaign&&!c.objective) f.push('campaign'); if(!c.pillar&&typeof unitPillars==='function'&&unitPillars(c.brand).length) f.push('pillar'); return f; }
-const ED_MISS={title:'título',date:'fecha',channel:'canal',format:'formato',campaign:'campaña u objetivo',pillar:'pilar'};
+function edMissing(c){ const f=[]; if(!edUnitOK(c.brand)) f.push('unit'); if(!c.title.trim()) f.push('title'); if(!c.date) f.push('date'); if(!c.channel) f.push('channel'); if(!c.format) f.push('format'); if(!c.campaign&&!c.objective) f.push('campaign'); if(!c.pillar&&typeof unitPillars==='function'&&unitPillars(c.brand).length) f.push('pillar'); return f; }
+const ED_MISS={unit:'unidad de negocio',title:'título',date:'fecha',channel:'canal',format:'formato',campaign:'campaña u objetivo',pillar:'pilar'};
 const edMissTxt=c=>edMissing(c).map(k=>ED_MISS[k]).join(', ');
 const edEditable=c=>['sin-presentar','ajustes'].includes(c.ideaSt)&&c.status==='Idea';
 
@@ -103,12 +108,12 @@ const edHead=()=>pageHead('Contenidos','Calendario editorial de todas tus marcas
 
 /* ---------- Vista: lista de planificaciones ---------- */
 function vPlanList(){
-  const ps=edPlans().filter(p=>!curBrand()||p.brand===curBrand().name).sort((a,b)=>b.start.localeCompare(a.start));
-  const bar=`<div class="toolbar"><p class="muted grow">Planes semanales o mensuales por marca. Cargá las ideas en una tabla, presentalas y el aprobador las aprueba en bloque. Las aprobadas pasan a producción sin duplicarse.</p><button class="btn btn-primary" id="newplan">${ic('plus')} Nueva planificación</button></div>`;
+  const ps=edPlans().filter(p=>!curBrand()||p.brand===curBrand().name||isMarcaPlan(p)).sort((a,b)=>b.start.localeCompare(a.start));
+  const bar=`<div class="toolbar"><p class="muted grow">Planes semanales o mensuales de toda la marca o de una unidad. Cargá las ideas en una tabla, presentalas y el aprobador las aprueba en bloque. Las aprobadas pasan a producción sin duplicarse.</p><button class="btn btn-primary" id="newplan">${ic('plus')} Nueva planificación</button></div>`;
   if(!ps.length) return bar+`<div class="card empty"><div class="eico">${ic('calendar')}</div><h3>Todavía no hay planificaciones</h3><p class="muted small">Creá un plan semanal o mensual para una marca y cargá las ideas sin escribir copys ni subir archivos.</p><button class="btn btn-primary" data-newplan>${ic('plus')} Nueva planificación</button></div>`;
   return bar+`<div class="table-wrap"><table class="t ed-plist"><thead><tr><th>Planificación</th><th>Período</th><th class="num">Ideas</th><th>Estado</th><th class="hide-m">Aprobador</th><th class="num hide-m">Versión</th></tr></thead><tbody>
   ${ps.map(p=>{ const ids=edIdeas(p), [sl,sk]=edPlanStatus(p), n=s=>ids.filter(c=>c.ideaSt===s).length;
-    return `<tr data-plan="${p.id}" style="cursor:pointer"><td><b>${esc(p.name)}</b><div class="small muted"><i class="sdot" style="background:${brandOf(p.brand).color};display:inline-block;margin-right:6px"></i>${esc(p.brand)} · ${p.type==='mes'?'Mensual':'Semanal'}</div></td>
+    return `<tr data-plan="${p.id}" style="cursor:pointer"><td><b>${esc(p.name)}</b><div class="small muted"><i class="sdot" style="background:${isMarcaPlan(p)?'var(--magenta)':brandOf(p.brand).color};display:inline-block;margin-right:6px"></i>${esc(edBrandName(p.brand))} · ${p.type==='mes'?'Mensual':'Semanal'}</div></td>
      <td class="mono small">${edRange(p)}</td><td class="num">${ids.length}<div class="small muted">${n('aprobada')} aprobadas${n('presentada')?` · ${n('presentada')} en revisión`:''}${n('ajustes')?` · ${n('ajustes')} con ajustes`:''}</div></td>
      <td><span class="${sk}">${sl}</span></td><td class="hide-m">${esc(p.approver||'—')}</td><td class="num hide-m mono">${p.version?'v'+p.version:'—'}</td></tr>`; }).join('')}</tbody></table></div>`;
 }
@@ -116,7 +121,9 @@ function vPlanList(){
 /* ---------- Vista: detalle con edición masiva ---------- */
 let edSel=new Set(), edBulkField='campaign';
 function edRow(p,c,can){
-  const m=M(), ed=edEditable(c), camps=m.campaigns.filter(x=>x.brand===p.brand), objs=m.objectives.filter(x=>x.brand===p.brand);
+  const m=M(), ed=edEditable(c), mp=isMarcaPlan(p), u=edUnitOK(c.brand)?c.brand:null, scope=x=>u?x.brand===u:(mp||x.brand===p.brand);
+  const tag=x=>mp&&!u?`${x.brand} · `:'';
+  const camps=m.campaigns.filter(scope), objs=m.objectives.filter(scope);
   const out=c.date&&(c.date<p.start||c.date>p.end);
   const mk=f=>(ed&&p.checked&&edMissing(c).includes(f==='objective'?'campaign':f))?' is-missing':'';
   const sel=(f,opts,v,ph)=>`<select class="select ed-in${mk(f)}" data-f="${f}" aria-label="${f}">${ph!=null?`<option value="">${ph}</option>`:''}${opts.map(([k,l])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
@@ -136,10 +143,12 @@ function edRow(p,c,can){
    <td data-l="Fecha">${ed?`<input class="input ed-in${mk('date')}" type="date" data-f="date" value="${c.date||''}" aria-label="Fecha">`:ro(c.date?fdate(c.date):'—')}${out?`<div class="small" style="color:var(--warning)">Fuera del período</div>`:''}</td>
    <td data-l="Canal">${ed?sel('channel',CHANNELS.map(x=>[x,x]),c.channel):ro(c.channel)}</td>
    <td data-l="Formato">${ed?sel('format',FORMATS.map(f=>[f[0],f[0]]),c.format):ro(c.format)}</td>
-   <td data-l="Campaña">${ed?sel('campaign',camps.map(x=>[x.id,x.name]),c.campaign,'Sin campaña'):ro(camp?esc(camp.name):'—')}</td>
-   <td data-l="Objetivo">${ed?sel('objective',objs.map(x=>[x.id,x.title]).concat([['__new','+ Crear objetivo…']]),c.objective,'Sin objetivo'):ro(obj?esc(obj.title):'—')}</td>
-   <td data-l="Pilar">${(()=>{ const pl=typeof unitPillars==='function'?unitPillars(p.brand):[]; return ed?(pl.length?sel('pillar',pl.map(x=>[x,x]),c.pillar,'Elegí un pilar'):`<a class="small" href="#/app/estrategia/posicionamiento">Cargá pilares</a>`):ro(esc(c.pillar||'—')); })()}</td>
-   <td data-l="Buyer persona">${(()=>{ const ps=m.personas.filter(x=>(x.brands||[x.brand]).includes(p.brand)); return ed?sel('persona',ps.map(x=>[x.id,x.name]),c.persona,ps.length?'—':'Sin buyer personas'):ro(esc((m.personas.find(x=>x.id===c.persona)||{}).name||'—')); })()}</td>
+   ${mp?`<td data-l="Unidad">${ed?sel('brand',S.brands.map(x=>[x.name,x.name]),u||'','Elegí la unidad'):ro(esc(u||'—'))}</td>`:''}
+   <td data-l="Campaña">${ed?sel('campaign',camps.map(x=>[x.id,tag(x)+x.name]),c.campaign,'Sin campaña'):ro(camp?esc(camp.name):'—')}</td>
+   <td data-l="Objetivo">${ed?sel('objective',objs.map(x=>[x.id,tag(x)+x.title]).concat(u||!mp?[['__new','+ Crear objetivo…']]:[]),c.objective,'Sin objetivo'):ro(obj?esc(obj.title):'—')}</td>
+   <td data-l="Funnel">${(()=>{ const oids=new Set(objs.map(o=>o.id)), fs=(m.funnels||[]).filter(f=>oids.has(f.objectiveId)); return ed?sel('funnel',fs.map(f=>[f.id,f.name]),c.funnel,fs.length?'—':'Sin funnels'):ro(esc((fs.find(f=>f.id===c.funnel)||{}).name||'—')); })()}</td>
+   <td data-l="Pilar">${(()=>{ const pl=typeof unitPillars==='function'?unitPillars(u||(mp?null:p.brand)):[]; return ed?(pl.length?sel('pillar',pl.map(x=>[x,x]),c.pillar,'Elegí un pilar'):`<a class="small" href="#/app/estrategia/posicionamiento">Cargá pilares</a>`):ro(esc(c.pillar||'—')); })()}</td>
+   <td data-l="Buyer persona">${(()=>{ const ps=m.personas.filter(x=>u?(x.brands||[x.brand]).includes(u):(mp||(x.brands||[x.brand]).includes(p.brand))); return ed?sel('persona',ps.map(x=>[x.id,x.name]),c.persona,ps.length?'—':'Sin buyer personas'):ro(esc((m.personas.find(x=>x.id===c.persona)||{}).name||'—')); })()}</td>
    <td data-l="Intención">${ed?sel('intent',ED_INTENTS,c.intent,'—'):ro(edIntentLabel(c.intent))}</td>
    <td data-l="Responsable">${ed?sel('owner',OWNERS().concat(c.owner&&!OWNERS().includes(c.owner)?[c.owner]:[]).map(o=>[o,o]),c.owner):ro(esc(c.owner||'—'))}</td>
    <td data-l="Estado">${edIdeaBadge(c)}${c.status!=='Idea'?`<div class="small muted">${edProd(c)}</div>`:''}${c.ideaVersion?`<div class="small muted mono">v${c.ideaVersion}</div>`:''}</td>
@@ -149,7 +158,7 @@ function edBulkBar(p,ideas,can){
   const sel=ideas.filter(c=>edSel.has(c.id)); if(!sel.length) return '';
   const editable=sel.filter(edEditable), pend=sel.filter(c=>c.ideaSt==='presentada'), m=M();
   const fields=[['date','Fecha'],['channel','Canal'],['format','Formato'],['campaign','Campaña'],['objective','Objetivo'],['intent','Intención'],['owner','Responsable']];
-  const opts={channel:CHANNELS.map(x=>[x,x]),format:FORMATS.map(f=>[f[0],f[0]]),campaign:[['','Sin campaña']].concat(m.campaigns.filter(x=>x.brand===p.brand).map(x=>[x.id,x.name])),objective:[['','Sin objetivo']].concat(m.objectives.filter(x=>x.brand===p.brand).map(x=>[x.id,x.title])),intent:[['','—']].concat(ED_INTENTS),owner:OWNERS().map(o=>[o,o])};
+  const opts={channel:CHANNELS.map(x=>[x,x]),format:FORMATS.map(f=>[f[0],f[0]]),campaign:[['','Sin campaña']].concat(m.campaigns.filter(x=>isMarcaPlan(p)||x.brand===p.brand).map(x=>[x.id,(isMarcaPlan(p)?x.brand+' · ':'')+x.name])),objective:[['','Sin objetivo']].concat(m.objectives.filter(x=>isMarcaPlan(p)||x.brand===p.brand).map(x=>[x.id,(isMarcaPlan(p)?x.brand+' · ':'')+x.title])),intent:[['','—']].concat(ED_INTENTS),owner:OWNERS().map(o=>[o,o])};
   const valCtl=edBulkField==='date'?`<input class="input" type="date" id="bkv" value="${p.start}" aria-label="Valor">`:`<select class="select" id="bkv" aria-label="Valor">${opts[edBulkField].map(([k,l])=>`<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select>`;
   return `<div class="ed-bulk" role="region" aria-label="Acciones sobre las seleccionadas"><b>${sel.length} seleccionada${sel.length>1?'s':''}</b>
    ${editable.length?`<span class="ed-bulk-g"><span class="small muted">Aplicar a ${editable.length} editable${editable.length>1?'s':''}:</span><select class="select" id="bkf" aria-label="Campo">${fields.map(([k,l])=>`<option value="${k}" ${k===edBulkField?'selected':''}>${l}</option>`).join('')}</select>${valCtl}<button class="btn btn-sm" id="bkapply">Aplicar</button><button class="btn btn-sm" id="bkdup">${ic('copy')} Duplicar</button><button class="btn btn-sm" id="bkdel">${ic('trash')} Eliminar</button></span>`:''}
@@ -160,25 +169,25 @@ function vPlanDetail(id){
   const p=edPlans().find(x=>x.id===id);
   if(!p) return `<div class="card empty"><div class="eico">${ic('calendar')}</div><h3>No encontramos esa planificación</h3><a class="btn" href="#/app/contenidos/planificaciones">Ver planificaciones</a></div>`;
   const ideas=edIdeas(p), can=edCanApprove(p), [sl,sk]=edPlanStatus(p), pend=ideas.filter(c=>c.ideaSt==='presentada'), toPresent=ideas.filter(c=>['sin-presentar','ajustes'].includes(c.ideaSt));
-  const loose=M().contents.filter(c=>!c.planId&&c.brand===p.brand&&c.status==='Idea'&&['sin-presentar','ajustes'].includes(cNorm(c).ideaSt));
+  const loose=M().contents.filter(c=>!c.planId&&(isMarcaPlan(p)||c.brand===p.brand)&&c.status==='Idea'&&['sin-presentar','ajustes'].includes(cNorm(c).ideaSt));
   const ob=edOnBehalf(p);
   return `<nav class="breadcrumbs" style="margin-bottom:8px"><a href="#/app/contenidos/planificaciones">Planificaciones</a>${ic('chevr')}<span>${esc(p.name)}</span></nav>
-  <div class="page-head" style="margin-bottom:12px"><div style="min-width:0"><h2 class="fz-title">${esc(p.name)}</h2><div class="small muted ed-meta"><i class="sdot" style="background:${brandOf(p.brand).color}"></i>${esc(p.brand)} · ${p.type==='mes'?'Mensual':'Semanal'} · ${edRange(p)} · <span class="${sk}">${sl}</span>${p.version?` · <span class="mono">v${p.version}</span>`:''}</div>
+  <div class="page-head" style="margin-bottom:12px"><div style="min-width:0"><h2 class="fz-title">${esc(p.name)}</h2><div class="small muted ed-meta"><i class="sdot" style="background:${isMarcaPlan(p)?'var(--magenta)':brandOf(p.brand).color}"></i>${esc(edBrandName(p.brand))}${isMarcaPlan(p)?' (todas las unidades)':''} · ${p.type==='mes'?'Mensual':'Semanal'} · ${edRange(p)} · <span class="${sk}">${sl}</span>${p.version?` · <span class="mono">v${p.version}</span>`:''}</div>
    <div class="small muted" style="margin-top:4px">Planifica: <b>${esc(p.owner||'—')}</b> · Aprueba: <b>${esc(p.approver||'—')}</b>${can&&ob?` · Podés aprobar en nombre de ${esc(ob)} (Dueño o Admin)`:''}</div></div>
    <div style="display:flex;gap:8px;flex-wrap:wrap">${pend.length&&can?`<button class="btn" id="apall">${ic('check')} Aprobar todas (${pend.length})</button>`:''}<button class="btn btn-primary" id="present" ${toPresent.length?'':'disabled'}>Presentar planificación${toPresent.length?` (${toPresent.length})`:''}</button><button class="icon-btn" id="pedit" aria-label="Editar datos" title="Editar datos">${ic('edit')}</button><button class="icon-btn" id="pdel" aria-label="Eliminar planificación" title="Eliminar">${ic('trash')}</button></div></div>
   ${edNotice(p,ideas)}
   <div id="edbulk">${edBulkBar(p,ideas,can)}</div>
-  <div class="table-wrap"><table class="t ed-table"><thead><tr><th><input type="checkbox" id="selall" aria-label="Seleccionar todas" ${ideas.length&&ideas.every(c=>edSel.has(c.id))?'checked':''}></th><th>Idea</th><th>Fecha</th><th>Canal</th><th>Formato</th><th>Campaña</th><th>Objetivo</th><th>Pilar</th><th>Buyer persona</th><th>Intención</th><th>Responsable</th><th>Estado</th></tr></thead>
+  <div class="table-wrap"><table class="t ed-table"><thead><tr><th><input type="checkbox" id="selall" aria-label="Seleccionar todas" ${ideas.length&&ideas.every(c=>edSel.has(c.id))?'checked':''}></th><th>Idea</th><th>Fecha</th><th>Canal</th><th>Formato</th>${isMarcaPlan(p)?'<th>Unidad</th>':''}<th>Campaña</th><th>Objetivo</th><th>Funnel</th><th>Pilar</th><th>Buyer persona</th><th>Intención</th><th>Responsable</th><th>Estado</th></tr></thead>
   <tbody>${ideas.map(c=>edRow(p,c,can)).join('')||`<tr><td colspan="10"><div class="empty"><p class="small muted">Sin ideas todavía. Agregá la primera: solo título, fecha, canal, formato y campaña u objetivo.</p></div></td></tr>`}</tbody></table></div>
   <div class="ed-foot"><button class="btn" id="addidea">${ic('plus')} Agregar idea</button>${toPresent.length?`<button class="btn" id="psave">${ic('check')} Guardar borrador</button><span class="small ed-saved" id="edsaved">${ic('check')} Cambios guardados</span>`:''}${loose.length?`<button class="btn btn-ghost" id="addloose">${ic('plus')} Sumar ideas sueltas de ${esc(p.brand)} (${loose.length})</button>`:''}<span class="small muted">Enter en el título agrega otra fila. Todo se guarda solo; cuando las ideas estén listas, tocá «Presentar planificación» para enviarlas a aprobación.</span></div>`;
 }
 function edNotice(p,ideas){
-  const m=M(), none=!m.campaigns.some(x=>x.brand===p.brand)&&!m.objectives.some(x=>x.brand===p.brand);
+  const m=M(), none=!m.campaigns.some(x=>isMarcaPlan(p)||x.brand===p.brand)&&!m.objectives.some(x=>isMarcaPlan(p)||x.brand===p.brand);
   const ed=ideas.filter(edEditable), bad=p.checked?ed.filter(c=>edMissing(c).length):[];
   const noLink=ed.filter(c=>!c.campaign&&!c.objective);
   if(bad.length) return `<div class="alert alert-err ed-notice" role="alert">${ic('alert')}<div><b>No se presentó: faltan datos en ${bad.length} idea${bad.length>1?'s':''}</b> (marcadas en rojo, con lo que falta debajo del título).${none?` ${esc(p.brand)} todavía no tiene campañas ni objetivos: cada idea tiene que estar vinculada a una campaña o a un objetivo.`:''}
     ${none||noLink.length?`<div style="margin-top:8px"><button class="btn btn-sm btn-primary" data-newobj-plan>${ic('plus')} Crear objetivo y vincular ${noLink.length} idea${noLink.length===1?'':'s'}</button></div>`:''}</div></div>`;
-  if(none&&ed.length) return `<div class="alert alert-info ed-notice">${ic('info')}<div>${esc(p.brand)} todavía no tiene campañas ni objetivos. Para presentar, cada idea tiene que estar vinculada a una campaña o a un objetivo. <button class="btn btn-sm btn-ghost" data-newobj-plan>${ic('plus')} Crear objetivo</button></div></div>`;
+  if(none&&ed.length) return `<div class="alert alert-info ed-notice">${ic('info')}<div>${esc(edBrandName(p.brand))} todavía no tiene campañas ni objetivos. Para presentar, cada idea tiene que estar vinculada a una campaña o a un objetivo. <button class="btn btn-sm btn-ghost" data-newobj-plan>${ic('plus')} Crear objetivo</button></div></div>`;
   if(ed.length&&!p.version) return `<div class="alert alert-info ed-notice">${ic('info')}<div>Las ideas se guardan solas mientras escribís. Cuando estén listas, tocá <b>Presentar planificación</b> para enviarlas a aprobación de <b>${esc(p.approver||'—')}</b>.</div></div>`;
   return '';
 }
@@ -186,18 +195,18 @@ function edObjDialog(p,onDone){
   const def=p.type==='mes'?p.name:`${MES_UP[parse(p.start).getMonth()]} ${parse(p.start).getFullYear()}`;
   const noLink=edIdeas(p).filter(c=>edEditable(c)&&!c.campaign&&!c.objective);
   modal('Nuevo objetivo',`${F('nob','Objetivo',`placeholder="Ej.: Aumentar las reservas de la barra en diciembre"`)}
-   <div class="form-grid"><div class="field"><label for="nobb">Unidad de negocio</label><input class="input" id="nobb" value="${esc(p.brand)}" disabled></div>
+   <div class="form-grid"><div class="field"><label for="nobb">Unidad de negocio</label>${isMarcaPlan(p)?`<select class="select" id="nobb">${S.brands.map(b=>`<option>${esc(b.name)}</option>`).join('')}</select>`:`<input class="input" id="nobb" value="${esc(p.brand)}" disabled>`}</div>
    <div class="field"><label for="nobp">Período</label><select class="select" id="nobp">${periodOptions(def).map(x=>`<option ${x===def?'selected':''}>${x}</option>`).join('')}</select></div></div>
    ${noLink.length?`<label class="check"><input type="checkbox" id="noball" checked> Vincular las ${noLink.length} idea${noLink.length>1?'s':''} sin campaña ni objetivo</label>`:''}
    <p class="small muted" style="margin-top:8px">Queda en Estrategia → Objetivos, donde podés sumarle resultados clave y un funnel.</p>`,
    `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="nobok">Crear objetivo</button>`);
   $('#nobok').onclick=()=>{ const t=$('#nob'); if(!fieldErr(t,!t.value.trim()?'Escribí el objetivo':'')) return;
-    const o={id:uid(),title:t.value.trim(),brand:p.brand,period:$('#nobp').value,owner:S.user.name,krs:[]}; M().objectives.unshift(o);
+    const o={id:uid(),title:t.value.trim(),brand:isMarcaPlan(p)?$('#nobb').value:p.brand,period:$('#nobp').value,owner:S.user.name,krs:[]}; M().objectives.unshift(o);
     if($('#noball')&&$('#noball').checked) noLink.forEach(c=>{ c.objective=o.id; });
     logAct(`Creaste el objetivo «${o.title}»`); closeLayer(); if(onDone) onDone(o); render(); toast('Objetivo creado'); };
 }
 function edNewIdea(p,afterDate){
-  const c=cNorm({id:uid(),title:'',format:'Post',channel:'Instagram',brand:p.brand,status:'Idea',campaign:'',objective:'',owner:p.owner||S.user.name,date:afterDate||p.start,time:'12:00',copy:'',hashtags:'',cta:'',files:[],comments:[],metrics:null,planId:p.id,ideaSt:'sin-presentar',desc:'',intent:'',order:Date.now()});
+  const c=cNorm({id:uid(),title:'',format:'Post',channel:'Instagram',brand:isMarcaPlan(p)?(curBrand()?curBrand().name:''):p.brand,status:'Idea',campaign:'',objective:'',owner:p.owner||S.user.name,date:afterDate||p.start,time:'12:00',copy:'',hashtags:'',cta:'',files:[],comments:[],metrics:null,planId:p.id,ideaSt:'sin-presentar',desc:'',intent:'',order:Date.now()});
   M().contents.push(c); return c;
 }
 function edFocusTitle(id){ return ()=>{ const t=document.querySelector(`.ed-row[data-id="${id}"] .ed-title`); if(t){ t.focus(); t.scrollIntoView({block:'nearest'}); } }; }
@@ -216,7 +225,13 @@ function bPlanDetail(p){
     $$('.ed-in',row).forEach(inp=>{ const f=inp.dataset.f;
       const apply=()=>{ if(f==='objective'&&inp.value==='__new'){ inp.value=c.objective||''; edObjDialog(p,o=>{ c.objective=o.id; }); return; }
         c[f]=inp.value; edRowCheck(p,c,row); edSavedFlash();
-        if(f==='campaign'){ const cp=M().campaigns.find(x=>x.id===inp.value); if(cp&&cp.objectiveId){ c.objective=cp.objectiveId; const o=$('[data-f=objective]',row); if(o) o.value=cp.objectiveId; } }
+        if(f==='campaign'){ const cp=M().campaigns.find(x=>x.id===inp.value); if(cp&&cp.objectiveId){ c.objective=cp.objectiveId; const o=$('[data-f=objective]',row); if(o) o.value=cp.objectiveId; } if(cp&&cp.funnel&&!c.funnel) c.funnel=cp.funnel;
+          if(cp&&isMarcaPlan(p)&&c.brand!==cp.brand){ c.brand=cp.brand; persist(); return redraw(); } }
+        if(f==='objective'&&isMarcaPlan(p)){ const ob=M().objectives.find(x=>x.id===inp.value); if(ob&&c.brand!==ob.brand){ c.brand=ob.brand; persist(); return redraw(); } }
+        if(f==='brand'){ const mm=M(), keep=(id,list)=>list.some(x=>x.id===id&&x.brand===c.brand);
+          if(c.campaign&&!keep(c.campaign,mm.campaigns)) c.campaign=''; if(c.objective&&!keep(c.objective,mm.objectives)) c.objective='';
+          if(c.persona&&!mm.personas.some(x=>x.id===c.persona&&(x.brands||[x.brand]).includes(c.brand))) c.persona='';
+          if(c.pillar&&!unitPillars(c.brand).includes(c.pillar)) c.pillar=''; persist(); return redraw(); }
         persist(); };
       inp.addEventListener(inp.tagName==='SELECT'||inp.type==='date'?'change':'input',apply);
       if(f==='title') inp.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); apply(); const n=edNewIdea(p,c.date); redraw(edFocusTitle(n.id)); } });
@@ -246,8 +261,8 @@ function bPlanDetail(p){
   on('#psave',()=>{ persist(); go('#/app/contenidos/planificaciones'); toast(`Planificación «${p.name}» guardada. Las ideas quedan en borrador hasta que la presentes.`); });
   $$('[data-newobj-plan]').forEach(b=>b.onclick=()=>edObjDialog(p));
   on('#addidea',()=>{ const ids=edIdeas(p); const n=edNewIdea(p,ids.length?ids[ids.length-1].date:p.start); redraw(edFocusTitle(n.id)); });
-  on('#addloose',()=>{ const loose=M().contents.filter(c=>!c.planId&&c.brand===p.brand&&c.status==='Idea'&&['sin-presentar','ajustes'].includes(c.ideaSt));
-    modal('Sumar ideas sueltas',`<p class="small muted" style="margin-bottom:12px">Ideas de ${esc(p.brand)} creadas desde el calendario que todavía no se presentaron.</p><div style="display:flex;flex-direction:column;gap:8px">${loose.map(c=>`<label class="check"><input type="checkbox" value="${c.id}" checked> <span>${esc(c.title||'Sin título')} <span class="small muted">· ${c.format} · ${fdate(c.date)}</span></span></label>`).join('')}</div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="lok">Sumar</button>`);
+  on('#addloose',()=>{ const loose=M().contents.filter(c=>!c.planId&&(isMarcaPlan(p)||c.brand===p.brand)&&c.status==='Idea'&&['sin-presentar','ajustes'].includes(c.ideaSt));
+    modal('Sumar ideas sueltas',`<p class="small muted" style="margin-bottom:12px">Ideas de ${esc(edBrandName(p.brand))} creadas desde el calendario que todavía no se presentaron.</p><div style="display:flex;flex-direction:column;gap:8px">${loose.map(c=>`<label class="check"><input type="checkbox" value="${c.id}" checked> <span>${esc(c.title||'Sin título')} <span class="small muted">· ${c.format} · ${fdate(c.date)}</span></span></label>`).join('')}</div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="lok">Sumar</button>`);
     $('#lok').onclick=()=>{ const ids=$$('#layer input:checked').map(i=>i.value); ids.forEach(id=>{ const c=byId(id); c.planId=p.id; }); closeLayer(); render(); toast(`Sumaste ${ids.length} idea${ids.length>1?'s':''}. Quedan guardadas en borrador hasta que toques «Presentar planificación».`); }; });
   on('#present',()=>{ const n=edIdeas(p).filter(c=>['sin-presentar','ajustes'].includes(c.ideaSt)).length;
     modal('Presentar planificación',`<p>Se presentan <b>${n} idea${n>1?'s':''}</b> de «${esc(p.name)}» a <b>${esc(p.approver||'—')}</b> como versión <b>${(p.version||0)+1}</b>.</p><p class="small muted" style="margin-top:8px">Mientras están en revisión no se pueden editar. Las ideas que se aprueben quedan listas para producción; las observadas vuelven con el comentario del aprobador.</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pok">Presentar</button>`);
@@ -282,8 +297,8 @@ function edCommentDialog(p,c){
 function edPlanForm(p){
   const isNew=!p, mems=OWNERS();
   if(!S.brands.length) return toast('Primero creá una marca');
-  const b0=p?p.brand:(curBrand()||S.brands[0]).name;
-  modal(isNew?'Nueva planificación':'Editar planificación',`${isNew?`<div class="form-grid"><div class="field"><label for="pbr">Unidad de negocio</label><select class="select" id="pbr">${S.brands.map(b=>`<option ${b.name===b0?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
+  const b0=p?p.brand:MARCA_PLAN;
+  modal(isNew?'Nueva planificación':'Editar planificación',`${isNew?`<div class="form-grid"><div class="field"><label for="pbr">Unidad de negocio</label><select class="select" id="pbr"><option value="${MARCA_PLAN}" ${b0===MARCA_PLAN?'selected':''}>${esc(edBrandName(MARCA_PLAN))} (toda la marca)</option>${S.brands.map(b=>`<option ${b.name===b0?'selected':''}>${esc(b.name)}</option>`).join('')}</select><span class="hint">Con toda la marca, en cada idea elegís a qué unidad aporta.</span></div>
    <div class="field"><label for="pty">Período</label><select class="select" id="pty"><option value="semana">Semanal</option><option value="mes">Mensual</option></select></div></div>
    <div class="field"><label for="pfr">Desde</label><input class="input" type="date" id="pfr" value="${iso(addDays(NOW,7-((NOW.getDay()+6)%7)))}"><span class="hint" id="prng"></span></div>`:''}
    ${F('pnm','Nombre',`value="${esc(p?p.name:'')}" placeholder="Se completa con el período"`)}
@@ -303,7 +318,7 @@ function edPlanForm(p){
 /* ---------- Vista: Aprobaciones ---------- */
 let edApSel=new Set();
 function vApprovals(){
-  const m=M(), plans=edPlans().filter(p=>!curBrand()||p.brand===curBrand().name);
+  const m=M(), plans=edPlans().filter(p=>!curBrand()||p.brand===curBrand().name||isMarcaPlan(p));
   const groups=plans.map(p=>({p,pend:edIdeas(p).filter(c=>c.ideaSt==='presentada'),adj:edIdeas(p).filter(c=>c.ideaSt==='ajustes')}));
   const pend=groups.filter(g=>g.pend.length), adj=groups.filter(g=>g.adj.length);
   const drafts=groups.map(g=>({p:g.p,n:edIdeas(g.p).filter(c=>c.ideaSt==='sin-presentar').length})).filter(d=>d.n);
@@ -316,7 +331,7 @@ function vApprovals(){
   return `<div class="toolbar"><p class="muted grow">Planificaciones e ideas que esperan aprobación estratégica. Podés aprobar en bloque; los ajustes no frenan a las demás ideas.</p>${selN?`<button class="btn btn-primary" id="aapsel">${ic('check')} Aprobar seleccionadas (${selN})</button>`:''}</div>
   <section style="margin-bottom:24px"><h3 style="margin-bottom:12px">Para aprobar <span class="small muted">(${total})</span></h3>
   ${pend.length?pend.map(g=>{ const can=edCanApprove(g.p), ob=edOnBehalf(g.p);
-    return `<div class="card ed-agroup"><div class="card-head"><div><a href="#/app/contenidos/planificaciones/${g.p.id}"><b>${esc(g.p.name)}</b></a><div class="small muted"><i class="sdot" style="background:${brandOf(g.p.brand).color};display:inline-block;margin-right:6px"></i>${esc(g.p.brand)} · ${edRange(g.p)} · <span class="mono">v${g.p.version}</span> · aprueba ${esc(g.p.approver||'—')}${can?(ob?` · <span class="badge badge-brand">Podés aprobar en su nombre</span>`:` · <span class="badge badge-brand">Te toca</span>`):''}</div></div>
+    return `<div class="card ed-agroup"><div class="card-head"><div><a href="#/app/contenidos/planificaciones/${g.p.id}"><b>${esc(g.p.name)}</b></a><div class="small muted"><i class="sdot" style="background:${isMarcaPlan(g.p)?'var(--magenta)':brandOf(g.p.brand).color};display:inline-block;margin-right:6px"></i>${esc(edBrandName(g.p.brand))} · ${edRange(g.p)} · <span class="mono">v${g.p.version}</span> · aprueba ${esc(g.p.approver||'—')}${can?(ob?` · <span class="badge badge-brand">Podés aprobar en su nombre</span>`:` · <span class="badge badge-brand">Te toca</span>`):''}</div></div>
       ${can?`<button class="btn btn-sm" data-aall="${g.p.id}">${ic('check')} Aprobar todas (${g.pend.length})</button>`:''}</div>
       <div class="table-wrap"><table class="t ed-table ed-atable"><thead><tr><th></th><th>Idea</th><th>Fecha</th><th>Canal y formato</th><th>Campaña u objetivo</th><th>Intención</th><th>Responsable</th></tr></thead><tbody>${g.pend.map(c=>row(g,c,can)).join('')}</tbody></table></div></div>`; }).join('')
    :`<div class="card empty"><div class="eico">${ic('check')}</div><h3>No hay nada para aprobar${curBrand()?` en ${esc(curBrand().name)}`:''}</h3><p class="muted small">${drafts.length?'Las ideas aparecen acá cuando se presenta su planificación. Abajo están las que todavía no se presentaron.':'Cuando alguien presente una planificación, sus ideas aparecen acá.'}</p></div>`}

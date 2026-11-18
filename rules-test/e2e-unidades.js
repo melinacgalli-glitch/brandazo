@@ -65,6 +65,23 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await p.evaluate(() => { const pl = { id: 'pl', brand: 'Cafelito Coffee House', type: 'semana', start: '2026-11-23', end: '2026-11-29', name: 'Semana 23', owner: S.user.name, approver: S.user.name, version: 0 }; edPlans().push(pl); const a = edNewIdea(pl, '2026-11-23'); a.title = 'Reel de la barra'; location.hash = '#/app/contenidos/planificaciones/pl'; });
   await p.waitForSelector('.ed-row'); ok(!!(await p.$('.ed-row [data-f="pillar"]')) && !!(await p.$('.ed-row [data-f="persona"]')), 'cada idea tiene pilar y buyer persona');
   ok(await p.evaluate(() => edMissing(M().contents.find(c => c.title === 'Reel de la barra')).includes('pillar')), 'sin pilar la idea no se puede presentar');
+  // Planificación de toda la marca: cada idea elige su unidad
+  await p.evaluate(() => { S.brand = -1; M().positioning['Cafelito Coffee House'] = { statement: 'x', value: '', diff: '', pillars: ['Café de especialidad'] };
+    M().campaigns.push({ id: 'k2', name: 'Desayunos de invierno', brand: 'Cafelito Coffee House', objectiveId: 'o1', personas: [], type: 'Orgánica', objective: 'Ventas', start: '2026-11-20', end: '2026-12-20', budget: 0, spent: 0, audience: '', channels: ['Instagram'], status: 'Activa', segment: 'General', m: { reach: 0, impr: 0, clicks: 0, conv: 0, revenue: 0 }, seed: 1 });
+    location.hash = '#/app/contenidos/planificaciones'; }); await p.waitForTimeout(400);
+  await p.evaluate(() => edPlanForm()); await p.waitForSelector('#pbr');
+  ok(await p.inputValue('#pbr') === '__marca' && /toda la marca/.test(await p.textContent('#pbr')), 'una planificación nueva es de toda la marca por defecto');
+  await p.click('#pok'); await p.waitForSelector('.ed-row [data-f="brand"]');
+  ok(/Cafelito \(todas las unidades\)/.test(await p.textContent('.ed-meta')), 'el encabezado dice «Cafelito (todas las unidades)»');
+  const row = '.ed-row:first-of-type';
+  ok(await p.evaluate(() => edMissing(M().contents[M().contents.length - 1]).includes('unit')), 'sin unidad la idea no se puede presentar');
+  const opts0 = await p.$$eval(row + ' [data-f="campaign"] option', o => o.map(x => x.textContent));
+  ok(opts0.some(t => /Cafelito Coffee House · Desayunos/.test(t)), 'sin unidad elegida, la campaña muestra todas con su unidad');
+  await p.selectOption(row + ' [data-f="campaign"]', 'k2'); await p.waitForTimeout(400);
+  ok(await p.inputValue(row + ' [data-f="brand"]') === 'Cafelito Coffee House', 'elegir la campaña completa la unidad sola');
+  const pil = await p.$$eval(row + ' [data-f="pillar"] option', o => o.map(x => x.textContent));
+  ok(pil.includes('Café de especialidad') && pil.includes('Hospitalidad'), 'los pilares son los de la unidad más los de Cafelito');
+  ok(!!(await p.$(row + ' [data-f="funnel"]')), 'cada idea puede indicar a qué funnel alimenta');
   await p.setViewportSize({ width: 390, height: 844 }); await p.evaluate(() => { location.hash = '#/app/estrategia/mapa'; }); await p.waitForSelector('.unit-card');
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= 392), 'mapa sin desborde en celular');
   ok(!errs.length, 'sin errores de JavaScript' + (errs.length ? ': ' + errs.join(' | ') : ''));
