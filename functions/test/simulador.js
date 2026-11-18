@@ -26,6 +26,7 @@ function mock(req, res) {
       if (/FROM campaign/.test(query)) return send({ results: [{ campaign: { id: '11', name: 'Búsqueda eventos', status: 'ENABLED', advertisingChannelType: 'SEARCH' }, metrics: { costMicros: '15000000000', impressions: '20000', clicks: '640', conversions: 12.5 } }] });
       if (/segments\.date/.test(query)) return send({ results: [{ segments: { date: '2026-11-16' }, metrics: { costMicros: '500000000', impressions: '700', clicks: '20', conversions: 1 } }, { segments: { date: '2026-11-15' }, metrics: { costMicros: '450000000', impressions: '650', clicks: '18' } }] });
     }
+    if (p === '/resend') return send({ id: 'msg_' + calls.length });
     send({ error: { message: 'ruta no simulada ' + p } }, 404);
   });
 }

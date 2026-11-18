@@ -51,6 +51,22 @@ function bindCloudScreen(){
 /* En el sitio real no se muestra el atajo «Mapa de pantallas» del prototipo */
 if(CLOUD.on){ const _authShell=authShell; authShell=function(inner){ return _authShell(inner).replace('<a class="small" href="#/mapa">Mapa de pantallas</a>',''); }; }
 
+/* ---------- Mails de cuenta con la marca Brandazo (servidor «cuenta»); si no está configurado, el mail de Firebase ---------- */
+const CUENTA_API=CLOUD.emu?'http://127.0.0.1:5001/brandazo/southamerica-east1/cuenta/api/v1/cuenta':'/api/v1/cuenta';
+async function cuentaPost(path,body,token){ const r=await fetch(`${CUENTA_API}/${path}`,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body||{})});
+  const j=await r.json().catch(()=>({})); if(!r.ok){ const e=new Error((j.error&&j.error.message)||'No se pudo mandar el mail.'); e.code=j.error&&j.error.code; throw e; } return j; }
+async function sendReset(email){
+  try{ const j=await cuentaPost('recuperar',{email}); if(!j.fallback) return; }
+  catch(e){ if(e.code==='RATE_LIMITED'||e.code==='BAD_EMAIL') throw e; console.warn('[cuenta] uso el mail de Firebase:',e.message); }
+  try{ await fbAuth.sendPasswordResetEmail(email); }catch(err){ if(err.code!=='auth/user-not-found') throw err; }
+}
+async function sendVerify(user){
+  try{ const j=await cuentaPost('verificar',{},await user.getIdToken()); if(!j.fallback) return; }
+  catch(e){ if(e.code==='RATE_LIMITED') throw e; console.warn('[cuenta] uso el mail de Firebase:',e.message); }
+  await user.sendEmailVerification();
+}
+const cuentaErr=e=>e&&e.code==='RATE_LIMITED'?e.message:authErr(e);
+
 /* ---------- Pantallas de los enlaces de cuenta (con el diseño de Brandazo) ---------- */
 function accionShell(icon,tone,title,text,extra=''){ return authShell(`<div style="width:48px;height:48px;border-radius:12px;background:var(--${tone}-soft);color:var(--${tone==='magenta'?'magenta-text':tone});display:grid;place-items:center;margin-bottom:16px">${ic(icon)}</div><h1>${title}</h1><p class="muted" style="margin:6px 0 24px">${text}</p>${extra}`); }
 function accionRender(){
@@ -78,7 +94,7 @@ function accionBind(){
     try{ await fbAuth.confirmPasswordReset(AX.code,a.value);
       AX.view=accionShell('check','success','Contraseña actualizada',`Ya podés entrar con tu contraseña nueva${AX.email?` y el email <b style="color:var(--ink)">${esc(AX.email)}</b>`:''}.`,`<a class="btn btn-primary btn-block" href="#/login">Iniciar sesión</a>`); render(); }
     catch(err){ e.submitter.classList.remove('is-loading'); $('#axerr').innerHTML=`<div class="alert alert-err" style="margin-bottom:16px">${ic('alert')}<div>${err.code==='auth/weak-password'?'Esa contraseña es muy débil: usá al menos 8 caracteres.':'El enlace venció o ya se usó. Pedí uno nuevo.'}</div></div>`; } };
-  const r=$('#axrec'); if(r) r.onclick=async()=>{ try{ await fbAuth.sendPasswordResetEmail(AX.email); toast('Te mandamos el enlace'); }catch(e){ toast(authErr(e)); } };
+  const r=$('#axrec'); if(r) r.onclick=async()=>{ try{ await sendReset(AX.email); toast('Te mandamos el enlace'); }catch(e){ toast(cuentaErr(e)); } };
 }
 
 /* ---------- Sesión ---------- */
@@ -206,7 +222,7 @@ if(CLOUD.on&&fbAuth){
       ok=fieldErr(pw,pw.value.length<8?'La contraseña necesita al menos 8 caracteres':'')&&ok;
       ok=fieldErr(t,!t.checked?'Para continuar, aceptá los términos':'')&&ok; if(!ok) return;
       const b=e.submitter; b.classList.add('is-loading');
-      try{ const r=await fbAuth.createUserWithEmailAndPassword(em.value.trim(),pw.value); await r.user.sendEmailVerification(); }
+      try{ const r=await fbAuth.createUserWithEmailAndPassword(em.value.trim(),pw.value); await sendVerify(r.user).catch(e=>console.warn('[cuenta]',e.message)); }
       catch(err){ b.classList.remove('is-loading'); fieldErr(em,authErr(err)); } };
   };
   vVerificar=function(){
@@ -219,12 +235,12 @@ if(CLOUD.on&&fbAuth){
     $('#vok').onclick=async e=>{ const b=e.currentTarget; b.classList.add('is-loading'); try{ await C.user.reload(); await C.user.getIdToken(true); }catch(_){}
       if(fbAuth.currentUser&&fbAuth.currentUser.emailVerified){ C.needVerify=false; C.user=fbAuth.currentUser; await loadCloud(); }
       else{ b.classList.remove('is-loading'); toast('Todavía figura sin verificar. Abrí el enlace del mail y volvé a tocar.'); } };
-    $('#vre').onclick=async()=>{ try{ await C.user.sendEmailVerification(); toast('Te mandamos el enlace de nuevo'); }catch(e){ toast(authErr(e)); } };
+    $('#vre').onclick=async()=>{ try{ await sendVerify(C.user); toast('Te mandamos el enlace de nuevo'); }catch(e){ toast(cuentaErr(e)); } };
     $('#vout').onclick=()=>cloudSignOut();
   };
   bRecuperar=function(){ $('#f').onsubmit=async e=>{ e.preventDefault(); const em=$('#em'); if(!fieldErr(em,!emailOk(em.value)?'Ingresá un email válido':'')) return;
     S.user.email=em.value.trim(); e.submitter.classList.add('is-loading');
-    try{ await fbAuth.sendPasswordResetEmail(em.value.trim()); }catch(err){ if(err.code!=='auth/user-not-found'){ e.submitter.classList.remove('is-loading'); return fieldErr(em,authErr(err)); } }
+    try{ await sendReset(em.value.trim()); }catch(err){ e.submitter.classList.remove('is-loading'); return fieldErr(em,cuentaErr(err)); }
     go('#/recuperar-enviado'); }; };
   vRecEnviado=(_v=>function(){ return _v().replace(/<a class="btn btn-primary btn-block" href="#\/nueva-clave">[^<]*<\/a>/,'').replace('Vence en 1 hora.','Abrilo desde el mismo dispositivo. Si no lo ves, revisá la carpeta de spam.'); })(vRecEnviado);
   // Menú de usuario: cerrar sesión real, cambiar contraseña real, subir datos del navegador
@@ -233,7 +249,7 @@ if(CLOUD.on&&fbAuth){
     _userMenu(anchor);
     const m=$('#layer .menu'); if(!m) return;
     m.querySelector('[data-a=salir]').onclick=()=>{ closeLayer(); cloudSignOut(); };
-    m.querySelector('[data-a=clave]').onclick=async()=>{ closeLayer(); if(!C.user||!C.user.email) return; try{ await fbAuth.sendPasswordResetEmail(C.user.email); toast('Te mandamos un enlace para cambiar la contraseña'); }catch(e){ toast(authErr(e)); } };
+    m.querySelector('[data-a=clave]').onclick=async()=>{ closeLayer(); if(!C.user||!C.user.email) return; try{ await sendReset(C.user.email); toast('Te mandamos un enlace para cambiar la contraseña'); }catch(e){ toast(cuentaErr(e)); } };
     const local=importable();
     if(local.length&&C.tenants.some(t=>['Dueño','Admin'].includes(t.role))){
       m.querySelector('[data-a=reset]').insertAdjacentHTML('beforebegin',`<button class="menu-item" data-a="subir">${ic('upload')}<span class="grow">Subir datos de este navegador a la nube</span></button>`);

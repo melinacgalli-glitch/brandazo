@@ -11,6 +11,7 @@ const { getAuth } = require('firebase-admin/auth');
 const { handleEventQuote, loadKeys } = require('./src/eventQuotes');
 const conn = require('./src/connections');
 const reminders = require('./src/reminders');
+const account = require('./src/account');
 
 initializeApp();
 const INTEGRATION_KEYS = defineSecret('INTEGRATION_KEYS');
@@ -51,4 +52,10 @@ exports.sincronizarConexiones = onSchedule({ schedule: '0 6 * * *', timeZone: 'A
 exports.recordatoriosSeguimiento = onSchedule({ schedule: '0 8 * * *', timeZone: 'America/Argentina/Cordoba', region: 'southamerica-east1', secrets: [RESEND], timeoutSeconds: 300, memory: '256MiB', retryCount: 1 }, async () => {
   const r = await reminders.sendReminders({ db: getFirestore(), Timestamp, fetch: globalThis.fetch, now: () => Date.now(), resend: reminders.parseCfg(RESEND.value()) });
   console.log('[recordatorios]', JSON.stringify(r.map(x => ({ ...x, email: x.email ? x.email.replace(/^(.).*@/, '$1…@') : '' }))));
+});
+
+// Mails de cuenta con la marca Brandazo (recuperar contraseña, verificar email). Hosting: /api/v1/cuenta/**
+exports.cuenta = onRequest({ region: 'southamerica-east1', secrets: [RESEND], cors: [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/], maxInstances: 3, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
+  await account.handleAccount(req, res, { db: getFirestore(), Timestamp, auth: getAuth(), fetch: globalThis.fetch, now: () => Date.now(),
+    resend: reminders.parseCfg(RESEND.value()), resendUrl: process.env.FUNCTIONS_EMULATOR ? process.env.RESEND_URL : undefined });
 });

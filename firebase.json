@@ -9,6 +9,13 @@
     "cleanUrls": true,
     "rewrites": [
       {
+        "source": "/api/v1/cuenta/**",
+        "function": {
+          "functionId": "cuenta",
+          "region": "southamerica-east1"
+        }
+      },
+      {
         "source": "/api/v1/connect/**",
         "function": {
           "functionId": "conexiones",

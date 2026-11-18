@@ -21,6 +21,6 @@ _Última actualización: 2026-11-18 · Estado: función `recordatoriosSeguimient
    ```json
    {"apiKey":"re_...","from":"Brandazo <avisos@brandazo.com.ar>"}
    ```
-6. Avisar para volver a publicar la función (toma la versión nueva al publicarse) y mandar un mail de prueba.
+6. Avisar para volver a publicar las funciones `recordatoriosSeguimiento` y `cuenta` (los mails de contraseña y verificación también salen por acá) (toma la versión nueva al publicarse) y mandar un mail de prueba.
 
 Nunca pasar la clave por chat ni mail.
