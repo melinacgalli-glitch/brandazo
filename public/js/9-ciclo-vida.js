@@ -40,12 +40,14 @@ function evSeguimientoHtml(o,owners,fuIso){
    <div class="field" style="margin-bottom:8px"><span class="label">Etapa (tocá otra para mover)</span><div style="display:flex;gap:6px;flex-wrap:wrap">${moves}</div></div>
    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end">
     <div class="field"><label for="evown">Responsable</label><select class="select" id="evown"><option value="">Sin asignar</option>${owners.map(n=>`<option ${n===o.owner?'selected':''}>${esc(n)}</option>`).join('')}</select></div>
-    ${open?`<div class="field"><label for="evfu">Próximo seguimiento</label><input class="input" type="date" id="evfu" value="${fuIso}"></div>`:''}
-    <div class="field"><button class="btn" id="evsave">Guardar</button></div></div>
+    ${open?`<div class="field"><label for="evfu">Próximo seguimiento</label><input class="input" type="date" id="evfu" value="${fuIso}"></div>`:''}</div>
+   ${open?`<div class="field"><label for="evna">Qué hay que hacer ese día</label><input class="input" id="evna" maxlength="200" value="${esc(o.nextAction||'')}" placeholder="Ej.: escribirle por WhatsApp para ver si leyó la propuesta"><span class="hint small muted">Le llega por mail al responsable el día del seguimiento.</span></div>`:''}
+   <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn" id="evsave">Guardar</button></div>
    <div class="ev-act"><h4 class="small" style="margin:8px 0">Registrar actividad</h4>
     <div style="display:grid;grid-template-columns:minmax(120px,160px) minmax(0,1fr);gap:8px"><select class="select" id="evat" aria-label="Tipo de actividad">${[...EV_VIA,'Nota'].map(v=>`<option>${v}</option>`).join('')}</select>
     <div class="field" style="margin:0"><textarea class="input" id="evatx" rows="2" placeholder="Qué pasó. Ej.: le pasé el menú por WhatsApp, pide sumar 20 personas" aria-label="Qué pasó"></textarea><span class="err" role="alert"></span></div></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;margin-top:8px">${open?`<label class="small muted" for="evatfu">Próximo seguimiento</label><input class="input" style="width:170px" type="date" id="evatfu" value="${fuIso}">`:''}<button class="btn btn-primary" id="evatok">Registrar</button></div></div>
+    ${open?`<div style="display:grid;grid-template-columns:minmax(150px,180px) minmax(0,1fr);gap:8px;margin-top:8px"><div class="field" style="margin:0"><label class="small" for="evatfu">Próximo seguimiento</label><input class="input" type="date" id="evatfu" value="${fuIso}"></div><div class="field" style="margin:0"><label class="small" for="evatna">Qué hay que hacer ese día</label><input class="input" id="evatna" maxlength="200" value="${esc(o.nextAction||'')}" placeholder="Ej.: escribirle por WhatsApp para ver si leyó la propuesta"></div></div>`:''}
+    <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-primary" id="evatok">Registrar</button></div></div>
    <h4 class="small" style="margin:16px 0 8px">Historia</h4><ul class="ev-tl" id="evtl"><li class="muted">Cargando…</li></ul></section>`;
 }
 
@@ -55,10 +57,11 @@ function evBindFicha(o,fuIso){
   $('#evsave').onclick=async e=>{
     const upd={}, owner=$('#evown').value, fu=$('#evfu')?$('#evfu').value:fuIso;
     if(owner!==(o.owner||'')) upd.owner=owner;
+    const na=$('#evna')?$('#evna').value.trim():(o.nextAction||''); if(na!==(o.nextAction||'')) upd.nextAction=na||null;
     if(fu!==fuIso){ if(!fu&&EV_OPEN.includes(o.stage)&&o.stage!=='nueva-cotizacion') return toast('Mientras esté abierta, la cotización necesita un próximo seguimiento'); upd.nextFollowUpAt=evTsFrom(fu); }
     if(!Object.keys(upd).length) return toast('No hay cambios');
     e.currentTarget.classList.add('is-loading');
-    const txt=[upd.owner!=null?`Responsable: ${upd.owner||'sin asignar'}`:'',upd.nextFollowUpAt!==undefined?`Próximo seguimiento: ${fu?evDate(fu):'sin fecha'}`:''].filter(Boolean).join(' · ');
+    const txt=[upd.owner!=null?`Responsable: ${upd.owner||'sin asignar'}`:'',upd.nextFollowUpAt!==undefined?`Próximo seguimiento: ${fu?evDate(fu):'sin fecha'}`:'',upd.nextAction!==undefined?`Qué hacer: ${upd.nextAction||'(vacío)'}`:''].filter(Boolean).join(' · ');
     try{ await evCommit(o,upd,{type:'cambio',text:txt}); toast('Guardado'); evFichaReopen(o.id); }
     catch(err){ e.currentTarget.classList.remove('is-loading'); toast(evErr(err)); }
   };
@@ -66,8 +69,9 @@ function evBindFicha(o,fuIso){
     const tx=$('#evatx'), type=$('#evat').value, fu=$('#evatfu')?$('#evatfu').value:'';
     if(!fieldErr(tx,!tx.value.trim()?'Contá qué pasó (una línea alcanza)':'')) return;
     const upd={}; if($('#evatfu')&&fu!==fuIso&&fu) upd.nextFollowUpAt=evTsFrom(fu);
+    const na=$('#evatna')?$('#evatna').value.trim():''; if($('#evatna')&&na!==(o.nextAction||'')) upd.nextAction=na||null;
     e.currentTarget.classList.add('is-loading');
-    try{ await evCommit(o,upd,{type:type==='Nota'?'nota':'contacto',via:type==='Nota'?null:type,text:tx.value.trim()+(upd.nextFollowUpAt?` · Próximo seguimiento: ${evDate(fu)}`:'')}); toast('Actividad registrada'); evFichaReopen(o.id); }
+    try{ await evCommit(o,upd,{type:type==='Nota'?'nota':'contacto',via:type==='Nota'?null:type,text:tx.value.trim()+(upd.nextFollowUpAt?` · Próximo seguimiento: ${evDate(fu)}`:'')+(upd.nextAction?` · Qué hacer: ${upd.nextAction}`:'')}); toast('Actividad registrada'); evFichaReopen(o.id); }
     catch(err){ e.currentTarget.classList.remove('is-loading'); toast(evErr(err)); }
   };
   $$('[data-evpay]').forEach(b=>b.onclick=()=>evPayForm(o,b.dataset.evpay));
@@ -88,7 +92,7 @@ async function evCommit(o,upd,act){
 
 /* ---------- Formulario de cambio de etapa ---------- */
 function evStageForm(o,to){
-  const name=evStageName(to), cur=evAmount(o), fu=n=>`<div class="field"><label for="sfu">Próximo seguimiento</label><input class="input" type="date" id="sfu" value="${evPlusDays(n)}"><span class="err" role="alert"></span></div>`;
+  const name=evStageName(to), cur=evAmount(o), fu=n=>`<div class="field"><label for="sfu">Próximo seguimiento</label><input class="input" type="date" id="sfu" value="${evPlusDays(n)}"><span class="err" role="alert"></span></div><div class="field"><label for="sna">Qué hay que hacer ese día (opcional)</label><input class="input" id="sna" maxlength="200" placeholder="Ej.: escribirle por WhatsApp para ver si leyó la propuesta"></div>`;
   const note=(req,ph)=>`<div class="field"><label for="snote">${req?'Qué pasó':'Nota (opcional)'}</label><textarea class="input" id="snote" rows="2" placeholder="${ph}"></textarea><span class="err" role="alert"></span></div>`;
   const money=(id,label,val,hint)=>`<div class="field"><label for="${id}">${label}</label><div style="display:flex;align-items:center;gap:6px"><span class="muted">$</span><input class="input" id="${id}" inputmode="decimal" value="${evPesos(val)}" style="text-align:right"></div>${hint?`<span class="hint small muted">${hint}</span>`:''}<span class="err" role="alert"></span></div>`;
   let body='';
@@ -104,8 +108,8 @@ function evStageForm(o,to){
   if(to==='ganada'){ $('#samt').oninput=()=>{ const a=evParseMoney($('#samt').value); if(a) $('#sdep').value=evPesos(Math.round(a*EV_DEPOSIT_PCT/100)); upBal(); }; $('#sdep').oninput=upBal; upBal(); $('#spaid').onchange=e=>{ $('#spaidf').hidden=!e.target.checked; }; }
   $('#sok').onclick=async e=>{
     const v=id=>$(id)?$(id).value.trim():'', upd={stage:to}, det={}; let text='', via=null;
-    if(EV_OPEN.includes(to)){ const f=v('#sfu'); if(!fieldErr($('#sfu'),!f?'Elegí cuándo volver a hablar':'')) return; upd.nextFollowUpAt=evTsFrom(f); det.nextFollowUp=f; }
-    else upd.nextFollowUpAt=null;
+    if(EV_OPEN.includes(to)){ const f=v('#sfu'); if(!fieldErr($('#sfu'),!f?'Elegí cuándo volver a hablar':'')) return; upd.nextFollowUpAt=evTsFrom(f); upd.nextAction=v('#sna')||null; det.nextFollowUp=f; }
+    else { upd.nextFollowUpAt=null; upd.nextAction=null; }
     if(to==='contactado'){ via=v('#svia'); text=''; /* la nota va una sola vez (abajo) */ }
     else if(to==='propuesta-enviada'){ const a=evParseMoney(v('#samt')); if(!fieldErr($('#samt'),!a?'Ingresá el importe (ej.: 1.420.000)':'')) return;
       upd.proposal={amountMinor:a,sentAt:v('#ssent')||evToday(),validUntil:v('#svalid')||null,link:v('#slink')||null}; det.amountMinor=a; text=`Propuesta por ${evMoney(a)}`; }

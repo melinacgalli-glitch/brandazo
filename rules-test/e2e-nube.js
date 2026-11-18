@@ -75,6 +75,8 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok(await page.evaluate(() => [...document.querySelectorAll('.ev-card, .ev-card *')].every(e => e.scrollWidth <= e.clientWidth + 1 || getComputedStyle(e).overflow === 'visible' && e.getBoundingClientRect().right <= e.closest('.ev-card').getBoundingClientRect().right + 1)), 'tarjeta con 4 avisos: nada sale de la tarjeta en celular');
   await page.screenshot({ path: require('os').tmpdir() + '/e2e-tarjeta-movil.png' });
   await page.setViewportSize({ width: 1280, height: 860 });
+  // enlace del mail de recordatorio: abre la ficha
+  await page.goto(BASE + '#/app/crm/eventos?t=cafelito&op=op1'); await page.waitForSelector('#evtl', { timeout: 15000 }); ok(!/op=/.test(page.url()), 'el enlace del mail abre la ficha de la cotización'); await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   // Contactos y Actividades reales
   await page.goto(BASE + '#/app/crm/contactos'); await page.waitForSelector('[data-evc=c1]', { timeout: 15000 });
   ok(!/Tu CRM está vacío/.test(await page.textContent('#root')), 'Contactos muestra los contactos reales (no la pantalla vacía del prototipo)');
@@ -93,9 +95,12 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.click('[data-evmove=perdida]'); await page.waitForSelector('#sok'); await page.click('#sok'); await page.waitForTimeout(300);
   ok(/Elegí por qué/.test(await page.textContent('#layer')), 'pasar a Perdida pide el motivo'); await page.click('#layer [data-close].btn');
   await page.waitForTimeout(300); await page.click('[data-op=op1]'); await page.waitForSelector('[data-evmove=contactado]');
-  await page.click('[data-evmove=contactado]'); await page.waitForSelector('#svia'); await page.selectOption('#svia', 'WhatsApp'); await page.fill('#snote', 'Le escribí, espera la propuesta'); await page.click('#sok');
+  ok(!(await page.$('.ev-stage-cur + * .btn-primary')) && (await page.textContent('.ev-stage-cur')).includes('Nueva cotización'), 'la etapa actual se ve marcada y ninguna otra aparece resaltada');
+  await page.click('[data-evmove=contactado]'); await page.waitForSelector('#svia'); await page.selectOption('#svia', 'WhatsApp'); await page.fill('#snote', 'Le escribí, espera la propuesta'); await page.fill('#sna', 'Escribirle para ver si leyó la propuesta'); await page.click('#sok');
   await page.waitForSelector('#evtl li:has-text("Le escribí")', { timeout: 15000 }); ok(true, 'Contactado: queda en la historia con el canal y la nota');
   let op = await get('tenants/cafelito/opportunities/op1');
+  ok(op.fields.nextAction && op.fields.nextAction.stringValue === 'Escribirle para ver si leyó la propuesta', '«qué hay que hacer» guardado');
+  { const tl = await page.textContent('#evtl'); ok((tl.match(/Le escribí, espera la propuesta/g) || []).length === 1, 'la nota no se repite en la historia'); }
   ok(op.fields.stage.stringValue === 'contactado' && op.fields.nextFollowUpAt.timestampValue, 'cambio de etapa guardado con próximo seguimiento');
   await page.click('[data-evmove=propuesta-enviada]'); await page.waitForSelector('#samt'); await page.fill('#samt', ''); await page.click('#sok'); await page.waitForTimeout(300);
   ok(/Ingresá el importe/.test(await page.textContent('#layer')), 'Propuesta sin importe: lo pide');

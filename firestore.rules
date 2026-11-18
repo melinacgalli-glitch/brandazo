@@ -79,7 +79,8 @@ service cloud.firestore {
       match /opportunities/{o} {
         allow read: if isMember(t);
         allow update: if isMember(t)
-          && onlyChanges(['stage', 'owner', 'lostReason', 'lostNote', 'canRecontact', 'nextFollowUpAt', 'updatedAt', 'stageHistory', 'proposal', 'won', 'negotiation'])
+          && onlyChanges(['stage', 'owner', 'lostReason', 'lostNote', 'canRecontact', 'nextFollowUpAt', 'nextAction', 'updatedAt', 'stageHistory', 'proposal', 'won', 'negotiation'])
+          && (!('nextAction' in request.resource.data) || request.resource.data.nextAction == null || (request.resource.data.nextAction is string && request.resource.data.nextAction.size() <= 200))
           && request.resource.data.stage in ['nueva-cotizacion', 'contactado', 'propuesta-enviada', 'en-negociacion', 'ganada', 'perdida']
           && (request.resource.data.stage != 'perdida' || request.resource.data.lostReason is string)
           && request.resource.data.owner is string

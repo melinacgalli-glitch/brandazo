@@ -926,3 +926,6 @@ input[type=date],input[type=time]{cursor:pointer}
 /* CRM · etapa actual dentro de la ficha */
 .ev-stage-cur{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--radius-md);border:1px solid var(--magenta);color:var(--magenta-text);font-size:13px;font-weight:600;background:var(--magenta-soft)}
 .ev-stage-cur svg{width:14px;height:14px}
+
+.ev-card .ev-next{display:flex;gap:4px;align-items:flex-start;color:var(--ink)}
+.ev-card .ev-next svg{width:12px;height:12px;flex:none;margin-top:2px}

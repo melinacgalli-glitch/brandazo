@@ -36,7 +36,7 @@ function evListen(){
   fbDb.doc(`tenants/${c.tid}/settings/cafelito-eventos`).get().then(s=>{ EV.settings=s.exists?s.data():{}; evRefresh(); }).catch(()=>{ EV.settings={}; });
 }
 function evRefresh(){
-  if(!/^#\/app\/crm(\/(eventos|contactos|actividades))?\/?$/.test(location.hash)) return;
+  if(!/^#\/app\/crm(\/(eventos|contactos|actividades))?\/?(\?.*)?$/.test(location.hash)) return;
   if($('#layer').children.length){ EV.dirty=true; return; } // no cerrar la ficha abierta
   render();
 }
@@ -68,9 +68,15 @@ function vEventos(){
        <span class="ev-amt">${evMoney(evAmount(o))}${evAmountLabel(o)?` <span class="ev-amtl">${evAmountLabel(o)}</span>`:''}</span>${o.stage==='ganada'&&o.won?`<span class="ev-meta">${o.won.balancePaid?'Cobrado completo':o.won.depositPaid?'Seña cobrada · falta el saldo':'Falta cobrar la seña'}</span>`:''}
        <span class="ev-meta">${esc(ev.type||'Evento')} · ${ev.guests||'?'} invitados</span>
        <span class="ev-meta">${evDate(ev.date)} · ${o.owner?esc(o.owner):'Sin asignar'}</span>
+       ${t&&!['ganada','perdida'].includes(o.stage)?`<span class="ev-meta ev-next">${ic('clock')} ${t.toLocaleDateString('es-AR',{day:'numeric',month:'short'})}${o.nextAction?' · '+esc(o.nextAction):''}</span>`:''}
        ${tags?`<span class="ev-tags">${tags}</span>`:''}</button>`; }).join('')||'<p class="small muted" style="text-align:center;padding:16px 0">Sin cotizaciones</p>'}</div></section>`; }).join('')}</div>`;
 }
 function bEventos(){
+  // Enlace del mail de recordatorio: #/app/crm/eventos?t=<empresa>&op=<cotización> → abre esa ficha
+  const q=new URLSearchParams(location.hash.split('?')[1]||'');
+  if(q.get('t')&&S.company&&S.company.tid!==q.get('t')){ const c=S.companies.find(x=>x.tid===q.get('t')); if(c){ switchCompany(c); setTimeout(render,0); return; } }
+  if(q.get('op')&&EV.loaded){ const id=q.get('op'); history.replaceState(null,'',location.pathname+location.search+'#/app/crm/eventos');
+    setTimeout(()=>{ if(EV.ops.find(o=>o.id===id)) evFicha(id); else toast('Esa cotización ya no está en el tablero'); },0); }
   const s=$('#evow'); if(s) s.onchange=()=>{ EV.owner=s.value; render(); };
   const cf=$('#evcfg'); if(cf) cf.onclick=evConfig;
   $$('[data-op]').forEach(b=>{ b.onclick=()=>evFicha(b.dataset.op);

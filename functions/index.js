@@ -10,12 +10,15 @@ const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { getAuth } = require('firebase-admin/auth');
 const { handleEventQuote, loadKeys } = require('./src/eventQuotes');
 const conn = require('./src/connections');
+const reminders = require('./src/reminders');
 
 initializeApp();
 const INTEGRATION_KEYS = defineSecret('INTEGRATION_KEYS');
 // Conexiones con Meta y Google Ads: JSON en Secret Manager (ver docs/conexiones.md)
 const META_APP = defineSecret('META_APP');
 const GOOGLE_ADS = defineSecret('GOOGLE_ADS');
+// Envío de mails (Resend): {"apiKey","from"}. Ver docs/recordatorios.md
+const RESEND = defineSecret('RESEND');
 
 exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KEYS], cors: false, maxInstances: 5, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
   const path = req.path.replace(/\/+$/, '');
@@ -42,4 +45,10 @@ exports.conexiones = onRequest({ region: 'southamerica-east1', secrets: [META_AP
 exports.sincronizarConexiones = onSchedule({ schedule: '0 6 * * *', timeZone: 'America/Argentina/Cordoba', region: 'southamerica-east1', secrets: [META_APP, GOOGLE_ADS], timeoutSeconds: 540, memory: '256MiB', retryCount: 1 }, async () => {
   const r = await conn.syncAll(connDeps());
   console.log('[conexiones] sincronización diaria', JSON.stringify(r));
+});
+
+// Recordatorios de seguimiento del CRM: todos los días a las 8 (Córdoba), un mail por responsable
+exports.recordatoriosSeguimiento = onSchedule({ schedule: '0 8 * * *', timeZone: 'America/Argentina/Cordoba', region: 'southamerica-east1', secrets: [RESEND], timeoutSeconds: 300, memory: '256MiB', retryCount: 1 }, async () => {
+  const r = await reminders.sendReminders({ db: getFirestore(), Timestamp, fetch: globalThis.fetch, now: () => Date.now(), resend: reminders.parseCfg(RESEND.value()) });
+  console.log('[recordatorios]', JSON.stringify(r.map(x => ({ ...x, email: x.email ? x.email.replace(/^(.).*@/, '$1…@') : '' }))));
 });
