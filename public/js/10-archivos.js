@@ -15,7 +15,9 @@ const fileKind=t=>/^image\//.test(t)?'image':/^video\//.test(t)?'video':'file';
 const fileCatFor=(t,n)=>/^image\//.test(t)?'Fotos':/^video\//.test(t)?'Videos':/font|\.(otf|ttf|woff2?)$/i.test(t+' '+n)?'Tipografías':/pdf|word|document|sheet|excel|presentation|powerpoint|text/.test(t)?'Documentos':'Plantillas';
 const fileSize=b=>b>=1048576?(b/1048576).toLocaleString('es-AR',{maximumFractionDigits:1})+' MB':Math.max(1,Math.round(b/1024))+' KB';
 const cloudCo=()=>!!(S.company&&S.company.cloud&&fbSt);
-const isFileObj=f=>f&&!Array.isArray(f)&&f.path;
+const isFileObj=f=>f&&!Array.isArray(f)&&(f.path||f.link);
+const linkHost=u=>{ try{ return new URL(u).hostname.replace(/^www\./,''); }catch(e){ return ''; } };
+const linkLabel=u=>{ const h=linkHost(u); return /drive\.google|docs\.google/.test(h)?'Google Drive':/dropbox/.test(h)?'Dropbox':/onedrive|sharepoint|1drv/.test(h)?'OneDrive':/canva/.test(h)?'Canva':/figma/.test(h)?'Figma':h; };
 
 /* Sube un archivo y devuelve sus datos. onProgress(0..1) */
 function uploadBrandFile(brand,file,onProgress){
@@ -37,14 +39,16 @@ function logosHtml(b,k){
     <div class="cap"><span>${n}</span><span style="display:flex;gap:4px">${l?`<a class="icon-btn" style="width:28px;height:28px" href="${esc(l.url)}" target="_blank" rel="noopener" aria-label="Descargar logo ${n}">${ic('download')}</a><button class="icon-btn" style="width:28px;height:28px" data-logodel="${id}" aria-label="Quitar logo ${n}">${ic('trash')}</button>`:''}<button class="btn btn-sm" data-logo="${id}">${l?'Cambiar':'Subir'}</button></span></div></div>`; }).join('')}</div>`;
 }
 function assetCloud(f){
+  if(f.link) return `<div class="asset"><a class="pv" href="${esc(f.url)}" target="_blank" rel="noopener" style="background:var(--negro);text-decoration:none;flex-direction:column;gap:6px" aria-label="Abrir ${esc(f.name)} (${esc(linkLabel(f.url))})">${ic('link')}<span class="small" style="color:#fff">${esc(linkLabel(f.url))}</span></a>
+   <div class="meta"><b title="${esc(f.name)}">${esc(f.name)}</b><span class="muted" style="display:flex;justify-content:space-between;align-items:center;gap:4px">${esc(f.cat)} · enlace<button class="icon-btn" style="width:24px;height:24px" data-fdel="${f.id}" aria-label="Quitar ${esc(f.name)}">${ic('trash')}</button></span></div></div>`;
   const kind=fileKind(f.contentType);
   return `<div class="asset"><a class="pv" href="${esc(f.url)}" target="_blank" rel="noopener" style="background:${kind==='image'?'var(--surface-sunken)':kind==='video'?'#0E0E10':'#5C5C66'};text-decoration:none" aria-label="Abrir ${esc(f.name)}">${kind==='image'?`<img src="${esc(f.url)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:ic(kind==='video'?'video':'file')}</a>
    <div class="meta"><b title="${esc(f.name)}">${esc(f.name)}</b><span class="muted" style="display:flex;justify-content:space-between;align-items:center;gap:4px">${esc(f.cat)} · ${fileSize(f.size)}<button class="icon-btn" style="width:24px;height:24px" data-fdel="${f.id}" aria-label="Borrar ${esc(f.name)}">${ic('trash')}</button></span></div></div>`;
 }
 function biblioHtml(k){
   const files=k.files.filter(isFileObj), cats=FILE_CATS.filter(c=>files.some(f=>f.cat===c)), fl=files.filter(f=>!libFilter||f.cat===libFilter);
-  return `<div class="toolbar"><div class="seg"><button data-lf="" aria-pressed="${!libFilter}">Todos · ${files.length}</button>${cats.map(c=>`<button data-lf="${c}" aria-pressed="${libFilter===c}">${c}</button>`).join('')}</div><span class="grow"></span><button class="btn btn-primary" id="upl2">${ic('upload')} Subir archivos</button></div>
-  ${fl.length?`<div class="lib">${fl.map(assetCloud).join('')}</div>`:`<div class="card empty"><div class="eico">${ic('image')}</div><h3>${files.length?'No hay archivos en esta categoría':'Biblioteca vacía'}</h3><p class="muted small">Subí logos, fotos, videos, documentos, plantillas y tipografías (hasta 25 MB cada uno). Los ve todo tu equipo.</p><button class="btn btn-primary" data-upl2>${ic('upload')} Subir archivos</button></div>`}`;
+  return `<div class="toolbar"><div class="seg"><button data-lf="" aria-pressed="${!libFilter}">Todos · ${files.length}</button>${cats.map(c=>`<button data-lf="${c}" aria-pressed="${libFilter===c}">${c}</button>`).join('')}</div><span class="grow"></span><button class="btn" id="lnk2">${ic('link')} Agregar enlace</button><button class="btn btn-primary" id="upl2">${ic('upload')} Subir archivos</button></div>
+  ${fl.length?`<div class="lib">${fl.map(assetCloud).join('')}</div>`:`<div class="card empty"><div class="eico">${ic('image')}</div><h3>${files.length?'No hay archivos en esta categoría':'Biblioteca vacía'}</h3><p class="muted small">Subí logos, fotos, videos, documentos, plantillas y tipografías (hasta 25 MB cada uno), o agregá el enlace a una carpeta de Drive, Dropbox u otra nube. Los ve todo tu equipo.</p><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn" data-lnk2>${ic('link')} Agregar enlace</button><button class="btn btn-primary" data-upl2>${ic('upload')} Subir archivos</button></div></div>`}`;
 }
 
 /* ---------- Acciones ---------- */
@@ -74,6 +78,24 @@ function uploadDialog(b,k){
   const obs=new MutationObserver(()=>{ if(!$('#layer').children.length){ obs.disconnect(); if(changed) render(); } }); obs.observe($('#layer'),{childList:true});
 }
 
+function linkDialog(b,k){
+  modal('Agregar enlace',`<p class="small muted" style="margin-bottom:12px">Para carpetas con muchas fotos o videos: pegá el enlace de Google Drive, Dropbox, OneDrive, Canva u otra nube. Revisá que esté compartido para que tu equipo pueda abrirlo.</p>
+   <div class="field"><label for="lkurl">Enlace</label><input class="input" id="lkurl" inputmode="url" placeholder="https://drive.google.com/…"><span class="err" role="alert"></span></div>
+   <div class="field"><label for="lkname">Nombre</label><input class="input" id="lkname" maxlength="80" placeholder="Ej.: Fotos de la barra móvil 2026"><span class="err" role="alert"></span></div>
+   <div class="field"><label for="lkcat">Categoría</label><select class="select" id="lkcat">${FILE_CATS.map(c=>`<option ${c==='Fotos'?'selected':''}>${c}</option>`).join('')}</select></div>`,
+   `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="lkok">Agregar</button>`);
+  $('#lkurl').oninput=()=>{ const n=$('#lkname'); if(!n.dataset.touched){ const l=linkLabel($('#lkurl').value.trim()); n.placeholder=l?`Ej.: Carpeta de ${l}`:'Ej.: Fotos de la barra móvil 2026'; } };
+  $('#lkname').oninput=e=>{ e.target.dataset.touched='1'; };
+  $('#lkok').onclick=()=>{ let u=$('#lkurl').value.trim(); if(u&&!/^https?:\/\//i.test(u)) u='https://'+u;
+    let valid=false; try{ const x=new URL(u); valid=/^https?:$/.test(x.protocol)&&x.hostname.includes('.'); }catch(e){}
+    let ok=fieldErr($('#lkurl'),!u?'Pegá el enlace':!valid?'Ese enlace no parece válido. Copialo desde el botón «Compartir» de la carpeta.':'');
+    const name=$('#lkname').value.trim()||`Carpeta de ${linkLabel(u)}`;
+    if(!ok) return;
+    if(k.files.some(f=>f.link&&f.url===u)) return fieldErr($('#lkurl'),'Ese enlace ya está en la biblioteca');
+    k.files.unshift({id:uid(),name,url:u,link:true,cat:$('#lkcat').value,contentType:'',size:0,at:new Date().toISOString(),by:S.user.name||(C.user&&C.user.email)||''});
+    closeLayer(); render(); toast('Enlace agregado a la biblioteca'); };
+}
+
 /* ---------- Conexión con la pantalla de Marca ---------- */
 (function(){
   if(!CLOUD.on) return;
@@ -100,8 +122,9 @@ function uploadDialog(b,k){
     $$('[data-logodel]').forEach(x=>x.onclick=()=>{ const id=x.dataset.logodel, l=k.logos[id]; modal('¿Quitar el logo?',`<p>Se borra el archivo <b>${esc(l.name)}</b>.</p>`,`<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="lok">Quitar</button>`);
       $('#lok').onclick=async()=>{ try{ await deleteBrandFile(l); delete k.logos[id]; closeLayer(); render(); toast('Logo quitado'); }catch(e){ toast('No se pudo borrar'); } }; });
     [$('#upl2'),...$$('[data-upl2]')].filter(Boolean).forEach(x=>x.onclick=()=>uploadDialog(b,k));
-    $$('[data-fdel]').forEach(x=>x.onclick=()=>{ const f=k.files.find(z=>z.id===x.dataset.fdel); if(!f) return; modal('¿Borrar el archivo?',`<p><b>${esc(f.name)}</b> se borra para todo el equipo. No se puede deshacer.</p>`,`<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="fok">Borrar</button>`);
-      $('#fok').onclick=async()=>{ try{ await deleteBrandFile(f); k.files=k.files.filter(z=>z!==f); closeLayer(); render(); toast('Archivo borrado'); }catch(e){ toast('No se pudo borrar'); } }; });
+    [$('#lnk2'),...$$('[data-lnk2]')].filter(Boolean).forEach(x=>x.onclick=()=>linkDialog(b,k));
+    $$('[data-fdel]').forEach(x=>x.onclick=()=>{ const f=k.files.find(z=>z.id===x.dataset.fdel); if(!f) return; modal(f.link?'¿Quitar el enlace?':'¿Borrar el archivo?',f.link?`<p>Se quita <b>${esc(f.name)}</b> de la biblioteca. La carpeta en ${esc(linkLabel(f.url))} no se toca.</p>`:`<p><b>${esc(f.name)}</b> se borra para todo el equipo. No se puede deshacer.</p>`,`<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="fok">Borrar</button>`);
+      $('#fok').onclick=async()=>{ try{ if(!f.link) await deleteBrandFile(f); k.files=k.files.filter(z=>z!==f); closeLayer(); render(); toast('Archivo borrado'); }catch(e){ toast('No se pudo borrar'); } }; });
     // En la nube, lo que todavía no existe no se simula
     $$('[data-dl]').forEach(x=>x.onclick=()=>toast('La descarga del manual en PDF todavía no está disponible'));
     $$('[data-share]').forEach(x=>x.onclick=()=>toast('Compartir el manual todavía no está disponible'));

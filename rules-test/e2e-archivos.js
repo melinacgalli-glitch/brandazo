@@ -50,6 +50,15 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= 392), 'sin desborde en celular');
   await page.screenshot({ path: path.join(os.tmpdir(), 'e2e-biblioteca-movil.png') });
   await page.setViewportSize({ width: 1280, height: 900 }); await page.goto(BASE + '#/app/marca/identidad'); await page.waitForSelector('.logo-card img'); await page.screenshot({ path: path.join(os.tmpdir(), 'e2e-logos.png') });
+  // Enlaces a carpetas (Drive, Dropbox…)
+  await page.goto(BASE + '#/app/marca/biblioteca'); await page.waitForSelector('#lnk2'); await page.click('#lnk2'); await page.waitForSelector('#lkurl');
+  await page.fill('#lkurl', 'esto no es un link'); await page.click('#lkok'); ok(/no parece válido/.test(await page.textContent('#layer')), 'un enlace inválido se rechaza con explicación');
+  await page.fill('#lkurl', 'drive.google.com/drive/folders/abc123'); await page.fill('#lkname', 'Fotos de la barra móvil 2026'); await page.click('#lkok'); await page.waitForTimeout(800);
+  const libt = await page.textContent('.lib'); ok(/Fotos de la barra móvil 2026/.test(libt) && /Google Drive/.test(libt), 'el enlace aparece en la biblioteca como «Google Drive»');
+  ok(await page.getAttribute('.lib a[href^="https://drive.google.com/drive/folders/abc123"]', 'target') === '_blank', 'se abre en otra pestaña con https agregado');
+  await page.waitForTimeout(1500); const kl = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue)['Cafelito Ambulante'].files.find(f => f.link);
+  ok(kl && kl.url === 'https://drive.google.com/drive/folders/abc123', 'el enlace quedó guardado en la nube');
+  await page.click(`[data-fdel="${kl.id}"]`); ok(/no se toca/.test(await page.textContent('#layer')), 'quitar un enlace aclara que la carpeta original no se toca'); await page.click('#fok'); await page.waitForTimeout(500);
   // Guardado claro: Marca → Información general
   await page.goto(BASE + '#/app/marca/general'); await page.waitForSelector('#fbr');
   ok(!(await page.$('[data-roedit]')), 'sin datos, el formulario arranca abierto para completar');

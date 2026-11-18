@@ -940,3 +940,15 @@ input[type=date],input[type=time]{cursor:pointer}
 .ro-val.empty{color:var(--ink-muted);font-style:italic}
 .form-saved{margin-bottom:16px}
 .form-head-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}
+
+/* Simulador: tres costos alineados; en pantallas angostas bajan solos */
+.fz-costs{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:start}
+.fz-costs .hint{display:block;margin-top:6px}
+/* Simulador: una fila por costo (nombre y explicación a la izquierda, importe a la derecha) */
+.fz-costs{grid-template-columns:1fr;gap:8px}
+.fz-costs .field{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,180px);grid-template-areas:"lab inp" "hin inp" "err err";column-gap:12px;align-items:center;margin:0;padding:8px 0;border-bottom:1px solid var(--line)}
+.fz-costs .field:last-child{border-bottom:0}
+.fz-costs .field>label{grid-area:lab;margin:0}
+.fz-costs .field>.fz-money{grid-area:inp}
+.fz-costs .field>.hint{grid-area:hin;margin-top:0}
+.fz-costs .field>.err{grid-area:err}
