@@ -63,24 +63,28 @@ function dropCloudCompanies(){ const keep=[...S.companies.filter(c=>!c.cloud),..
 async function acceptInvites(u){
   const em=lowerEmail(u.email); if(!em||!u.emailVerified) return 0;
   const inv=await fbDb.collection('invites').where('email','==',em).get(); let n=0;
-  for(const d of inv.docs){ const i=d.data();
+  await Promise.all(inv.docs.map(async d=>{ const i=d.data();
     try{ await fbDb.doc(`tenants/${i.tenantId}/members/${u.uid}`).set({uid:u.uid,email:em,name:u.displayName||'',role:i.role,status:'Activo',joinedAt:TS(),invitedBy:i.invitedByName||''});
-      await d.ref.delete(); n++; }catch(e){ console.warn('[nube] invitación',d.id,e.code); } }
+      await d.ref.delete(); n++; }catch(e){ console.warn('[nube] invitación',d.id,e.code); } }));
   return n;
 }
 async function loadCloud(){
   const u=C.user; if(!u) return;
   C.loading=true; C.error=''; render();
   try{
-    const accepted=await acceptInvites(u);
-    const plat=await fbDb.doc('config/platform').get().catch(()=>null);
+    // Todo lo que no depende entre sí sale junto (antes eran ~8 consultas en fila: 5 a 8 segundos)
+    const memQ=()=>fbDb.collectionGroup('members').where('uid','==',u.uid).get();
+    let [accepted,plat,mems]=await Promise.all([acceptInvites(u),fbDb.doc('config/platform').get().catch(()=>null),memQ()]);
+    if(accepted) mems=await memQ(); // solo si se aceptó una invitación nueva hace falta volver a buscar
     C.admin=!!(plat&&plat.exists&&(plat.data().admins||[]).map(lowerEmail).includes(lowerEmail(u.email)));
-    const mems=await fbDb.collectionGroup('members').where('uid','==',u.uid).get();
-    const tenants=[];
-    for(const m of mems.docs){ const tid=m.ref.parent.parent.id; const t=await fbDb.doc(`tenants/${tid}`).get(); if(t.exists) tenants.push({tid,role:m.data().role,data:t.data()}); }
-    tenants.sort((a,b)=>(a.data.name||'').localeCompare(b.data.name||''));
-    const companies=[];
-    for(const t of tenants){ companies.push(await loadTenant(t)); }
+    // Por cada empresa, su ficha, sus datos y su equipo salen juntos
+    const loaded=(await Promise.all(mems.docs.map(async m=>{ const tid=m.ref.parent.parent.id, role=m.data().role;
+      const [t,c]=await Promise.all([fbDb.doc(`tenants/${tid}`).get(),loadTenant({tid,role,data:{}})]);
+      if(!t.exists){ STORE.delete(c); return null; }
+      const d=t.data(); Object.assign(c,{name:d.name||tid,country:d.country||'Argentina',industry:d.industry||'',size:d.size||''});
+      return {t:{tid,role,data:d},c}; }))).filter(Boolean);
+    loaded.sort((a,b)=>(a.c.name||'').localeCompare(b.c.name||''));
+    const tenants=loaded.map(x=>x.t), companies=loaded.map(x=>x.c);
     const local=[...S.companies.filter(c=>!c.cloud),...C.local.filter(c=>!S.companies.includes(c))];
     // Con empresas en la nube, las del navegador (y la de ejemplo) no se muestran: quedan guardadas solo para «Subir datos…»
     if(companies.length){ C.local=local; S.companies=companies; } else { C.local=[]; S.companies=local; }
@@ -95,19 +99,19 @@ async function loadCloud(){
 async function loadTenant(t){
   const c={name:t.data.name||t.tid,country:t.data.country||'Argentina',industry:t.data.industry||'',size:t.data.size||'',cloud:true,tid:t.tid,myRole:t.role};
   const st={workspaces:[{name:'General'}],brands:[],members:[],integrations:{},activity:[],m:emptyModules(),demo:false,plan:'Prueba gratis',audit:[]};
-  const parts=await fbDb.collection(`tenants/${t.tid}/state`).get();
+  const [parts,members]=await Promise.all([fbDb.collection(`tenants/${t.tid}/state`).get(),loadMembers(t.tid,['Dueño','Admin'].includes(t.role))]);
   parts.forEach(d=>{ let v; try{ v=JSON.parse(d.data().json); }catch(e){ return; }
     C.last[`${t.tid}/${d.id}`]=d.data().json;
     if(d.id==='base') Object.assign(st,v); else if(d.id==='x') st.x=v; else if(d.id.startsWith('m_')) st.m[d.id.slice(2)]=v; });
-  st.members=await loadMembers(t.tid,['Dueño','Admin'].includes(t.role));
+  st.members=members;
   STORE.set(c,st);
   if(typeof edMigrate==='function') edMigrate(st.m);
   return c;
 }
 async function loadMembers(tid,isAdmin){
-  const out=[]; const ms=await fbDb.collection(`tenants/${tid}/members`).get();
+  const out=[]; const [ms,inv]=await Promise.all([fbDb.collection(`tenants/${tid}/members`).get(),isAdmin?fbDb.collection('invites').where('tenantId','==',tid).get():null]);
   ms.forEach(d=>{ const m=d.data(); out.push({uid:d.id,name:m.name||'',email:m.email||'',role:m.role,status:'Activo'}); });
-  if(isAdmin){ const inv=await fbDb.collection('invites').where('tenantId','==',tid).get(); inv.forEach(d=>{ const i=d.data(); out.push({inviteId:d.id,name:'',email:i.email,role:i.role,status:'Pendiente'}); }); }
+  if(inv) inv.forEach(d=>{ const i=d.data(); out.push({inviteId:d.id,name:'',email:i.email,role:i.role,status:'Pendiente'}); });
   return out.sort((a,b)=>(a.status>b.status?1:-1)||(a.name||a.email).localeCompare(b.name||b.email));
 }
 
@@ -140,7 +144,9 @@ window.addEventListener('pagehide',()=>{ try{ flushCloud(); }catch(e){} });
 
 /* ---------- Pantallas de ingreso conectadas ---------- */
 if(CLOUD.on&&fbAuth){
-  const googleIn=async()=>{ try{ const p=new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({prompt:'select_account'}); await fbAuth.signInWithPopup(p); }catch(e){ toast(authErr(e)); } };
+  const googleIn=async e=>{ const b=e&&e.currentTarget; if(b) b.classList.add('is-loading');
+    try{ const p=new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({prompt:'select_account'}); await fbAuth.signInWithPopup(p); }
+    catch(err){ if(b) b.classList.remove('is-loading'); toast(authErr(err)); } };
   vLogin=(_v=>function(){ return _v().replace('¿No tenés cuenta? <a href="#/registro">Creala gratis</a>','¿Te invitaron a Brandazo? <a href="#/registro">Creá tu contraseña</a>'); })(vLogin);
   bLogin=function(){
     bindEyes();
