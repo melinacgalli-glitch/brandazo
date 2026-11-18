@@ -14,6 +14,7 @@ const reminders = require('./src/reminders');
 const account = require('./src/account');
 const availability = require('./src/availability');
 const { handleShopOrder } = require('./src/shopOrders');
+const { handleManual } = require('./src/crmManual');
 
 initializeApp();
 const INTEGRATION_KEYS = defineSecret('INTEGRATION_KEYS');
@@ -23,11 +24,16 @@ const GOOGLE_ADS = defineSecret('GOOGLE_ADS');
 // Envío de mails (Resend): {"apiKey","from"}. Ver docs/recordatorios.md
 const RESEND = defineSecret('RESEND');
 
-exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KEYS], cors: false, maxInstances: 5, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
+// CORS solo para pruebas locales; en producción la app llama por el mismo dominio (Hosting)
+exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KEYS], cors: [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/], maxInstances: 5, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
   const path = req.path.replace(/\/+$/, '');
   if (/\/integrations\/cafelito\/availability$/.test(path)) { // fechas no disponibles para el calendario del cotizador
     const out = await availability.handleAvailability(req, { db: getFirestore(), keys: loadKeys(INTEGRATION_KEYS.value()), now: () => new Date() });
     res.set(out.headers || {}).status(out.status).json(out.body); return;
+  }
+  if (/\/crm\/manual$/.test(path)) { // carga manual de contactos y pedidos de presupuesto (miembros con sesión)
+    const out = await handleManual(req, { db: getFirestore(), FieldValue, Timestamp, verifyIdToken: t => getAuth().verifyIdToken(t) });
+    res.status(out.status).json(out.body); return;
   }
   if (/\/integrations\/cafelito\/shop-orders$/.test(path)) { // pedidos de la tienda online (Cafelito Cakes)
     const out = await handleShopOrder(req, { db: getFirestore(), FieldValue, Timestamp, keys: loadKeys(INTEGRATION_KEYS.value()) });
