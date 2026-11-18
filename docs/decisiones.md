@@ -57,7 +57,7 @@ _Última actualización: 2026-11-17_
 | 2026-11-18 | **Fechas no disponibles en el cotizador**: `GET /api/v1/integrations/cafelito/availability` (misma clave; firma sobre `${timestamp}.GET ${ruta}?${consulta}`) devuelve solo fechas: `booked` (ganada con seña cobrada; 1 evento por día), `blocked` (bloqueada a mano en CRM → Configurar) y `min_notice` (próximos 7 días). Cotización para una fecha tomada: se registra igual con el aviso `DATE_UNAVAILABLE`. En Brandazo: aviso al pasar a Ganada o cobrar la seña de un día tomado. Contrato actualizado (sección 8 bis) y `firmar.mjs disponibilidad`. Pruebas: servidor 3/3, navegador ok. | Decisión de Melina: ocupa con la seña cobrada, 1 evento por día, 7 días mínimos de anticipación. |
 
 ## Pendientes de definir
-- Publicar la disponibilidad (función `api`, reglas y sitio: falta autorización) y que Rodri la use en el calendario del cotizador (contrato, sección 8 bis).
+- Rodri: usar la disponibilidad en el calendario del cotizador (contrato, sección 8 bis). Publicada y verificada en producción el 18/11/2026.
 - Melina: cuenta en Resend, dominio brandazo.com.ar verificado en Cloudflare y clave en el secreto `RESEND`; después volver a publicar `recordatoriosSeguimiento` y mandar un mail de prueba (activa también los mails de cuenta con la marca: función `cuenta`).
 - Conexiones Meta y Google Ads (publicadas, autorizado por Melina): Melina crea la app de Meta, el cliente OAuth de Google y pide el token de desarrollador con acceso básico.
 - Stack a largo plazo: se reevalúa cuando haya clientes externos (hoy Firebase alcanza).
