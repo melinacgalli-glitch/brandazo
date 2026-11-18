@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0",
+  "eventId": "CK-10452:paid",
+  "orderId": "CK-10452",
+  "status": "paid",
+  "statusAt": "2026-11-20T15:02:11-03:00",
+  "createdAt": "2026-11-20T14:55:40-03:00",
+  "paidAt": "2026-11-20T15:02:11-03:00",
+  "currency": "ARS",
+  "totalMinor": 5900000,
+  "discountMinor": 0,
+  "items": [
+    {
+      "sku": "TOR-CHOCO-20",
+      "name": "Torta de chocolate",
+      "variant": "20 porciones",
+      "category": "Tortas",
+      "quantity": 1,
+      "unitPriceMinor": 4500000
+    },
+    {
+      "sku": "VEL-NUM",
+      "name": "Vela número",
+      "variant": "5",
+      "quantity": 2,
+      "unitPriceMinor": 700000
+    }
+  ],
+  "pickup": {
+    "date": "2026-11-25",
+    "timeSlot": "16 a 18 h",
+    "place": "Cafelito Coffee House"
+  },
+  "customer": {
+    "name": "Lucía Pérez",
+    "phone": "351 555-0199",
+    "email": "lucia@example.com"
+  },
+  "payment": {
+    "provider": "mercadopago",
+    "paymentId": "1234567890",
+    "method": "credit_card",
+    "installments": 1
+  },
+  "source": {
+    "site": "cafelito.com.ar",
+    "pageUrl": "https://www.cafelito.com.ar/cakes/checkout"
+  },
+  "attribution": {
+    "utmSource": "instagram",
+    "utmMedium": "paid_social",
+    "utmCampaign": "dia-de-la-madre",
+    "landingPage": "https://www.cafelito.com.ar/cakes?utm_source=instagram&utm_medium=paid_social&utm_campaign=dia-de-la-madre",
+    "capturedAt": "2026-11-20T14:40:02-03:00"
+  },
+  "consent": {
+    "marketing": true,
+    "text": "Quiero recibir novedades y promociones de Cafelito",
+    "capturedAt": "2026-11-20T15:01:50-03:00"
+  },
+  "notes": "Dedicatoria: ¡Feliz cumple, Juana!"
+}

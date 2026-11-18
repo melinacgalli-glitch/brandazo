@@ -1,0 +1,14 @@
+{
+  "status": "created",
+  "orderId": "CK-10452",
+  "receivedAt": "2026-11-20T18:02:12.120Z",
+  "order": {
+    "status": "paid",
+    "counted": true
+  },
+  "contact": {
+    "id": "Xy12...",
+    "match": "new"
+  },
+  "warnings": []
+}

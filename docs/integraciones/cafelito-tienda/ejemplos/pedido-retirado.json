@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "1.0",
+  "orderId": "CK-10452",
+  "currency": "ARS",
+  "totalMinor": 5900000,
+  "items": [
+    {
+      "sku": "TOR-CHOCO-20",
+      "name": "Torta de chocolate",
+      "variant": "20 porciones",
+      "category": "Tortas",
+      "quantity": 1,
+      "unitPriceMinor": 4500000
+    },
+    {
+      "sku": "VEL-NUM",
+      "name": "Vela número",
+      "variant": "5",
+      "quantity": 2,
+      "unitPriceMinor": 700000
+    }
+  ],
+  "customer": {
+    "name": "Lucía Pérez",
+    "phone": "351 555-0199",
+    "email": "lucia@example.com"
+  },
+  "eventId": "CK-10452:picked_up",
+  "status": "picked_up",
+  "statusAt": "2026-11-25T16:40:00-03:00"
+}

@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.brandazo.com.ar/schemas/integrations/cafelito/shop-order.request.v1.json",
+  "title": "Pedido de la tienda online de Cafelito Cakes (solicitud)",
+  "description": "Cuerpo que el servidor de cafelito.com.ar envía a Brandazo cada vez que un pedido de la tienda cambia de estado (pagado, retirado, cancelado o devuelto). El mismo pedido se envía varias veces, una por cada cambio, con el mismo orderId y un eventId distinto. Importes en centavos (enteros), IVA incluido, en pesos.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "orderId",
+    "status",
+    "statusAt",
+    "totalMinor",
+    "items",
+    "customer"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9_.:-]+$",
+      "description": "Identificador único de ESTE aviso (por ejemplo `<orderId>:paid`). Tiene que ser igual al encabezado Idempotency-Key. Reenviar el mismo aviso no duplica nada."
+    },
+    "orderId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "description": "Número de pedido de la tienda. Es la clave del pedido en Brandazo: todos los avisos del mismo pedido lo actualizan."
+    },
+    "status": {
+      "enum": [
+        "paid",
+        "picked_up",
+        "cancelled",
+        "refunded"
+      ],
+      "description": "paid = pago aprobado por Mercado Pago · picked_up = el cliente retiró la torta · cancelled = se anuló antes de entregar · refunded = se devolvió el dinero. Los pedidos sin pagar y los pagos rechazados NO se mandan acá (van en los avisos del recorrido, etapa C2)."
+    },
+    "statusAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Momento del cambio de estado (ISO 8601 con zona). Si llega un aviso más viejo que el último guardado, Brandazo lo registra pero no cambia el estado."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Cuándo se creó el pedido en la tienda."
+    },
+    "paidAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Cuándo se aprobó el pago. Obligatorio cuando status = paid. La venta cuenta en el mes de esta fecha."
+    },
+    "currency": {
+      "const": "ARS"
+    },
+    "totalMinor": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000000000,
+      "description": "Total cobrado en centavos, IVA incluido (lo que pagó el cliente)."
+    },
+    "discountMinor": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000000000,
+      "description": "Descuento aplicado, en centavos."
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "quantity",
+          "unitPriceMinor"
+        ],
+        "properties": {
+          "sku": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "variant": {
+            "type": "string",
+            "maxLength": 160,
+            "description": "Tamaño, porciones, sabor, etc."
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "unitPriceMinor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000000000
+          }
+        }
+      }
+    },
+    "pickup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Día de retiro elegido (AAAA-MM-DD)."
+        },
+        "timeSlot": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "place": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Local donde se retira."
+        }
+      }
+    },
+    "customer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "phone"
+          ]
+        },
+        {
+          "required": [
+            "email"
+          ]
+        }
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 30,
+          "pattern": "^[0-9+()\\-.\\s]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        }
+      }
+    },
+    "payment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "const": "mercadopago"
+        },
+        "paymentId": {
+          "type": "string",
+          "maxLength": 60,
+          "description": "Número de pago de Mercado Pago (para buscarlo si hay un reclamo)."
+        },
+        "method": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Por ejemplo credit_card, debit_card, account_money."
+        },
+        "installments": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 36
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "site": {
+          "type": "string",
+          "maxLength": 100,
+          "default": "cafelito.com.ar"
+        },
+        "pageUrl": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2000
+        }
+      }
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Origen de la visita que terminó en la compra (los parámetros utm_* con los que la persona llegó a la web, guardados hasta el pago). Con utmCampaign Brandazo vincula el pedido a la campaña.",
+      "properties": {
+        "utmSource": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "utmMedium": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "utmCampaign": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "utmContent": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "utmTerm": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "gclid": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "gbraid": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "wbraid": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "fbclid": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Identificador de clic de anuncios de Meta (parámetro fbclid de la URL de llegada)."
+        },
+        "landingPage": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2000,
+          "description": "Primera página de la visita."
+        },
+        "referrer": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Cuándo se capturaron estos parámetros (inicio de la visita)."
+        }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional. Aceptación de PROMOCIONES (casilla de promociones del cotizador). Responder el pedido de presupuesto no necesita consentimiento: lo inició la persona. Sin este bloque, o con marketing=false, Brandazo no envía promociones a ese contacto.",
+      "properties": {
+        "marketing": {
+          "type": "boolean",
+          "description": "true si la persona marcó la casilla de promociones; false si la dejó sin marcar."
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Texto exacto de la casilla de promociones tal como lo vio la persona (se guarda como prueba del consentimiento)."
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Dedicatoria o aclaraciones del pedido."
+    }
+  }
+}

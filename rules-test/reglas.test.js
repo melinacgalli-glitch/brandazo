@@ -114,6 +114,10 @@ test('lo del servidor no se toca desde el navegador', async () => {
   await assertFails(updateDoc(doc(d, 'tenants/cafelito/contacts/c1'), { name: 'Otro' }));
   await assertFails(getDoc(doc(d, 'tenants/cafelito/idempotency/q1')));
   await assertFails(setDoc(doc(d, 'tenants/cafelito/eventQuotes/q9'), { a: 1 }));
+  await assertSucceeds(getDoc(doc(d, 'tenants/cafelito/orders/P-1')));
+  await assertFails(setDoc(doc(d, 'tenants/cafelito/orders/P-2'), { status: 'paid', totalMinor: 1 }));
+  await assertFails(getDoc(doc(d, 'tenants/cafelito/contactsByEmail/a@b.com')));
+  await assertFails(getDoc(doc(db(extrana), 'tenants/cafelito/orders/P-1')));
 });
 
 test('configuración del tablero: solo Dueño/Admin', async () => {

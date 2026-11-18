@@ -13,6 +13,7 @@ const conn = require('./src/connections');
 const reminders = require('./src/reminders');
 const account = require('./src/account');
 const availability = require('./src/availability');
+const { handleShopOrder } = require('./src/shopOrders');
 
 initializeApp();
 const INTEGRATION_KEYS = defineSecret('INTEGRATION_KEYS');
@@ -26,6 +27,10 @@ exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KE
   const path = req.path.replace(/\/+$/, '');
   if (/\/integrations\/cafelito\/availability$/.test(path)) { // fechas no disponibles para el calendario del cotizador
     const out = await availability.handleAvailability(req, { db: getFirestore(), keys: loadKeys(INTEGRATION_KEYS.value()), now: () => new Date() });
+    res.set(out.headers || {}).status(out.status).json(out.body); return;
+  }
+  if (/\/integrations\/cafelito\/shop-orders$/.test(path)) { // pedidos de la tienda online (Cafelito Cakes)
+    const out = await handleShopOrder(req, { db: getFirestore(), FieldValue, Timestamp, keys: loadKeys(INTEGRATION_KEYS.value()) });
     res.set(out.headers || {}).status(out.status).json(out.body); return;
   }
   if (path !== '/api/v1/integrations/cafelito/event-quotes' && path !== '/v1/integrations/cafelito/event-quotes') {

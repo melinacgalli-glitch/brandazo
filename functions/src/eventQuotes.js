@@ -199,4 +199,4 @@ async function handleEventQuote(req, deps) {
   }
 }
 
-module.exports = { handleEventQuote, loadKeys, ApiError, PIPELINE, todayInTZ };
+module.exports = { handleEventQuote, loadKeys, ApiError, errorBody, ajvDetails, PIPELINE, todayInTZ };

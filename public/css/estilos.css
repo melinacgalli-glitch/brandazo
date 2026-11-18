@@ -1008,3 +1008,22 @@ input[type=date],input[type=time]{cursor:pointer}
   .pillar-st{margin-top:0}
 }
 @media (max-width:560px){ .pillar-a{flex-direction:column} }
+
+/* Resultados clave con fuente automática (objetivos) */
+.kr-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1.4fr) 96px 96px 36px;gap:8px;align-items:center;margin-bottom:8px}
+.kr-row [hidden]{display:none}
+.kr-row:has([data-krc][hidden]){grid-template-columns:minmax(0,1.4fr) minmax(0,1.4fr) 96px 36px}
+@media (max-width:640px){ .kr-row,.kr-row:has([data-krc][hidden]){grid-template-columns:1fr 1fr;padding-bottom:8px;border-bottom:1px solid var(--line)} .kr-row [data-krt],.kr-row [data-krs]{grid-column:1/-1} }
+.kr-auto{display:flex;gap:6px;align-items:center;margin:4px 0 12px}
+.kr-auto svg{width:14px;height:14px;flex:none}
+
+/* Pedidos de la tienda (CRM → Tienda): una tarjeta por pedido, sin tabla apretada en celular */
+.sh-list{display:grid}
+.sh-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;width:100%;text-align:left;padding:14px 4px;border:0;border-top:1px solid var(--line);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.sh-row:first-child{border-top:0}
+.sh-row:hover{background:var(--surface-sunken)}
+.sh-main{display:grid;gap:2px;min-width:0}
+.sh-main b{font-size:15px}
+.sh-main .small{overflow-wrap:anywhere}
+.sh-total{font-size:15px;font-weight:600;text-align:right;white-space:nowrap}
+.sh-meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
