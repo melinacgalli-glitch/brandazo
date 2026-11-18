@@ -70,6 +70,7 @@ let page; const reopen = async () => { await page.waitForTimeout(700); if (!(awa
   ok(/Estudio Contable Ruiz/.test(board) && !/NO DEBE VERSE/.test(board), 'tablero muestra la cotización real y nada de otra empresa');
   ok(/1\.420\.000/.test(await page.textContent('.stat-grid')), 'presupuesto en pesos desde centavos ($ 1.420.000)');
   ok(await page.isVisible('text=Seguimiento vencido'), 'marca el seguimiento vencido');
+  ok(await page.isVisible('.ev-legend') && await page.evaluate(() => getComputedStyle(document.querySelector('.kcol[data-evstage="nueva-cotizacion"]')).borderTopWidth === '4px') && await page.evaluate(() => !!document.querySelector('.stat.st-bad')), 'CRM con colores tipo semáforo (etapas, leyenda y vencidos en rojo)');
   await page.screenshot({ path: require('os').tmpdir() + '/e2e-tablero.png' });
   // tarjetas sin desborde en celular
   await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300);

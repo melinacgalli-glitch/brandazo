@@ -37,6 +37,34 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   const nb = await p.$('#newcamp, [data-newcamp]'); if (nb) { await nb.click(); await p.waitForSelector('#wn'); await p.fill('#wn', 'Campaña sin objetivo');
     if (await p.$('#wobj')) { await p.evaluate(() => { const s = document.querySelector('#wobj'); if (s.tagName === 'SELECT') s.value = ''; }); await p.click('#layer .modal-foot .btn-primary'); await p.waitForTimeout(200);
       ok(/Elegí qué objetivo persigue/.test(await p.textContent('#layer')), 'una campaña no avanza sin objetivo'); } else ok(true, '(sin selector de objetivo en este paso)'); }
+  // Filtro de unidad (no un cartel fijo)
+  await p.evaluate(() => { S.brand = -1; location.hash = '#/app/estrategia/okr'; }); await p.waitForSelector('[data-unitfilter]');
+  await p.selectOption('[data-unitfilter]', '1'); await p.waitForTimeout(200); ok(await p.evaluate(() => S.brand === 1), 'el selector de unidad filtra la vista');
+  // Editar objetivo y su unidad
+  await p.evaluate(() => { S.brand = -1; render(); }); await p.waitForSelector('[data-oedit="o1"]'); await p.click('[data-oedit="o1"]'); await p.waitForSelector('#eob');
+  await p.selectOption('#eob', 'Cafelito Coffee House'); await p.click('#eok'); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => M().objectives[0].brand === 'Cafelito Coffee House' && M().campaigns[0].brand === 'Cafelito Coffee House'), 'editar un objetivo cambia su unidad (y la de sus campañas)');
+  // Aviso de guardado dentro de la tarjeta (no como columna suelta)
+  await p.evaluate(() => { S.brand = -1; location.hash = '#/app/estrategia/posicionamiento'; }); await p.waitForSelector('#fposm');
+  if (await p.$('#fposm [data-roedit]')) await p.click('#fposm [data-roedit]');
+  await p.fill('#mps', 'Declaración actualizada'); await p.click('#fposm button.btn-primary'); await p.waitForSelector('#fposm .form-saved');
+  ok(await p.evaluate(() => { const b = document.querySelector('#fposm .form-saved'), e = document.querySelector('#fposm [data-roedit]'); return b.closest('section.card') && e.closest('section.card') && b.parentElement.tagName !== 'FORM'; }), 'el aviso y «Editar» quedan dentro de la tarjeta (sin romper las columnas)');
+  // Pilares con Enter y heredados de la marca principal
+  await p.fill('#mnewpillar', 'Hospitalidad'); await p.press('#mnewpillar', 'Enter'); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => M().positioning.__principal.pillars.includes('Hospitalidad')), 'Enter en el campo agrega el pilar');
+  ok(await p.evaluate(() => unitPillars('Cafelito Coffee House').includes('Hospitalidad')), 'cada unidad puede usar los pilares de la marca principal');
+  // Marca: una sola identidad
+  await p.evaluate(() => { S.brand = 0; location.hash = '#/app/marca/general'; }); await p.waitForSelector('#fbr');
+  const mt = await p.textContent('#root'); ok(/Marca · Cafelito/.test(mt) && !(await p.$('#newbrand')) && /misma para todas sus unidades/.test(mt), 'Marca muestra la identidad única de Cafelito, sin separar por unidad');
+  ok(await p.evaluate(() => !!M().kits.__marca), 'la identidad quedó guardada como la de la marca principal');
+  // Funnel: unidad y después objetivo
+  await p.evaluate(() => { location.hash = '#/app/estrategia/funnel'; }); await p.waitForTimeout(300);
+  await p.evaluate(() => fForm()); await p.waitForSelector('#fu'); await p.selectOption('#fu', 'Cafelito Barra Móvil'); await p.waitForTimeout(100);
+  ok(/no tiene objetivos/.test(await p.textContent('#fo')), 'en el funnel se elige la unidad y se filtran sus objetivos'); await p.click('#layer .modal-foot [data-close]');
+  // Planificación: pilar por idea
+  await p.evaluate(() => { const pl = { id: 'pl', brand: 'Cafelito Coffee House', type: 'semana', start: '2026-11-23', end: '2026-11-29', name: 'Semana 23', owner: S.user.name, approver: S.user.name, version: 0 }; edPlans().push(pl); const a = edNewIdea(pl, '2026-11-23'); a.title = 'Reel de la barra'; location.hash = '#/app/contenidos/planificaciones/pl'; });
+  await p.waitForSelector('.ed-row'); ok(!!(await p.$('.ed-row [data-f="pillar"]')) && !!(await p.$('.ed-row [data-f="persona"]')), 'cada idea tiene pilar y buyer persona');
+  ok(await p.evaluate(() => edMissing(M().contents.find(c => c.title === 'Reel de la barra')).includes('pillar')), 'sin pilar la idea no se puede presentar');
   await p.setViewportSize({ width: 390, height: 844 }); await p.evaluate(() => { location.hash = '#/app/estrategia/mapa'; }); await p.waitForSelector('.unit-card');
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= 392), 'mapa sin desborde en celular');
   ok(!errs.length, 'sin errores de JavaScript' + (errs.length ? ': ' + errs.join(' | ') : ''));

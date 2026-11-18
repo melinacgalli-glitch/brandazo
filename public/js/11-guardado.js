@@ -23,7 +23,10 @@ function roApply(){
     // Marca de «se intentó guardar»: si después se redibuja la pantalla, fue un guardado válido
     f.addEventListener('submit',()=>{ RO.saved[key]=Date.now(); RO.edit[key]=false; },true);
     const justSaved=RO.saved[key]&&Date.now()-RO.saved[key]<2500;
-    if(justSaved){ RO.saved[key]=0; f.insertAdjacentHTML('afterbegin',`<div class="alert alert-ok form-saved" role="status">${ic('check')}<div><b>Cambios guardados.</b> ${S.company&&S.company.cloud?'Quedaron en la nube y los ve tu equipo.':'Quedaron guardados en este navegador.'}</div></div>`); }
+    // En formularios de dos columnas (grid) el aviso y «Editar» van dentro de la primera tarjeta, no como columnas sueltas
+    const host=f.classList.contains('grid')?(f.querySelector('section.card')||f):f, head=host.querySelector('.card-head');
+    const putTop=html=>{ if(head) head.insertAdjacentHTML('afterend',html); else host.insertAdjacentHTML('afterbegin',html); };
+    if(justSaved){ RO.saved[key]=0; putTop(`<div class="alert alert-ok form-saved" role="status">${ic('check')}<div><b>Cambios guardados.</b> ${S.company&&S.company.cloud?'Quedaron en la nube y los ve tu equipo.':'Quedaron guardados en este navegador.'}</div></div>`); }
     const hasData=ctrls.some(c=>c.type!=='checkbox'&&String(c.value||'').trim());
     if(RO.edit[key]||!hasData){
       // Modo edición: «Cancelar» al lado de «Guardar» (si ya había datos)
@@ -36,7 +39,8 @@ function roApply(){
       wrap.insertAdjacentHTML('afterend',`<div class="ro-val ${v?'':'empty'}">${v?esc(v):'Sin completar'}</div>`); wrap.style.display='none'; });
     f.querySelectorAll('.field label').forEach(l=>l.removeAttribute('for'));
     if(submit) submit.style.display='none';
-    f.insertAdjacentHTML('afterbegin',`<div class="form-head-actions"><button type="button" class="btn" data-roedit>${ic('edit')} Editar</button></div>`);
+    if(head) head.insertAdjacentHTML('beforeend',`<button type="button" class="btn btn-sm" data-roedit>${ic('edit')} Editar</button>`);
+    else host.insertAdjacentHTML('afterbegin',`<div class="form-head-actions"><button type="button" class="btn" data-roedit>${ic('edit')} Editar</button></div>`);
     f.querySelector('[data-roedit]').onclick=()=>{ RO.edit[key]=true; render(); setTimeout(()=>{ const first=document.querySelector(`#${id} .field input:not([type=hidden]), #${id} .field textarea`); if(first) first.focus(); },50); };
   });
 }

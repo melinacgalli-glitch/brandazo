@@ -971,3 +971,9 @@ input[type=date],input[type=time]{cursor:pointer}
 .unit-chain li.ok .unit-dot{background:var(--success-soft);color:var(--success)}
 .unit-chain li.miss .unit-dot{background:var(--warning-soft);color:var(--warning)}
 .unit-ref summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+
+/* Filtro de unidad de negocio en el encabezado de las pantallas */
+.unit-filter{display:inline-flex;align-items:center;gap:6px;padding:0 4px 0 10px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-raised);color:var(--ink-muted)}
+.unit-filter .select{border:0;background:transparent;height:36px;padding-left:2px;color:var(--ink);font-weight:500;max-width:230px}
+.unit-filter svg{width:16px;height:16px;flex:none}
+.obj-edit-row{display:flex;justify-content:flex-end;margin-top:8px}

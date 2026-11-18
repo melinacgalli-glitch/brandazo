@@ -29,7 +29,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok(/Sin logo/.test(await page.textContent('.kit-grid')), 'sin logos cargados dice «Sin logo» (no un dibujo inventado)');
   const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('[data-logo=principal]')]); await fc.setFiles(path.join(dir, 'logo-cafelito.png'));
   await page.waitForSelector('.logo-card img', { timeout: 20000 }); ok(true, 'logo principal subido y visible');
-  { const o = await objs(); console.log('   objetos:', JSON.stringify(o)); ok(o.some(n => /marcas\/cafelito-ambulante\/\d+-logo-cafelito\.png$/.test(n)), 'el archivo quedó en la carpeta de la empresa y la marca'); }
+  { const o = await objs(); console.log('   objetos:', JSON.stringify(o)); ok(o.some(n => /marcas\/[a-z-]+\/\d+-logo-cafelito\.png$/.test(n)), 'el archivo quedó en la carpeta de la empresa y la marca'); }
   // Biblioteca
   await page.goto(BASE + '#/app/marca/biblioteca'); await page.waitForSelector('#upl2'); await page.click('#upl2'); await page.waitForSelector('#udrop');
   const [fc2] = await Promise.all([page.waitForEvent('filechooser'), page.click('#udrop')]); await fc2.setFiles([path.join(dir, 'foto barra.png'), path.join(dir, 'Manual de marca.pdf')]);
@@ -40,7 +40,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   // persistencia
   await page.reload(); await page.waitForSelector('.app', { timeout: 20000 }); await page.evaluate(() => { S.brand = 0; render(); }); await page.goto(BASE + '#/app/marca/biblioteca'); await page.waitForSelector('.lib', { timeout: 15000 });
   ok(/Manual de marca\.pdf/.test(await page.textContent('.lib')), 'al recargar los archivos siguen ahí');
-  const kits = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue); const k = kits['Cafelito Ambulante'];
+  const kits = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue); const k = kits['__marca'];
   ok(k.logos.principal && k.files.length === 2 && k.files.every(f => f.path && f.url && f.size > 0), 'datos de los archivos guardados en la nube (sin el contenido)');
   // borrar
   const pdfId = k.files.find(f => /pdf$/.test(f.name)).id; await page.click(`[data-fdel="${pdfId}"]`); await page.click('#fok'); await page.waitForTimeout(1500);
@@ -56,7 +56,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.fill('#lkurl', 'drive.google.com/drive/folders/abc123'); await page.fill('#lkname', 'Fotos de la barra móvil 2026'); await page.click('#lkok'); await page.waitForTimeout(800);
   const libt = await page.textContent('.lib'); ok(/Fotos de la barra móvil 2026/.test(libt) && /Google Drive/.test(libt), 'el enlace aparece en la biblioteca como «Google Drive»');
   ok(await page.getAttribute('.lib a[href^="https://drive.google.com/drive/folders/abc123"]', 'target') === '_blank', 'se abre en otra pestaña con https agregado');
-  await page.waitForTimeout(1500); const kl = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue)['Cafelito Ambulante'].files.find(f => f.link);
+  await page.waitForTimeout(1500); const kl = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue)['__marca'].files.find(f => f.link);
   ok(kl && kl.url === 'https://drive.google.com/drive/folders/abc123', 'el enlace quedó guardado en la nube');
   await page.click(`[data-fdel="${kl.id}"]`); ok(/no se toca/.test(await page.textContent('#layer')), 'quitar un enlace aclara que la carpeta original no se toca'); await page.click('#fok'); await page.waitForTimeout(500);
   // Guardado claro: Marca → Información general
@@ -69,16 +69,12 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.click('[data-roedit]'); await page.waitForSelector('#bd'); ok(await page.isVisible('[data-rocancel]'), '«Editar» abre el formulario con «Cancelar»');
   await page.fill('#bw', 'cambio-que-no-se-guarda'); await page.click('[data-rocancel]'); await page.waitForTimeout(300);
   ok(/www\.cafelito\.com\.ar/.test(await page.textContent('#fbr')) && !/cambio-que-no-se-guarda/.test(await page.textContent('#fbr')), '«Cancelar» descarta lo que no se guardó');
-  await page.waitForTimeout(1500); const kk = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue); ok(kk['Cafelito Ambulante'].info.web === 'www.cafelito.com.ar', 'la información de la marca quedó en la nube');
-  // Nueva marca con logo desde la ventana
-  await page.goto(BASE + '#/app/marca'); await page.waitForSelector('#newbrand'); await page.click('#newbrand'); await page.waitForSelector('#layer .upload');
-  await page.fill('#bnm', 'Cafelito Coffee');
-  const [fc3] = await Promise.all([page.waitForEvent('filechooser'), page.click('#layer .upload')]); await fc3.setFiles(path.join(dir, 'logo-cafelito.png'));
-  ok(/logo-cafelito\.png/.test(await page.textContent('#layer .upload')), 'la ventana «Nueva marca» muestra el logo elegido');
-  await page.click('#ok'); await page.waitForTimeout(2500);
-  const kits2 = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue);
-  ok(kits2['Cafelito Coffee'] && kits2['Cafelito Coffee'].logos && kits2['Cafelito Coffee'].logos.principal && kits2['Cafelito Coffee'].logos.principal.url, 'la marca nueva quedó con su logo principal');
-  ok((await objs()).some(n => /marcas\/cafelito-coffee\/\d+-logo-cafelito\.png$/.test(n)), 'el logo de la marca nueva está en su carpeta');
+  await page.waitForTimeout(1500); const kk = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue); ok(kk['__marca'].info.web === 'www.cafelito.com.ar', 'la información de la marca quedó en la nube');
+  // Nueva unidad de negocio: usa la identidad de la marca (sin logo propio)
+  await page.evaluate(() => { S.brand = -1; location.hash = '#/app/estrategia/mapa'; render(); }); await page.waitForSelector('[data-newunit]'); await page.click('[data-newunit]'); await page.waitForSelector('#bnm');
+  ok(!(await page.$('#layer .upload')) && /usa la identidad de/.test(await page.textContent('#layer')), 'una unidad nueva no pide logo: usa la identidad de la marca');
+  await page.fill('#bnm', 'Cafelito Cakes'); await page.click('#ok'); await page.waitForTimeout(1500);
+  ok(JSON.parse((await get('tenants/cafelito/state/base')).fields.json.stringValue).brands.some(b => b.name === 'Cafelito Cakes'), 'la unidad nueva quedó guardada');
   // Configuración → Empresa: logo y nombre
   await page.goto(BASE + '#/app/config/empresa'); await page.waitForSelector('#logo');
   const [fc4] = await Promise.all([page.waitForEvent('filechooser'), page.click('#logo')]); await fc4.setFiles(path.join(dir, 'logo-cafelito.png'));

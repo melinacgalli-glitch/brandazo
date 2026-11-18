@@ -63,8 +63,8 @@ function edPeriod(type,dateIso){
 const edRange=p=>`${fdate(p.start)} – ${fdate(p.end)} ${parse(p.end).getFullYear()}`;
 
 /* ---------- Validación para presentar ---------- */
-function edMissing(c){ const f=[]; if(!c.title.trim()) f.push('title'); if(!c.date) f.push('date'); if(!c.channel) f.push('channel'); if(!c.format) f.push('format'); if(!c.campaign&&!c.objective) f.push('campaign'); return f; }
-const ED_MISS={title:'título',date:'fecha',channel:'canal',format:'formato',campaign:'campaña u objetivo'};
+function edMissing(c){ const f=[]; if(!c.title.trim()) f.push('title'); if(!c.date) f.push('date'); if(!c.channel) f.push('channel'); if(!c.format) f.push('format'); if(!c.campaign&&!c.objective) f.push('campaign'); if(!c.pillar&&typeof unitPillars==='function'&&unitPillars(c.brand).length) f.push('pillar'); return f; }
+const ED_MISS={title:'título',date:'fecha',channel:'canal',format:'formato',campaign:'campaña u objetivo',pillar:'pilar'};
 const edMissTxt=c=>edMissing(c).map(k=>ED_MISS[k]).join(', ');
 const edEditable=c=>['sin-presentar','ajustes'].includes(c.ideaSt)&&c.status==='Idea';
 
@@ -138,6 +138,8 @@ function edRow(p,c,can){
    <td data-l="Formato">${ed?sel('format',FORMATS.map(f=>[f[0],f[0]]),c.format):ro(c.format)}</td>
    <td data-l="Campaña">${ed?sel('campaign',camps.map(x=>[x.id,x.name]),c.campaign,'Sin campaña'):ro(camp?esc(camp.name):'—')}</td>
    <td data-l="Objetivo">${ed?sel('objective',objs.map(x=>[x.id,x.title]).concat([['__new','+ Crear objetivo…']]),c.objective,'Sin objetivo'):ro(obj?esc(obj.title):'—')}</td>
+   <td data-l="Pilar">${(()=>{ const pl=typeof unitPillars==='function'?unitPillars(p.brand):[]; return ed?(pl.length?sel('pillar',pl.map(x=>[x,x]),c.pillar,'Elegí un pilar'):`<a class="small" href="#/app/estrategia/posicionamiento">Cargá pilares</a>`):ro(esc(c.pillar||'—')); })()}</td>
+   <td data-l="Buyer persona">${(()=>{ const ps=m.personas.filter(x=>(x.brands||[x.brand]).includes(p.brand)); return ed?sel('persona',ps.map(x=>[x.id,x.name]),c.persona,ps.length?'—':'Sin buyer personas'):ro(esc((m.personas.find(x=>x.id===c.persona)||{}).name||'—')); })()}</td>
    <td data-l="Intención">${ed?sel('intent',ED_INTENTS,c.intent,'—'):ro(edIntentLabel(c.intent))}</td>
    <td data-l="Responsable">${ed?sel('owner',OWNERS().concat(c.owner&&!OWNERS().includes(c.owner)?[c.owner]:[]).map(o=>[o,o]),c.owner):ro(esc(c.owner||'—'))}</td>
    <td data-l="Estado">${edIdeaBadge(c)}${c.status!=='Idea'?`<div class="small muted">${edProd(c)}</div>`:''}${c.ideaVersion?`<div class="small muted mono">v${c.ideaVersion}</div>`:''}</td>
@@ -166,7 +168,7 @@ function vPlanDetail(id){
    <div style="display:flex;gap:8px;flex-wrap:wrap">${pend.length&&can?`<button class="btn" id="apall">${ic('check')} Aprobar todas (${pend.length})</button>`:''}<button class="btn btn-primary" id="present" ${toPresent.length?'':'disabled'}>Presentar planificación${toPresent.length?` (${toPresent.length})`:''}</button><button class="icon-btn" id="pedit" aria-label="Editar datos" title="Editar datos">${ic('edit')}</button><button class="icon-btn" id="pdel" aria-label="Eliminar planificación" title="Eliminar">${ic('trash')}</button></div></div>
   ${edNotice(p,ideas)}
   <div id="edbulk">${edBulkBar(p,ideas,can)}</div>
-  <div class="table-wrap"><table class="t ed-table"><thead><tr><th><input type="checkbox" id="selall" aria-label="Seleccionar todas" ${ideas.length&&ideas.every(c=>edSel.has(c.id))?'checked':''}></th><th>Idea</th><th>Fecha</th><th>Canal</th><th>Formato</th><th>Campaña</th><th>Objetivo</th><th>Intención</th><th>Responsable</th><th>Estado</th></tr></thead>
+  <div class="table-wrap"><table class="t ed-table"><thead><tr><th><input type="checkbox" id="selall" aria-label="Seleccionar todas" ${ideas.length&&ideas.every(c=>edSel.has(c.id))?'checked':''}></th><th>Idea</th><th>Fecha</th><th>Canal</th><th>Formato</th><th>Campaña</th><th>Objetivo</th><th>Pilar</th><th>Buyer persona</th><th>Intención</th><th>Responsable</th><th>Estado</th></tr></thead>
   <tbody>${ideas.map(c=>edRow(p,c,can)).join('')||`<tr><td colspan="10"><div class="empty"><p class="small muted">Sin ideas todavía. Agregá la primera: solo título, fecha, canal, formato y campaña u objetivo.</p></div></td></tr>`}</tbody></table></div>
   <div class="ed-foot"><button class="btn" id="addidea">${ic('plus')} Agregar idea</button>${toPresent.length?`<button class="btn" id="psave">${ic('check')} Guardar borrador</button><span class="small ed-saved" id="edsaved">${ic('check')} Cambios guardados</span>`:''}${loose.length?`<button class="btn btn-ghost" id="addloose">${ic('plus')} Sumar ideas sueltas de ${esc(p.brand)} (${loose.length})</button>`:''}<span class="small muted">Enter en el título agrega otra fila. Todo se guarda solo; cuando las ideas estén listas, tocá «Presentar planificación» para enviarlas a aprobación.</span></div>`;
 }
