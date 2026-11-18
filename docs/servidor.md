@@ -2,7 +2,7 @@
 
 _Última actualización: 2026-11-17 · **Publicado** en `brandazo` (función `api`, southamerica-east1). Dirección: `https://www.brandazo.com.ar/api/v1/integrations/cafelito/event-quotes`_
 
-**Estado:** publicado. Validación del contrato 1.0 con el equipo web: **aprobada** (pasos 1 a 9 + prueba de punta a punta, 17/11/2026; verificado en la base). Claves en `INTEGRATION_KEYS` (versión 2, la 1 deshabilitada): `cafelito-web` → empresa `cafelito` (**producción**) y `cafelito-web-test` → `cafelito-pruebas` (secreto cambiado el 18/11/2026; el anterior ya no funciona).
+**Estado:** publicado. Validación del contrato 1.0 con el equipo web: **aprobada** (pasos 1 a 9 + prueba de punta a punta, 17/11/2026; verificado en la base). Claves en `INTEGRATION_KEYS` (versión 2, la 1 deshabilitada): `cafelito-web` → empresa `cafelito` (**producción**) y `cafelito-web-test` → `cafelito-pruebas` (secreto cambiado el 18/11/2026). **La empresa `cafelito-pruebas` se borró el 18/11/2026**; falta quitar su clave.
 
 ## Qué hay
 | Pieza | Dónde |

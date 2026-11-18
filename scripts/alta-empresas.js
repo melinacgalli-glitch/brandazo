@@ -13,8 +13,8 @@ admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'brandazo' });
 const db = admin.firestore();
 const now = admin.firestore.FieldValue.serverTimestamp();
 const EMPRESAS = [
-  { id: 'cafelito', name: 'Cafelito Coffee House', industry: 'Gastronomía' },
-  { id: 'cafelito-pruebas', name: 'Cafelito (pruebas)', industry: 'Gastronomía' }
+  { id: 'cafelito', name: 'Cafelito Coffee House', industry: 'Gastronomía' }
+  // «cafelito-pruebas» se borró el 18/11/2026 a pedido de Melina (ver docs/decisiones.md)
 ];
 
 (async () => {
