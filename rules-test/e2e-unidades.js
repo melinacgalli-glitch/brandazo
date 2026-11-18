@@ -49,9 +49,10 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   if (await p.$('#fposm [data-roedit]')) await p.click('#fposm [data-roedit]');
   await p.fill('#mps', 'Declaración actualizada'); await p.click('#fposm button.btn-primary'); await p.waitForSelector('#fposm .form-saved');
   ok(await p.evaluate(() => { const b = document.querySelector('#fposm .form-saved'), e = document.querySelector('#fposm [data-roedit]'); return b.closest('section.card') && e.closest('section.card') && b.parentElement.tagName !== 'FORM'; }), 'el aviso y «Editar» quedan dentro de la tarjeta (sin romper las columnas)');
-  // Pilares con Enter y heredados de la marca principal
-  await p.fill('#mnewpillar', 'Hospitalidad'); await p.press('#mnewpillar', 'Enter'); await p.waitForTimeout(200);
-  ok(await p.evaluate(() => M().positioning.__principal.pillars.includes('Hospitalidad')), 'Enter en el campo agrega el pilar');
+  // Pilares numerados (nombre, descripción, función en el funnel) y heredados de la marca principal
+  await p.click('[data-padd="__principal"]'); await p.waitForSelector('#pln'); await p.fill('#pln', 'Hospitalidad'); await p.fill('#pld', 'Atención cálida en cada local.'); await p.selectOption('#pls', 'Confianza'); await p.click('#plok'); await p.waitForTimeout(200);
+  ok(await p.evaluate(() => M().positioning.__principal.pillars.some(x => x.name === 'Hospitalidad' && x.stage === 'Confianza')), 'agregar pilar guarda nombre, descripción y función en el funnel');
+  ok(/01[\s\S]*Hospitalidad[\s\S]*Atención cálida[\s\S]*Confianza/.test(await p.textContent('.pillar-list')), 'el pilar se ve numerado con su descripción y etapa');
   ok(await p.evaluate(() => unitPillars('Cafelito Coffee House').includes('Hospitalidad')), 'cada unidad puede usar los pilares de la marca principal');
   // Marca: una sola identidad
   await p.evaluate(() => { S.brand = 0; location.hash = '#/app/marca/general'; }); await p.waitForSelector('#fbr');

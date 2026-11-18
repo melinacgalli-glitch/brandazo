@@ -18,7 +18,7 @@ const mainName=()=>mainBrand().name||(S.company&&S.company.name)||'Marca princip
   stPos=function(objs){
     const b=curBrand();
     if(b){ const mp=mainPos(), h=_stPos(objs);
-      const ref=mp.statement?`<details class="card unit-ref" style="margin-bottom:16px"><summary><span class="small muted">Marca principal · ${esc(mainName())}</span> <b>Ver su posicionamiento</b></summary><p class="statement" style="margin-top:12px;font-size:18px;line-height:26px">${esc(mp.statement)}</p>${mp.value?`<p class="small" style="margin-top:8px"><b>Propuesta de valor:</b> ${esc(mp.value)}</p>`:''}${mp.pillars.length?`<div class="pill-list" style="margin-top:8px">${mp.pillars.map(x=>`<span class="pill">${esc(x)}</span>`).join('')}</div>`:''}<p class="small muted" style="margin-top:8px">El posicionamiento de ${esc(b.name)} tiene que ser coherente con este.</p></details>`
+      const ref=mp.statement?`<details class="card unit-ref" style="margin-bottom:16px"><summary><span class="small muted">Marca principal · ${esc(mainName())}</span> <b>Ver su posicionamiento</b></summary><p class="statement" style="margin-top:12px;font-size:18px;line-height:26px">${esc(mp.statement)}</p>${mp.value?`<p class="small" style="margin-top:8px"><b>Propuesta de valor:</b> ${esc(mp.value)}</p>`:''}${mp.pillars.length?`<div class="pill-list" style="margin-top:8px">${mp.pillars.map(x=>`<span class="pill">${esc(pName(x))}</span>`).join('')}</div>`:''}<p class="small muted" style="margin-top:8px">El posicionamiento de ${esc(b.name)} tiene que ser coherente con este.</p></details>`
         :`<div class="alert alert-info" style="margin-bottom:16px">${ic('info')}<div>Todavía no definiste el posicionamiento de la marca principal${mainBrand().name?` (${esc(mainBrand().name)})`:''}. <button type="button" class="btn btn-sm" data-gomain style="margin-left:8px">Definirlo</button></div></div>`;
       return ref+h; }
     const mp=mainPos(), mb=mainBrand();
@@ -30,10 +30,9 @@ const mainName=()=>mainBrand().name||(S.company&&S.company.name)||'Marca princip
      <div class="field"><label for="mpv">Propuesta de valor</label><textarea class="input" id="mpv" rows="2">${esc(mp.value)}</textarea></div>
      <div class="field"><label for="mpd">Diferenciales</label><textarea class="input" id="mpd" rows="2">${esc(mp.diff)}</textarea></div>
      <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary">Guardar</button></div></section>
-     <section class="card span-4"><h3 style="margin-bottom:12px">Pilares de la marca principal</h3><div class="pill-list">${mp.pillars.map(x=>`<span class="pill">${esc(x)}</span>`).join('')||'<span class="small muted">Sin pilares todavía</span>'}</div>
-      <div style="display:flex;gap:8px;margin-top:16px"><input class="input" id="mnewpillar" placeholder="Ej.: Hospitalidad" style="height:32px" aria-label="Nuevo pilar"><button type="button" class="btn btn-sm" id="maddpillar">Agregar</button></div>
-      <p class="small muted" style="margin-top:16px">Estos pilares los pueden usar todas las unidades, además de los propios de cada una.</p></section>
-     <section class="card span-4"><h3 style="margin-bottom:8px">Unidades de negocio</h3><p class="small muted" style="margin-bottom:8px">Tocá una para cargar su posicionamiento.</p>${S.brands.map((u,i)=>`<button type="button" class="settings-row" data-pickunit="${i}" style="all:unset;display:flex;gap:8px;align-items:center;cursor:pointer;padding:6px 0"><i class="sdot" style="background:${u.color}"></i><span class="grow">${esc(u.name)}</span><span class="small ${(M().positioning[u.name]||{}).statement?'':'muted'}">${(M().positioning[u.name]||{}).statement?'Con posicionamiento':'Falta'}</span></button>`).join('')||'<p class="small muted">Todavía no hay unidades.</p>'}</section></form>`;
+     <section class="card span-4"><h3 style="margin-bottom:8px">Unidades de negocio</h3><p class="small muted" style="margin-bottom:8px">Tocá una para cargar su posicionamiento.</p>${S.brands.map((u,i)=>`<button type="button" class="settings-row" data-pickunit="${i}" style="all:unset;display:flex;gap:8px;align-items:center;cursor:pointer;padding:6px 0"><i class="sdot" style="background:${u.color}"></i><span class="grow">${esc(u.name)}</span><span class="small ${(M().positioning[u.name]||{}).statement?'':'muted'}">${(M().positioning[u.name]||{}).statement?'Con posicionamiento':'Falta'}</span></button>`).join('')||'<p class="small muted">Todavía no hay unidades.</p>'}</section>
+     <section class="card span-12"><h3 style="margin-bottom:12px">Pilares de la marca principal</h3>${pillarsBlock(mp.pillars,MAIN_KEY)}
+      <p class="small muted" style="margin-top:16px">Estos pilares los pueden usar todas las unidades, además de los propios de cada una.</p></section></form>`;
   };
   const _bEst=bEstrategia;
   bEstrategia=function(tab){ _bEst(tab);
@@ -41,9 +40,7 @@ const mainName=()=>mainBrand().name||(S.company&&S.company.name)||'Marca princip
     $$('[data-pickunit]').forEach(x=>x.onclick=()=>{ S.brand=+x.dataset.pickunit; render(); });
     const f=$('#fposm'); if(f){ const mp=mainPos(), mb=mainBrand();
       f.onsubmit=e=>{ e.preventDefault(); const n=$('#mbn'); if(!fieldErr(n,!n.value.trim()?'Escribí el nombre de la marca principal':'')) return;
-        mb.name=n.value.trim(); mp.statement=$('#mps').value; mp.value=$('#mpv').value; mp.diff=$('#mpd').value; render(); toast('Posicionamiento de la marca principal guardado'); };
-      const add=$('#maddpillar'); if(add) add.onclick=()=>{ const v=$('#mnewpillar').value.trim(); if(!v) return; if(mp.pillars.some(x=>x.toLowerCase()===v.toLowerCase())) return toast('Ese pilar ya está'); mp.pillars.push(v); render(); toast(`Pilar «${v}» agregado`); };
-      const inp=$('#mnewpillar'); if(inp) inp.onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); add.click(); } }; }
+        mb.name=n.value.trim(); mp.statement=$('#mps').value; mp.value=$('#mpv').value; mp.diff=$('#mpd').value; render(); toast('Posicionamiento de la marca principal guardado'); }; }
   };
   VIEWS.estrategia.view=vEstrategia; VIEWS.estrategia.bind=bEstrategia;
   if(typeof RO_FORMS==='object') RO_FORMS.fposm='Posicionamiento de la marca principal';

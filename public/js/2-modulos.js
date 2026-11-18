@@ -249,8 +249,7 @@ function stPos(){
   <div class="field"><label for="pv">Propuesta de valor</label><textarea class="input" id="pv" rows="2">${esc(p.value)}</textarea></div>
   <div class="field"><label for="pd">Diferenciales</label><textarea class="input" id="pd" rows="2">${esc(p.diff)}</textarea></div>
   <div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" class="btn" data-ai-pos>${ic('spark')} Mejorar con IA</button><button class="btn btn-primary">Guardar</button></div></section>
-  <section class="card span-4"><h3 style="margin-bottom:12px">Pilares de comunicación</h3><div class="pill-list" id="pillars">${p.pillars.map(x=>`<span class="pill">${esc(x)}</span>`).join('')||'<span class="small muted">Sin pilares todavía</span>'}</div>
-  <div style="display:flex;gap:8px;margin-top:16px"><input class="input" id="newpillar" placeholder="Ej.: Educación" style="height:32px"><button type="button" class="btn btn-sm" id="addpillar">Agregar</button></div>
+  <section class="card span-12"><h3 style="margin-bottom:4px">Pilares de comunicación</h3><p class="small muted" style="margin-bottom:8px">Qué temas comunica ${esc(b.name)} y para qué etapa del funnel trabaja cada uno.</p>${pillarsBlock(p.pillars||[],b.name)}
   <p class="small muted" style="margin-top:16px">Los pilares aparecen como opción al planificar cada contenido.</p></section></form>`;
 }
 let planView='trimestral';
@@ -296,8 +295,6 @@ function bEstrategia(tab){
   $$('[data-pickbrand]').forEach(b=>b.onclick=()=>{S.brand=+b.dataset.pickbrand;render()});
   if($('#fpos')){ const b=curBrand(); const m=M(); m.positioning[b.name]=m.positioning[b.name]||{statement:'',value:'',pillars:[],diff:''}; const p=m.positioning[b.name];
     $('#fpos').onsubmit=e=>{e.preventDefault(); p.statement=$('#ps').value; p.value=$('#pv').value; p.diff=$('#pd').value; render(); toast('Posicionamiento guardado'); };
-    $('#addpillar').onclick=()=>{ const v=$('#newpillar').value.trim(); if(!v) return; if(p.pillars.some(x=>x.toLowerCase()===v.toLowerCase())) return toast('Ese pilar ya está'); p.pillars.push(v); render(); toast(`Pilar «${v}» agregado`); };
-    $('#newpillar').onkeydown=e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#addpillar').click(); } };
     $('[data-ai-pos]').onclick=()=>toast('La IA va a sugerir mejoras a partir de tus buyer personas (próximamente)'); }
   $$('[data-pv]').forEach(b=>b.onclick=()=>{planView=b.dataset.pv;render()});
   on('#newplan',()=>ensureBrand(()=>{ modal('Agregar hito al plan',`${F('ht','Hito','placeholder="Ej.: Campaña Día de la Madre"')}<div class="form-grid"><div class="field"><label for="hy">Tipo</label><select class="select" id="hy"><option>Campaña</option><option>Lanzamiento</option><option>Evento</option><option>Contenido</option><option>Interno</option></select></div>${F('hd','Fecha',`type="date" value="${iso(NOW)}"`)}</div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="ok">Agregar</button>`);
