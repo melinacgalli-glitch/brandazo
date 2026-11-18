@@ -929,3 +929,14 @@ input[type=date],input[type=time]{cursor:pointer}
 
 .ev-card .ev-next{display:flex;gap:4px;align-items:flex-start;color:var(--ink)}
 .ev-card .ev-next svg{width:12px;height:12px;flex:none;margin-top:2px}
+
+/* Avisos arriba (se ven sin buscar) y estado de guardado */
+#toasts{top:72px;bottom:auto}
+.toast{font-size:15px;padding:12px 18px;border-left:4px solid var(--success)}
+.toast .ico{color:var(--success)}
+.badge-err{background:var(--danger-soft);color:var(--danger)}
+/* Formularios en modo lectura después de guardar */
+.ro-val{min-height:24px;padding:4px 0;font-size:15px;line-height:22px;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.ro-val.empty{color:var(--ink-muted);font-style:italic}
+.form-saved{margin-bottom:16px}
+.form-head-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px}

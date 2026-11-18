@@ -50,6 +50,17 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= 392), 'sin desborde en celular');
   await page.screenshot({ path: path.join(os.tmpdir(), 'e2e-biblioteca-movil.png') });
   await page.setViewportSize({ width: 1280, height: 900 }); await page.goto(BASE + '#/app/marca/identidad'); await page.waitForSelector('.logo-card img'); await page.screenshot({ path: path.join(os.tmpdir(), 'e2e-logos.png') });
+  // Guardado claro: Marca → Información general
+  await page.goto(BASE + '#/app/marca/general'); await page.waitForSelector('#fbr');
+  ok(!(await page.$('[data-roedit]')), 'sin datos, el formulario arranca abierto para completar');
+  await page.fill('#bd', 'En Cafelito creemos que los grandes momentos empiezan con una taza de café.'); await page.fill('#bw', 'www.cafelito.com.ar'); await page.click('#fbr button.btn-primary');
+  await page.waitForSelector('#fbr .form-saved', { timeout: 5000 }); ok(/Cambios guardados/.test(await page.textContent('#fbr')), 'al guardar aparece «Cambios guardados»');
+  ok(await page.isVisible('[data-roedit]') && !(await page.isVisible('#bd')) && /www\.cafelito\.com\.ar/.test(await page.textContent('#fbr')), 'el formulario se cierra y muestra los datos con «Editar»');
+  await page.waitForSelector('#syncst:has-text("Guardado"), #syncst:has-text("En la nube")', { timeout: 8000 }); ok(true, 'arriba se ve el estado del guardado en la nube');
+  await page.click('[data-roedit]'); await page.waitForSelector('#bd'); ok(await page.isVisible('[data-rocancel]'), '«Editar» abre el formulario con «Cancelar»');
+  await page.fill('#bw', 'cambio-que-no-se-guarda'); await page.click('[data-rocancel]'); await page.waitForTimeout(300);
+  ok(/www\.cafelito\.com\.ar/.test(await page.textContent('#fbr')) && !/cambio-que-no-se-guarda/.test(await page.textContent('#fbr')), '«Cancelar» descarta lo que no se guardó');
+  await page.waitForTimeout(1500); const kk = JSON.parse((await get('tenants/cafelito/state/m_kits')).fields.json.stringValue); ok(kk['Cafelito Ambulante'].info.web === 'www.cafelito.com.ar', 'la información de la marca quedó en la nube');
   // Nueva marca con logo desde la ventana
   await page.goto(BASE + '#/app/marca'); await page.waitForSelector('#newbrand'); await page.click('#newbrand'); await page.waitForSelector('#layer .upload');
   await page.fill('#bnm', 'Cafelito Coffee');
@@ -64,7 +75,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   const [fc4] = await Promise.all([page.waitForEvent('filechooser'), page.click('#logo')]); await fc4.setFiles(path.join(dir, 'logo-cafelito.png'));
   await page.waitForSelector('#fe img', { timeout: 20000 }); ok(true, 'logo de la empresa subido y visible');
   ok(await page.isVisible('.side img.mark'), 'el logo aparece en el menú lateral');
-  await page.fill('#en', 'Cafelito Coffee House SRL'); await page.click('#fe button.btn-primary'); await page.waitForTimeout(1500);
+  await page.click('#fe [data-roedit]'); await page.waitForSelector('#en'); await page.fill('#en', 'Cafelito Coffee House SRL'); await page.click('#fe button.btn-primary'); await page.waitForSelector('#fe .form-saved', { timeout: 5000 }); await page.waitForTimeout(1500);
   const ten = await get('tenants/cafelito'); ok(ten.fields.name.stringValue === 'Cafelito Coffee House SRL', 'el nombre de la empresa se guarda en la nube');
   const base = JSON.parse((await get('tenants/cafelito/state/base')).fields.json.stringValue); ok(base.logo && /empresa\//.test(base.logo.path), 'el logo de la empresa quedó guardado');
   ok(!errs.length, 'sin errores de JavaScript' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));

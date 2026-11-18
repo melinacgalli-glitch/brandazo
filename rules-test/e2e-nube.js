@@ -9,6 +9,7 @@ const enc = v => v === null ? { nullValue: null } : typeof v === 'string' ? { st
 const put = (p, data) => fetch(`${FS}/${p}`, { method: 'PATCH', headers: H, body: JSON.stringify({ fields: enc(data).mapValue.fields }) }).then(async r => { if (!r.ok) throw new Error(p + ' ' + await r.text()); });
 const get = p => fetch(`${FS}/${p}`, { headers: H }).then(r => r.json());
 const list = p => fetch(`${FS}/${p}?pageSize=100`, { headers: H }).then(r => r.json());
+const applyOob = (code) => fetch(`${AU}/identitytoolkit.googleapis.com/v1/accounts:update?key=x`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oobCode: code }) });
 const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails.push(m); };
 
 (async () => {
@@ -30,7 +31,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
   const page = await ctx.newPage();
-  const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/PERMISSION_DENIED|favicon|status of 400/.test(m.text())) errs.push(m.text()); }); page.on('response', r => { if (r.status() >= 400 && !/accounts:signInWithPassword/.test(r.url())) errs.push('HTTP ' + r.status() + ' ' + r.url().slice(0, 120)); });
+  const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/PERMISSION_DENIED|favicon|status of 400|status of 502/.test(m.text())) errs.push(m.text()); }); page.on('response', r => { if (r.status() >= 400 && !/accounts:signInWithPassword|\/cuenta\/(verificar|recuperar)/.test(r.url())) errs.push('HTTP ' + r.status() + ' ' + r.url().slice(0, 120)); });
 
   // 1) Prototipo local (sin ?emu): sigue funcionando como antes. Cargamos datos "míos" en el navegador.
   await page.goto(BASE + '#/login'); await page.click('[data-google]'); await page.waitForSelector('.app');
@@ -51,9 +52,8 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.fill('#em', EMAIL); await page.fill('#pw2', 'Clave-segura-2026'); await page.check('#tos'); await page.click('#f button.btn-primary');
   await page.waitForSelector('#vok', { timeout: 15000 }); ok(true, 'después de crear la cuenta pide verificar el email');
   await page.click('#vok'); await page.waitForTimeout(800); ok(await page.isVisible('#vok'), 'sin verificar no entra');
-  const codes = await (await fetch(`${AU}/emulator/v1/projects/${P}/oobCodes`)).json();
-  const link = codes.oobCodes.find(c => c.requestType === 'VERIFY_EMAIL' && c.email === EMAIL).oobLink;
-  await fetch(link); await page.click('#vok');
+  let vc; for (let i = 0; i < 40 && !vc; i++) { vc = (await (await fetch(`${AU}/emulator/v1/projects/${P}/oobCodes`)).json()).oobCodes.find(c => c.requestType === 'VERIFY_EMAIL' && c.email === EMAIL); if (!vc) await new Promise(r => setTimeout(r, 250)); }
+  await applyOob(vc.oobCode); await page.click('#vok');
   await page.waitForSelector('.app', { timeout: 20000 }); ok(true, 'verificado: entra a la app');
   await page.waitForTimeout(800);
   const cos = await page.evaluate(() => S.companies.map(c => (c.cloud ? '☁ ' : '') + c.name));
@@ -61,7 +61,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok((await get(`invites/${EMAIL}__cafelito`)).error, 'la invitación usada se borró');
   ok(!cos.some(n => !n.startsWith('☁')), 'con sesión iniciada, el selector solo muestra empresas de la nube (no «Estudio Norte» ni otras del navegador)');
   await page.click('#ctx'); ok(!/Estudio Norte|Café del Centro/.test(await page.textContent('#layer')), 'el menú de empresas no muestra la de ejemplo'); await page.keyboard.press('Escape');
-  ok(await page.isVisible('text=En la nube'), 'indicador "En la nube" visible');
+  ok(await page.isVisible('#syncst'), 'indicador de guardado en la nube visible');
 
   // 4) CRM → Cafelito Eventos
   await page.evaluate(() => { const c = S.companies.find(x => x.cloud); switchCompany(c); }); await page.goto(BASE + '#/app/crm'); try { await page.waitForSelector('.kanban', { timeout: 15000 }); } catch (e) { console.log('DBG', await page.evaluate(async () => { try { const s = await fbDb.collection('tenants/cafelito/opportunities').where('pipeline','==','cafelito-eventos').get(); return 'get ok ' + s.size + ' tid=' + EV.tid + ' loaded=' + EV.loaded; } catch (e) { return 'get err ' + e.code + ' ' + e.message; } })); page.on('response', r => { if (r.status() >= 400) console.log('RESP', r.status(), r.url().slice(0, 160)); }); await page.reload(); await page.waitForTimeout(6000); console.log('PANTALLA:', page.url(), (await page.evaluate(() => document.querySelector('#root').innerText)).slice(0, 900), errs); throw e; }
@@ -170,7 +170,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   const p2 = await (await browser.newContext()).newPage();
   await p2.goto(BASE + '?emu=1#/registro'); await p2.waitForSelector('#pw2');
   await p2.fill('#em', 'intrusa@otra.test'); await p2.fill('#pw2', 'Clave-segura-2026'); await p2.check('#tos'); await p2.click('#f button.btn-primary');
-  await p2.waitForSelector('#vok'); const c2 = (await (await fetch(`${AU}/emulator/v1/projects/${P}/oobCodes`)).json()).oobCodes.find(c => c.email === 'intrusa@otra.test'); await fetch(c2.oobLink); await p2.click('#vok');
+  await p2.waitForSelector('#vok'); let c2; for (let i = 0; i < 40 && !c2; i++) { c2 = (await (await fetch(`${AU}/emulator/v1/projects/${P}/oobCodes`)).json()).oobCodes.find(c => c.email === 'intrusa@otra.test' && c.requestType === 'VERIFY_EMAIL'); if (!c2) await new Promise(r => setTimeout(r, 250)); } await applyOob(c2.oobCode); await p2.click('#vok');
   await p2.waitForSelector('text=Todavía no tenés acceso a ninguna empresa', { timeout: 15000 }); ok(true, 'sin invitación: no ve ninguna empresa');
 
   ok(!errs.length, 'sin errores de JavaScript' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));

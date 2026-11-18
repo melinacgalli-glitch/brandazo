@@ -176,7 +176,13 @@ function tenantParts(st){
   if(st.x) parts.x=st.x;
   return parts;
 }
-window.cloudSave=function(){ if(!C.user||C.loading||!fbDb) return; clearTimeout(C.timer); C.timer=setTimeout(()=>flushCloud().catch(e=>console.warn('[nube] guardado',e)),700); };
+window.cloudSave=function(){ if(!C.user||C.loading||!fbDb) return; clearTimeout(C.timer); if(C.sync!=='error') C.sync=C.sync==='pending'?'pending':C.sync; C.timer=setTimeout(()=>flushCloud().catch(e=>console.warn('[nube] guardado',e)),700); };
+/* Estado real del guardado en la nube, visible arriba: Guardando… / Guardado / No se pudo guardar */
+C.sync='ok';
+function syncBadge(){ const t={ok:['badge-ok','check','En la nube','Todo guardado en la nube. Lo ve tu equipo.'],pending:['','clock','Guardando…','Guardando los cambios en la nube'],saved:['badge-ok','check','Guardado','Cambios guardados en la nube'],error:['badge-err','alert','No se pudo guardar','No se pudo guardar en la nube: reintentamos con el próximo cambio']}[C.sync]||[];
+  return `<span class="badge ${t[0]}" id="syncst" role="status" aria-live="polite" title="${t[3]}">${ic(t[1])} ${t[2]}</span>`; }
+function setSync(st){ C.sync=st; const el=$('#syncst'); if(el) el.outerHTML=syncBadge().replace('class="badge','class="desk badge');
+  clearTimeout(setSync.t); if(st==='saved') setSync.t=setTimeout(()=>setSync('ok'),2500); }
 async function flushCloud(){
   if(!C.user||!fbDb) return; clearTimeout(C.timer);
   const batch=fbDb.batch(); let n=0, big=[];
@@ -189,9 +195,10 @@ async function flushCloud(){
     try{ if(S.company===c) localStorage.setItem('bz-cur',c.tid); }catch(e){}
   }
   if(big.length&&!flushCloud.warned){ flushCloud.warned=true; toast('Hay datos muy grandes que no se pudieron guardar en la nube: '+big.join(', ')); }
-  if(!n) return;
-  try{ await batch.commit(); C.saveErr=false; }
-  catch(e){ C.saveErr=true; C.last={}; toast(e.code==='permission-denied'?'No tenés permiso para guardar en esta empresa.':'No se pudo guardar en la nube. Reintentamos al próximo cambio.'); }
+  if(!n){ if(C.sync==='pending') setSync('ok'); return; }
+  setSync('pending');
+  try{ await batch.commit(); C.saveErr=false; setSync('saved'); }
+  catch(e){ C.saveErr=true; C.last={}; setSync('error'); toast(e.code==='permission-denied'?'No tenés permiso para guardar en esta empresa.':'No se pudo guardar en la nube. Reintentamos al próximo cambio.'); }
 }
 window.addEventListener('pagehide',()=>{ try{ flushCloud(); }catch(e){} });
 
@@ -330,7 +337,7 @@ const _shellNube=shell;
 shell=function(active,title,inner){
   const h=_shellNube(active,title,inner);
   if(!S.company) return h;
-  const tag=S.company.cloud?`<span class="badge badge-ok" title="Se guarda en la nube y lo ve tu equipo">${ic('check')} En la nube</span>`:`<span class="badge" title="Solo en este navegador">Solo en este navegador</span>`;
+  const tag=S.company.cloud?syncBadge():`<span class="badge" title="Solo en este navegador">Solo en este navegador</span>`;
   return CLOUD.on?h.replace('<button class="search" id="cmdk">',tag.replace('class="badge','class="desk badge')+'<button class="search" id="cmdk">'):h;
 };
 
