@@ -25,7 +25,8 @@ const evWho=()=>({by:C.user.uid,byName:S.user.name||C.user.email});
 /* ---------- Bloque «Seguimiento» de la ficha ---------- */
 function evSeguimientoHtml(o,owners,fuIso){
   const open=EV_OPEN.includes(o.stage), w=o.won||{}, p=o.proposal||{};
-  const moves=EV_STAGES.filter(([k])=>k!==o.stage).map(([k,n])=>`<button class="btn btn-sm ${k==='ganada'?'btn-primary':''}" data-evmove="${k}">${n}</button>`).join('');
+  // Todas las etapas en orden: la actual marcada (no se toca), las demás para mover. Ninguna resaltada como si fuera la actual.
+  const moves=EV_STAGES.map(([k,n])=>k===o.stage?`<span class="ev-stage-cur" aria-current="step">${ic('check')} ${n}</span>`:`<button class="btn btn-sm" data-evmove="${k}">${n}</button>`).join('');
   let money='';
   if(o.stage==='ganada'&&w.amountMinor){ const dep=w.depositMinor||0, bal=w.amountMinor-dep;
     money=`<div class="ev-cobro"><dl class="kv"><dt>Importe final</dt><dd>${evMoney(w.amountMinor)}</dd>
@@ -36,7 +37,7 @@ function evSeguimientoHtml(o,owners,fuIso){
   return `<section class="card"><div class="card-head"><h3>Seguimiento</h3><span class="badge">${esc(evStageName(o.stage))}</span></div>
    ${money}
    ${o.stage==='perdida'?`<p class="small" style="margin-bottom:8px">Motivo: <b>${esc(o.lostReason||'Sin datos')}</b>${o.lostNote?` · ${esc(o.lostNote)}`:''}${o.canRecontact?' · se puede volver a contactar':''}</p>`:''}
-   <div class="field" style="margin-bottom:8px"><span class="label">Mover a</span><div style="display:flex;gap:6px;flex-wrap:wrap">${moves}</div></div>
+   <div class="field" style="margin-bottom:8px"><span class="label">Etapa (tocá otra para mover)</span><div style="display:flex;gap:6px;flex-wrap:wrap">${moves}</div></div>
    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end">
     <div class="field"><label for="evown">Responsable</label><select class="select" id="evown"><option value="">Sin asignar</option>${owners.map(n=>`<option ${n===o.owner?'selected':''}>${esc(n)}</option>`).join('')}</select></div>
     ${open?`<div class="field"><label for="evfu">Próximo seguimiento</label><input class="input" type="date" id="evfu" value="${fuIso}"></div>`:''}
@@ -105,7 +106,7 @@ function evStageForm(o,to){
     const v=id=>$(id)?$(id).value.trim():'', upd={stage:to}, det={}; let text='', via=null;
     if(EV_OPEN.includes(to)){ const f=v('#sfu'); if(!fieldErr($('#sfu'),!f?'Elegí cuándo volver a hablar':'')) return; upd.nextFollowUpAt=evTsFrom(f); det.nextFollowUp=f; }
     else upd.nextFollowUpAt=null;
-    if(to==='contactado'){ via=v('#svia'); text=v('#snote'); }
+    if(to==='contactado'){ via=v('#svia'); text=''; /* la nota va una sola vez (abajo) */ }
     else if(to==='propuesta-enviada'){ const a=evParseMoney(v('#samt')); if(!fieldErr($('#samt'),!a?'Ingresá el importe (ej.: 1.420.000)':'')) return;
       upd.proposal={amountMinor:a,sentAt:v('#ssent')||evToday(),validUntil:v('#svalid')||null,link:v('#slink')||null}; det.amountMinor=a; text=`Propuesta por ${evMoney(a)}`; }
     else if(to==='en-negociacion'){ if(!fieldErr($('#snote'),!v('#snote')?'Contá qué se está negociando':'')) return; upd.negotiation={topic:v('#stopic')}; det.topic=v('#stopic'); text=`${v('#stopic')}: ${v('#snote')}`; }

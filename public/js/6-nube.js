@@ -10,6 +10,9 @@ const FB_CONFIG={apiKey:'AIzaSyBDerAhYZjkx7fl-cvC6IeK4F31rX9QL_0',authDomain:'br
 const CLOUD=(()=>{ const local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   let emu=false; try{ if(/[?&]emu=1\b/.test(location.search)) sessionStorage.setItem('bz-emu','1'); emu=sessionStorage.getItem('bz-emu')==='1'; }catch(e){}
   return { on: !local||emu, emu: local&&emu }; })();
+/* Enlaces de los mails de cuenta (cambiar contraseña, verificar email, recuperar email): llegan a /accion?mode=…&oobCode=… */
+const AX=(()=>{ if(!/^\/accion\/?$/.test(location.pathname)) return null; const q=new URLSearchParams(location.search);
+  const ax={mode:q.get('mode')||'',code:q.get('oobCode')||'',view:null}; history.replaceState(null,'','/#/accion'); return ax; })();
 const C={ local:[], user:null, ready:false, loading:false, error:'', tenants:[], admin:false, unsub:[], last:{}, timer:null, saving:false, needVerify:false };
 let fbAuth=null, fbDb=null;
 if(CLOUD.on&&window.firebase){
@@ -26,6 +29,7 @@ const AUTH_ROUTES=['login','registro','verificar','recuperar','recuperar-enviado
 window.cloudGate=function(){
   if(!CLOUD.on||!fbAuth) return false;
   const a=location.hash.replace(/^#\/?/,'').split('/')[0];
+  if(a==='accion'){ accionRender(); return true; }
   const priv=['app','ui-kit','onboarding'].includes(a);
   if(!C.ready){ if(priv||a===''||a==='mapa'){ $('#root').innerHTML=cloudScreen('Cargando…','Conectando con tu cuenta.'); return true; } return false; }
   if(!C.user){ if(priv||a==='verificar'||a==='nueva-clave'){ location.replace('#/login'); return true; } return false; }
@@ -42,6 +46,39 @@ function bindCloudScreen(){
   const r=$('#cretry'); if(r) r.onclick=()=>loadCloud();
   const o=$('#cout'); if(o) o.onclick=()=>cloudSignOut();
   const d=$('#cdemo'); if(d) d.onclick=()=>{ const c={name:'Estudio Norte',country:'Argentina',industry:'Agencia de marketing',size:'2 a 10'}; S.companies.push(c); switchCompany(c); D().demo=true; if(typeof loadDemo==='function') loadDemo(); S.brand=0; render(); toast('Demo con datos de ejemplo: queda solo en este navegador'); };
+}
+
+/* En el sitio real no se muestra el atajo «Mapa de pantallas» del prototipo */
+if(CLOUD.on){ const _authShell=authShell; authShell=function(inner){ return _authShell(inner).replace('<a class="small" href="#/mapa">Mapa de pantallas</a>',''); }; }
+
+/* ---------- Pantallas de los enlaces de cuenta (con el diseño de Brandazo) ---------- */
+function accionShell(icon,tone,title,text,extra=''){ return authShell(`<div style="width:48px;height:48px;border-radius:12px;background:var(--${tone}-soft);color:var(--${tone==='magenta'?'magenta-text':tone});display:grid;place-items:center;margin-bottom:16px">${ic(icon)}</div><h1>${title}</h1><p class="muted" style="margin:6px 0 24px">${text}</p>${extra}`); }
+function accionRender(){
+  const root=$('#root'); document.title='Brandazo · Tu cuenta';
+  if(!AX||!AX.code){ root.innerHTML=accionShell('alert','danger','Enlace incompleto','Abrí el enlace completo desde el mail. Si no funciona, pedí uno nuevo.',`<a class="btn btn-primary btn-block" href="#/recuperar">Pedir un enlace nuevo</a><p class="small" style="margin-top:16px;text-align:center"><a href="#/login">Volver a iniciar sesión</a></p>`); return; }
+  if(AX.view){ root.innerHTML=AX.view; accionBind(); return; }
+  root.innerHTML=accionShell('clock','magenta','Un momento…','Estamos revisando el enlace.');
+  if(AX.busy) return; AX.busy=true;
+  const vencido=()=>accionShell('alert','danger','El enlace venció o ya se usó','Por seguridad, cada enlace sirve una sola vez y por tiempo limitado. Pedí uno nuevo y usalo apenas te llegue.',`<a class="btn btn-primary btn-block" href="#/recuperar">Pedir un enlace nuevo</a><p class="small" style="margin-top:16px;text-align:center"><a href="#/login">Volver a iniciar sesión</a></p>`);
+  const show=h=>{ AX.view=h; AX.busy=false; if(location.hash==='#/accion') render(); };
+  if(AX.mode==='resetPassword') fbAuth.verifyPasswordResetCode(AX.code).then(email=>{ AX.email=email;
+      show(authShell(`<h1>Creá una contraseña nueva</h1><p class="muted" style="margin:6px 0 24px">Para <b style="color:var(--ink)">${esc(email)}</b>. Al guardarla, se cierra la sesión en tus otros dispositivos.</p>
+      <form id="axf" novalidate>${pwField('n1','Nueva contraseña')}<div class="meter" id="axm"><i></i><i></i><i></i><i></i></div><p class="hint small muted" style="margin:6px 0 16px">Mínimo 8 caracteres. Sumá números y símbolos para hacerla más segura.</p>${pwField('n2','Repetí la contraseña')}<div id="axerr"></div><button class="btn btn-primary btn-block">Guardar contraseña</button></form>`)); }).catch(()=>show(vencido()));
+  else if(AX.mode==='verifyEmail') fbAuth.applyActionCode(AX.code).then(async()=>{ try{ if(fbAuth.currentUser){ await fbAuth.currentUser.reload(); await fbAuth.currentUser.getIdToken(true); } }catch(e){}
+      show(accionShell('check','success','Email verificado','Listo, ya confirmaste que el email es tuyo. Ya podés entrar a Brandazo.',`<a class="btn btn-primary btn-block" href="#/app/inicio" id="axgo">Entrar a Brandazo</a>`)); }).catch(()=>show(vencido()));
+  else if(AX.mode==='recoverEmail') fbAuth.checkActionCode(AX.code).then(info=>fbAuth.applyActionCode(AX.code).then(()=>{ const em=info.data&&info.data.email||'';
+      show(accionShell('check','success','Recuperamos tu email',`Tu cuenta vuelve a usar <b style="color:var(--ink)">${esc(em)}</b>. Si no fuiste vos quien lo cambió, creá una contraseña nueva ahora.`,`<button class="btn btn-primary btn-block" id="axrec">Mandame un enlace para cambiar la contraseña</button><p class="small" style="margin-top:16px;text-align:center"><a href="#/login">Iniciar sesión</a></p>`)); AX.email=em; })).catch(()=>show(vencido()));
+  else show(vencido());
+}
+function accionBind(){
+  bindEyes();
+  const n1=$('#n1'); if(n1) n1.oninput=e=>{const v=e.target.value;let s=0;if(v.length>=8)s++;if(/\d/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;if(v.length>=12)s++;$('#axm').className='meter'+(v?' s'+Math.max(1,s):'')};
+  const f=$('#axf'); if(f) f.onsubmit=async e=>{ e.preventDefault(); const a=$('#n1'),b=$('#n2'); let ok=fieldErr(a,a.value.length<8?'Mínimo 8 caracteres':''); ok=fieldErr(b,b.value!==a.value?'Las contraseñas no coinciden':'')&&ok; if(!ok) return;
+    e.submitter.classList.add('is-loading');
+    try{ await fbAuth.confirmPasswordReset(AX.code,a.value);
+      AX.view=accionShell('check','success','Contraseña actualizada',`Ya podés entrar con tu contraseña nueva${AX.email?` y el email <b style="color:var(--ink)">${esc(AX.email)}</b>`:''}.`,`<a class="btn btn-primary btn-block" href="#/login">Iniciar sesión</a>`); render(); }
+    catch(err){ e.submitter.classList.remove('is-loading'); $('#axerr').innerHTML=`<div class="alert alert-err" style="margin-bottom:16px">${ic('alert')}<div>${err.code==='auth/weak-password'?'Esa contraseña es muy débil: usá al menos 8 caracteres.':'El enlace venció o ya se usó. Pedí uno nuevo.'}</div></div>`; } };
+  const r=$('#axrec'); if(r) r.onclick=async()=>{ try{ await fbAuth.sendPasswordResetEmail(AX.email); toast('Te mandamos el enlace'); }catch(e){ toast(authErr(e)); } };
 }
 
 /* ---------- Sesión ---------- */

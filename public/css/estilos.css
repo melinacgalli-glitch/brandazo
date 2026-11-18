@@ -922,3 +922,7 @@ input[type=date],input[type=time]{cursor:pointer}
 .ev-tl-ic{width:28px;height:28px;border-radius:50%;background:var(--surface-sunken);display:grid;place-items:center;color:var(--ink-muted)}
 .ev-tl-ic svg{width:14px;height:14px}
 @media (max-width:640px){ .ev-act > div:first-of-type{grid-template-columns:1fr !important} }
+
+/* CRM · etapa actual dentro de la ficha */
+.ev-stage-cur{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--radius-md);border:1px solid var(--magenta);color:var(--magenta-text);font-size:13px;font-weight:600;background:var(--magenta-soft)}
+.ev-stage-cur svg{width:14px;height:14px}
