@@ -54,7 +54,7 @@ function bindDemo(){ $$('[data-demo]').forEach(b=>b.onclick=()=>{ loadDemo(); re
 function emptyBlock(icon,title,text,action){ return `<div class="card empty"><div class="eico">${ic(icon)}</div><h3>${title}</h3><p class="muted small">${text}</p><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">${action||''}${demoBtn()}</div></div>`; }
 function pageHead(title,sub,actions){ return `<div class="page-head"><div><h1>${title}</h1>${sub?`<p class="muted" style="margin-top:4px">${sub}</p>`:''}</div><div style="display:flex;gap:8px;flex-wrap:wrap">${actions||''}</div></div>`; }
 function subTabs(base,tabs,cur){ return `<div class="tabs" role="tablist">${tabs.map(([k,l])=>`<a class="tab" role="tab" href="#/app/${base}/${k}" aria-selected="${k===cur}">${l}</a>`).join('')}</div>`; }
-function brandScope(){ const b=curBrand(); return b?`<span class="badge"><i class="sdot" style="background:${b.color}"></i>${esc(b.name)}</span>`:`<span class="badge">${ic('grid')} Todas las marcas</span>`; }
+function brandScope(){ const b=curBrand(); return b?`<span class="badge"><i class="sdot" style="background:${b.color}"></i>${esc(b.name)}</span>`:`<span class="badge">${ic('grid')} Todas las unidades</span>`; }
 function seeded(n,seed){ let x=seed; return Array.from({length:n},()=>{x=(x*9301+49297)%233280;return x/233280}); }
 function series(n,start,growth,noise,seed){ const r=seeded(n,seed); let v=start; return r.map(z=>{ v=v*(1+growth)+(z-.5)*noise*start; return Math.max(0,v); }); }
 
@@ -158,7 +158,7 @@ function objStatus(p){ return p>=70?['En camino','badge-ok']:p>=40?['Atención',
 function vEstrategia(tab){
   tab=ST_TABS.some(t=>t[0]===tab)?tab:'resumen';
   const m=M(), objs=m.objectives.filter(inBrand);
-  const head=pageHead('Estrategia','Objetivos, públicos, posicionamiento, planes y presupuesto de cada marca.',`${brandScope()}<button class="btn btn-primary" id="newobj">${ic('plus')} Nuevo objetivo</button>`)+subTabs('estrategia',ST_TABS,tab);
+  const head=pageHead('Estrategia','Objetivos, públicos, posicionamiento, planes y presupuesto de cada unidad de negocio.',`${brandScope()}<button class="btn btn-primary" id="newobj">${ic('plus')} Nuevo objetivo</button>`)+subTabs('estrategia',ST_TABS,tab);
   if(tab==='resumen'&&!m.objectives.length&&!m.personas.length) return head+emptyBlock('target','Definí tu estrategia','Empezá con un objetivo: qué querés lograr, para qué marca y cómo lo vas a medir.',`<button class="btn btn-primary" data-newobj>${ic('plus')} Crear objetivo</button>`);
   const body={resumen:stResumen,okr:stOkr,personas:stPersonas,posicionamiento:stPos,planes:stPlanes,presupuesto:stBudget}[tab](objs);
   return head+body;
@@ -179,13 +179,13 @@ function stResumen(objs){
   <div class="stat"><div class="l">Avance promedio</div><div class="v">${avg}%</div><div class="d">del período ${esc(b.period||'actual')}</div></div>
   <div class="stat"><div class="l">Presupuesto usado</div><div class="v">${pct(spent,b.total)}%</div><div class="d">${money(spent)} de ${money(b.total)}</div></div>
   <div class="stat"><div class="l">Contenidos del plan</div><div class="v">${conts.length}</div><div class="d">${conts.filter(c=>c.status==='Publicado').length} publicados</div></div></div>
-  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(min(420px,100%),1fr))">${objs.map(objCard).join('')||emptyBlock('target','Sin objetivos para esta marca','Creá un objetivo o elegí "Todas las marcas".')}</div>`;
+  <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(min(420px,100%),1fr))">${objs.map(objCard).join('')||emptyBlock('target','Sin objetivos para esta marca','Creá un objetivo o elegí "Todas las unidades".')}</div>`;
 }
 function stOkr(objs){
   const kp=M().kpis.filter(inBrand);
   return `<h2 style="margin-bottom:12px">Objetivos y resultados clave</h2><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(min(420px,100%),1fr));margin-bottom:32px">${objs.map(objCard).join('')||emptyBlock('target','Sin objetivos todavía','Definí qué querés lograr y con qué resultado clave lo vas a medir.',`<button class="btn btn-primary" data-newobj>${ic('plus')} Crear objetivo</button>`)}</div>
   <div class="card-head"><h2>KPI por canal</h2><button class="btn btn-sm" id="newkpi">${ic('plus')} Agregar KPI</button></div>
-  <div class="table-wrap"><table class="t"><thead><tr><th>Indicador</th><th>Canal</th><th class="hide-m">Marca</th><th class="num">Meta</th><th class="num">Actual</th><th>Estado</th></tr></thead><tbody>
+  <div class="table-wrap"><table class="t"><thead><tr><th>Indicador</th><th>Canal</th><th class="hide-m">Unidad</th><th class="num">Meta</th><th class="num">Actual</th><th>Estado</th></tr></thead><tbody>
   ${kp.length?'':`<tr><td colspan="6" class="muted small" style="text-align:center;padding:24px">Sin KPI cargados. Tocá «Agregar KPI» para sumar el primero.</td></tr>`}${kp.map(k=>{const lowerBetter=k.unit==='$';const ok=lowerBetter?k.actual<=k.target:k.actual>=k.target;const f=v=>k.unit==='$'?money(v):k.unit==='%'?String(v).replace('.',',')+'%':num(v);return `<tr><td><b>${esc(k.name)}</b></td><td>${esc(k.channel)}</td><td class="hide-m"><span class="badge"><i class="sdot" style="background:${brandOf(k.brand).color}"></i>${esc(k.brand)}</span></td><td class="num">${f(k.target)}</td><td class="num">${f(k.actual)}</td><td>${ok?'<span class="badge badge-ok">'+ic('check')+' Cumple</span>':'<span class="badge badge-warn">Por debajo</span>'}</td></tr>`}).join('')}</tbody></table></div>`;
 }
 /* Buyer personas: unidades de negocio = marcas de la empresa (sin entidad nueva).
@@ -274,7 +274,7 @@ function stBudget(){
 }
 function ensureBrand(next){
   if(S.brands.length) return next();
-  modal('Primero creá una marca',`<p class="muted small" style="margin-bottom:16px">Los objetivos, buyer personas, KPI, hitos y el posicionamiento se organizan por marca. Creá la primera ahora; después podés sumar más desde Configuración → Marcas.</p>${F('nbm','Nombre de la marca',`value="${esc(S.company?.name||'')}" placeholder="Ej.: Café del Centro"`)}`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="okb">Crear marca y seguir</button>`);
+  modal('Primero creá una unidad de negocio',`<p class="muted small" style="margin-bottom:16px">Los objetivos, buyer personas, KPI, hitos y el posicionamiento se organizan por marca. Creá la primera ahora; después podés sumar más desde Configuración → Marcas.</p>${F('nbm','Nombre de la marca',`value="${esc(S.company?.name||'')}" placeholder="Ej.: Café del Centro"`)}`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="okb">Crear marca y seguir</button>`);
   $('#okb').onclick=()=>{ const v=$('#nbm').value.trim(); if(!fieldErr($('#nbm'),!v?'Ingresá el nombre de la marca':''))return;
     S.brands.push({name:v,color:COLORS[0]}); S.brand=S.brands.length-1; logAct(`Creaste la marca ${v}`); closeLayer(); render(); toast(`Marca ${v} creada`); next(); };
 }
@@ -366,7 +366,7 @@ function contentEditor(c,date){
   <div class="dr-body"><div class="dr-main">
    <div class="field"><span class="label">Formato</span><div class="formats" role="radiogroup">${FORMATS.map(([f,i])=>`<button type="button" class="fmt" data-fmt="${f}" aria-pressed="${c.format===f}">${ic(i)}${f}</button>`).join('')}</div></div>
    <div class="form-grid"><div class="field"><label for="cch">Canal</label><select class="select" id="cch">${CHANNELS.map(x=>`<option ${x===c.channel?'selected':''}>${x}</option>`).join('')}</select></div>
-   <div class="field"><label for="cbr">Marca</label><select class="select" id="cbr">${S.brands.map(b=>`<option ${b.name===c.brand?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div></div>
+   <div class="field"><label for="cbr">Unidad de negocio</label><select class="select" id="cbr">${S.brands.map(b=>`<option ${b.name===c.brand?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div></div>
    <div class="field"><div style="display:flex;justify-content:space-between;align-items:center"><label for="ccp">Copy</label><button type="button" class="btn btn-ghost btn-sm" id="aicopy">${ic('spark')} Escribir con IA</button></div><textarea class="input" id="ccp" rows="6" placeholder="Escribí el texto de la publicación…">${esc(c.copy)}</textarea><div class="counter" id="cnt"></div></div>
    <div class="form-grid">${F('chs','Hashtags',`value="${esc(c.hashtags)}" placeholder="#marca #tema"`)}${F('cta','Llamado a la acción',`value="${esc(c.cta)}" placeholder="Ej.: Comprá online"`)}</div>
    <div class="field"><span class="label">Archivos</span><div class="files" id="files">${c.files.map((f,i)=>`<div class="file"><span class="thumb" style="background:${f.t==='video'?'#0E0E10':brandOf(c.brand).color}">${ic(f.t==='video'?'video':f.t==='file'?'file':'image')}</span><span class="grow">${esc(f.n)}</span><span class="small muted">${f.s}</span><button type="button" class="icon-btn" data-rmf="${i}" aria-label="Quitar">${ic('x')}</button></div>`).join('')}</div>
@@ -521,7 +521,7 @@ function campWizard(){
     const c={id:uid(),name:d.name,brand:d.brand,type:d.type,objective:d.objective,start:d.start,end:d.end,budget:+d.budget||0,spent:0,audience:d.audience||'Sin definir',channels:d.channels,personas:d.personas.slice(),objectiveId:d.objectiveId||'',status:parse(d.start)>NOW?'Programada':'Activa',segment:d.segment||'General',m:{reach:0,impr:0,clicks:0,conv:0,revenue:0},seed:13};
     M().campaigns.unshift(c); fWizLink(c,d); logAct(`Creaste la campaña ${c.name}`); closeLayer(); go('#/app/campanas/'+c.id); toast('Campaña creada'); }; };
   const save=(validate)=>{ if(step===0){ const n=$('#wn'); d.name=n.value.trim(); if(d.brand!==$('#wb').value){ d.personas=[]; d.funnel=''; d.objectiveId=''; } else if($('#wobj')) d.objectiveId=$('#wobj').value; d.brand=$('#wb').value; d.objective=$('#wo').value; d.start=$('#ws').value; d.end=$('#we').value; d.segment=$('#wg').value;
-     if(validate){ let ok=fieldErr(n,!d.name?'Poné un nombre a la campaña':''); ok=fieldErr($('#we'),d.end<d.start?'La fecha de fin es anterior al inicio':'')&&ok; return ok; } }
+     if(validate){ let ok=fieldErr(n,!d.name?'Poné un nombre a la campaña':''); ok=fieldErr($('#we'),d.end<d.start?'La fecha de fin es anterior al inicio':'')&&ok; if($('#wobj')&&$('#wobj').tagName==='SELECT'&&$('#wobj').options.length>1) ok=fieldErr($('#wobj'),!$('#wobj').value?'Elegí qué objetivo persigue esta campaña: así se ve cómo aporta a las ventas':'')&&ok; return ok; } }
     if(step===1){ const b=$('#wbu'); if(b){ d.budget=b.value; if(validate&&d.type!=='Orgánica') return fieldErr(b,!(+b.value>0)?'Ingresá un presupuesto mayor a cero':''); } }
     if(step===2){ d.audience=$('#wa').value; d.personas=$$('#wps input:checked').map(i=>i.value); d.channels=$$('#layer .check input:checked').filter(i=>!i.closest('#wps')).map(i=>i.value); const okF=fWizSave(d,validate); if(validate) return fieldErr($$('#layer .check input').find(i=>!i.closest('#wps')),!d.channels.length?'Elegí al menos un canal':'')&&okF; }
     return true; };
@@ -557,7 +557,7 @@ function vRedes(){
 function bRedes(){
   bindDemo(); const m=M(); const on=(s,f)=>{const e=$(s);if(e)e.onclick=f};
   const connect=(pre)=>{ if(!S.brands.length) return toast('Primero creá una marca');
-    modal('Conectar cuenta',`<div class="field"><label for="nb">Marca</label><select class="select" id="nb">${S.brands.map(b=>`<option ${(pre?pre.brand:(curBrand()||S.brands[0]).name)===b.name?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
+    modal('Conectar cuenta',`<div class="field"><label for="nb">Unidad de negocio</label><select class="select" id="nb">${S.brands.map(b=>`<option ${(pre?pre.brand:(curBrand()||S.brands[0]).name)===b.name?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
      <div class="field"><span class="label">Red social</span><div style="display:flex;flex-direction:column;gap:8px">${Object.entries(NETS).map(([k,v])=>`<button type="button" class="choice" data-net="${k}" aria-pressed="${pre?pre.net===k:k==='Instagram'}" style="flex-direction:row;align-items:center;gap:12px"><span class="net" style="width:32px;height:32px;font-size:12px">${v.l}</span><div><b>${k}</b><div class="small muted">${v.api}</div></div></button>`).join('')}</div></div>
      <div class="alert alert-info">${ic('info')}<div>Vas a autorizar el acceso en la red elegida. Podés conectar varias cuentas por marca.</div></div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="ok">Continuar</button>`);
     let net=pre?pre.net:'Instagram'; $$('#layer [data-net]').forEach(b=>b.onclick=()=>{$$('#layer [data-net]').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');net=b.dataset.net});
@@ -580,7 +580,7 @@ function kitFor(b){ const m=M(); if(!m.kits[b.name]) m.kits[b.name]={info:{desc:
 function vMarca(tab){
   tab=MK_TABS.some(t=>t[0]===tab)?tab:'general';
   const b=curBrand();
-  const head=pageHead('Marca','Identidad, tono y recursos de cada marca, listos para usar en contenidos y campañas.',`${brandScope()}<button class="btn" id="newbrand">${ic('plus')} Nueva marca</button>`);
+  const head=pageHead('Marca','Identidad, tono y recursos de cada unidad de negocio, listos para usar en contenidos y campañas.',`${brandScope()}<button class="btn" id="newbrand">${ic('plus')} Nueva unidad</button>`);
   if(!S.brands.length) return head+emptyBlock('tag','Creá tu primera marca','Cargá logo, colores y tono una vez y usalos en todos los módulos.',`<button class="btn btn-primary" data-newbrand>${ic('plus')} Crear marca</button>`);
   if(!b) return head+`<div class="cards">${S.brands.map((x,i)=>{const k=kitFor(x);return `<button class="card ent" data-pick="${i}" style="text-align:left;cursor:pointer;font:inherit;color:inherit"><div class="ent-top"><div class="mark" style="background:${x.color}">${initials(x.name)}</div><div><b>${esc(x.name)}</b><div class="small muted">${esc(k.info.industry||'Sin rubro')}</div></div></div><div style="display:flex;gap:4px">${k.colors.map(c=>`<i style="width:24px;height:24px;border-radius:6px;background:${c[1]};border:1px solid var(--line)"></i>`).join('')}</div><span class="small muted">${k.files.length} archivos · ${k.messages.length} mensajes</span></button>`}).join('')}</div>`;
   const k=kitFor(b);

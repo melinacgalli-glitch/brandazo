@@ -184,7 +184,7 @@ function edObjDialog(p,onDone){
   const def=p.type==='mes'?p.name:`${MES_UP[parse(p.start).getMonth()]} ${parse(p.start).getFullYear()}`;
   const noLink=edIdeas(p).filter(c=>edEditable(c)&&!c.campaign&&!c.objective);
   modal('Nuevo objetivo',`${F('nob','Objetivo',`placeholder="Ej.: Aumentar las reservas de la barra en diciembre"`)}
-   <div class="form-grid"><div class="field"><label for="nobb">Marca</label><input class="input" id="nobb" value="${esc(p.brand)}" disabled></div>
+   <div class="form-grid"><div class="field"><label for="nobb">Unidad de negocio</label><input class="input" id="nobb" value="${esc(p.brand)}" disabled></div>
    <div class="field"><label for="nobp">Período</label><select class="select" id="nobp">${periodOptions(def).map(x=>`<option ${x===def?'selected':''}>${x}</option>`).join('')}</select></div></div>
    ${noLink.length?`<label class="check"><input type="checkbox" id="noball" checked> Vincular las ${noLink.length} idea${noLink.length>1?'s':''} sin campaña ni objetivo</label>`:''}
    <p class="small muted" style="margin-top:8px">Queda en Estrategia → Objetivos, donde podés sumarle resultados clave y un funnel.</p>`,
@@ -281,7 +281,7 @@ function edPlanForm(p){
   const isNew=!p, mems=OWNERS();
   if(!S.brands.length) return toast('Primero creá una marca');
   const b0=p?p.brand:(curBrand()||S.brands[0]).name;
-  modal(isNew?'Nueva planificación':'Editar planificación',`${isNew?`<div class="form-grid"><div class="field"><label for="pbr">Marca</label><select class="select" id="pbr">${S.brands.map(b=>`<option ${b.name===b0?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
+  modal(isNew?'Nueva planificación':'Editar planificación',`${isNew?`<div class="form-grid"><div class="field"><label for="pbr">Unidad de negocio</label><select class="select" id="pbr">${S.brands.map(b=>`<option ${b.name===b0?'selected':''}>${esc(b.name)}</option>`).join('')}</select></div>
    <div class="field"><label for="pty">Período</label><select class="select" id="pty"><option value="semana">Semanal</option><option value="mes">Mensual</option></select></div></div>
    <div class="field"><label for="pfr">Desde</label><input class="input" type="date" id="pfr" value="${iso(addDays(NOW,7-((NOW.getDay()+6)%7)))}"><span class="hint" id="prng"></span></div>`:''}
    ${F('pnm','Nombre',`value="${esc(p?p.name:'')}" placeholder="Se completa con el período"`)}
@@ -375,7 +375,7 @@ flowActions=function(c){
 };
 
 /* Campañas: objetivo estratégico vinculado (se hereda en los contenidos) */
-function edCampObjField(d){ const objs=M().objectives.filter(o=>o.brand===d.brand); return `<div class="field"><label for="wobj">Objetivo estratégico</label><select class="select" id="wobj"><option value="">Sin objetivo</option>${objs.map(o=>`<option value="${o.id}" ${o.id===d.objectiveId?'selected':''}>${esc(o.title)} · ${esc(o.period)}</option>`).join('')}</select><span class="hint">Los contenidos de esta campaña lo heredan automáticamente.</span></div>`; }
+function edCampObjField(d){ const objs=M().objectives.filter(o=>o.brand===d.brand); return `<div class="field"><label for="wobj">Objetivo estratégico</label><select class="select" id="wobj"><option value="">${objs.length?'Elegí un objetivo':'Esta unidad todavía no tiene objetivos'}</option>${objs.map(o=>`<option value="${o.id}" ${o.id===d.objectiveId?'selected':''}>${esc(o.title)} · ${esc(o.period)}</option>`).join('')}</select><span class="hint">${objs.length?'Los contenidos de esta campaña lo heredan automáticamente.':'Creá un objetivo en Estrategia para conectar esta campaña con las ventas.'}</span><span class="err" role="alert"></span></div>`; }
 function edCampObjDd(c){ campNorm(c,M()); const o=M().objectives.find(x=>x.id===c.objectiveId); return `${o?`<a href="#/app/estrategia/okr">${esc(o.title)}</a>`:'Sin objetivo'} <button type="button" class="btn btn-ghost btn-sm" data-campobj="${c.id}">Cambiar</button>${c.objInferred&&o?'<div class="small muted">Detectado por los vínculos existentes</div>':''}`; }
 document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-campobj]'); if(!b) return;
   const c=M().campaigns.find(x=>x.id===b.dataset.campobj); if(!c) return; const objs=M().objectives.filter(o=>o.brand===c.brand);

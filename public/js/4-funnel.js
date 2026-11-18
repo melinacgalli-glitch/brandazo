@@ -371,7 +371,7 @@ const _vEstrategia=vEstrategia, _bEstrategia=bEstrategia;
 vEstrategia=function(tab){
   if(tab!=='funnel') return _vEstrategia(tab);
   const id=location.hash.split('/')[4]||'';
-  const head=pageHead('Estrategia','Objetivos, públicos, posicionamiento, planes y presupuesto de cada marca.',`${brandScope()}<button class="btn btn-primary" id="newobj">${ic('plus')} Nuevo objetivo</button>`)+subTabs('estrategia',ST_TABS,'funnel');
+  const head=pageHead('Estrategia','Objetivos, públicos, posicionamiento, planes y presupuesto de cada unidad de negocio.',`${brandScope()}<button class="btn btn-primary" id="newobj">${ic('plus')} Nuevo objetivo</button>`)+subTabs('estrategia',ST_TABS,'funnel');
   return head+(id?vFunnelDetail(id):vFunnelList());
 };
 bEstrategia=function(tab){ _bEstrategia(tab); if(tab==='funnel') bFunnelTab(location.hash.split('/')[4]||''); bObjFunnel(); };

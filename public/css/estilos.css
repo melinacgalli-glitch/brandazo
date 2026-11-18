@@ -959,3 +959,15 @@ input[type=date],input[type=time]{cursor:pointer}
 
 .toast.update-bar{border-left-color:var(--magenta)}
 .toast.update-bar .ico{color:var(--magenta)}
+
+/* Estrategia → Mapa por unidad */
+.unit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:16px}
+.unit-card h3{display:flex;align-items:center;gap:8px}
+.unit-chain{list-style:none;padding:0;margin:0;display:grid;gap:0}
+.unit-chain li{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);min-width:0}
+.unit-chain li .grow{min-width:0;overflow-wrap:anywhere}
+.unit-dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;font:600 12px var(--font-mono);background:var(--surface-sunken);color:var(--ink-muted)}
+.unit-dot svg{width:14px;height:14px}
+.unit-chain li.ok .unit-dot{background:var(--success-soft);color:var(--success)}
+.unit-chain li.miss .unit-dot{background:var(--warning-soft);color:var(--warning)}
+.unit-ref summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
