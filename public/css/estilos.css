@@ -952,3 +952,7 @@ input[type=date],input[type=time]{cursor:pointer}
 .fz-costs .field>.fz-money{grid-area:inp}
 .fz-costs .field>.hint{grid-area:hin;margin-top:0}
 .fz-costs .field>.err{grid-area:err}
+
+/* Aviso de cambios sin guardar dentro de una ventana */
+.discard-bar{margin:12px 16px 0;position:sticky;top:0;z-index:2}
+.modal .discard-bar{margin:0 0 12px}

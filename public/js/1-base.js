@@ -117,22 +117,38 @@ function toast(msg,undo){
   if(undo) el.querySelector('button').onclick=()=>{undo();el.remove()};
   $('#toasts').appendChild(el); setTimeout(()=>el.remove(),4000);
 }
-function closeLayer(){ $('#layer').innerHTML=''; document.removeEventListener('keydown',escClose); if(lastFocus) lastFocus.focus?.(); }
+function closeLayer(){ $('#layer').innerHTML=''; layerDirty=false; document.removeEventListener('keydown',escClose); if(lastFocus) lastFocus.focus?.(); }
 let lastFocus=null;
-function escClose(e){ if(e.key==='Escape') closeLayer(); }
+/* Protección contra perder lo escrito: si una ventana tiene cambios sin guardar, tocar afuera,
+   apretar Escape o la X no la cierran: preguntan. «Cancelar» sigue cerrando directo (es explícito). */
+let layerDirty=false;
+document.addEventListener('input',e=>{ if(e.target.closest&&e.target.closest('#layer')&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)&&e.target.type!=='search') layerDirty=true; },true);
+document.addEventListener('change',e=>{ if(e.target.closest&&e.target.closest('#layer')&&/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) layerDirty=true; },true);
+function softClose(){
+  if(!layerDirty) return closeLayer();
+  const box=$('#layer .modal')||$('#layer .drawer'); if(!box) return closeLayer();
+  if(box.querySelector('.discard-bar')){ box.querySelector('[data-keep]').focus(); return; }
+  box.insertAdjacentHTML('afterbegin',`<div class="alert alert-warn discard-bar" role="alertdialog" aria-label="Cambios sin guardar">${ic('alert')}<div style="flex:1"><b>Tenés cambios sin guardar.</b> ¿Querés salir igual? Lo que escribiste se pierde.<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btn-sm btn-primary" data-keep>Seguir editando</button><button type="button" class="btn btn-sm btn-danger" data-discard>Salir sin guardar</button></div></div></div>`);
+  const bar=box.querySelector('.discard-bar'); bar.querySelector('[data-keep]').onclick=()=>bar.remove(); bar.querySelector('[data-discard]').onclick=()=>closeLayer();
+  bar.scrollIntoView({block:'nearest'}); bar.querySelector('[data-keep]').focus();
+}
+const isSoftClose=t=>!!(t&&t.closest&&t.closest('button[data-close]')&&t.closest('button[data-close]').classList.contains('icon-btn'));
+function escClose(e){ if(e.key==='Escape') softClose(); }
 function modal(title,body,foot,opts={}){
   lastFocus=document.activeElement;
   $('#layer').innerHTML=`<div class="overlay" data-close><div class="modal ${opts.cls||''}" role="dialog" aria-modal="true" aria-labelledby="mt">
    ${title?`<div class="modal-head"><h3 id="mt">${title}</h3><button class="icon-btn" data-close aria-label="Cerrar">${ic('x')}</button></div>`:''}
    <div class="modal-body">${body}</div>${foot?`<div class="modal-foot">${foot}</div>`:''}</div></div>`;
-  const ov=$('#layer .overlay'); ov.addEventListener('click',e=>{ if(!ov.isConnected) return; if(e.target===ov||e.target.closest('button[data-close]')) closeLayer(); });
+  layerDirty=false;
+  const ov=$('#layer .overlay'); ov.addEventListener('click',e=>{ if(!ov.isConnected) return; if(e.target===ov||isSoftClose(e.target)) softClose(); else if(e.target.closest('button[data-close]')) closeLayer(); });
   document.addEventListener('keydown',escClose);
   setTimeout(()=>($('#layer input, #layer select, #layer button.btn-primary')||$('#layer button'))?.focus(),30);
 }
 function drawer(html){
   lastFocus=document.activeElement;
   $('#layer').innerHTML=`<div class="overlay" data-close style="padding:0"></div><aside class="drawer" role="dialog" aria-modal="true">${html}</aside>`;
-  $('#layer .overlay').onclick=closeLayer; $$('#layer [data-close]').forEach(b=>b.onclick=closeLayer);
+  layerDirty=false;
+  $('#layer .overlay').onclick=softClose; $$('#layer [data-close]').forEach(b=>b.onclick=b.classList.contains('icon-btn')?softClose:closeLayer);
   document.addEventListener('keydown',escClose);
 }
 function popMenu(anchor,html,align='left'){
