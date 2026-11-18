@@ -1,0 +1,26 @@
+rules_version = '2';
+// Archivos de Brandazo (Firebase Storage). Cada empresa tiene su carpeta: tenants/{tenantId}/…
+// Solo los miembros de la empresa (según Firestore) ven, suben y borran. Pruebas: rules-test/archivos.test.js
+service firebase.storage {
+  match /b/{bucket}/o {
+    function member(t) {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/tenants/$(t)/members/$(request.auth.uid));
+    }
+    function okType() {
+      return request.resource.contentType.matches('image/.*|video/.*|font/.*|text/plain|application/pdf|application/zip|application/x-zip-compressed|application/postscript|application/octet-stream|application/msword|application/vnd\\.ms-.*|application/vnd\\.openxmlformats-officedocument\\..*|application/vnd\\.oasis\\.opendocument\\..*|application/x-font-.*|application/font-.*');
+    }
+
+    // Logos y biblioteca de cada marca
+    match /tenants/{t}/marcas/{marca}/{archivo} {
+      allow read: if member(t);
+      allow create, update: if member(t) && request.resource.size < 25 * 1024 * 1024 && okType();
+      allow delete: if member(t);
+    }
+
+    // Todo lo demás, cerrado
+    match /{todo=**} {
+      allow read, write: if false;
+    }
+  }
+}
