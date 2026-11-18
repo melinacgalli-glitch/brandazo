@@ -241,7 +241,7 @@ function bPlanDetail(p){
   $$('[data-repres]').forEach(b=>b.onclick=()=>{ if(edPresent(p,b.dataset.repres)){ render(); toast('Idea presentada de nuevo'); } });
   $$('[data-prod]').forEach(b=>b.onclick=()=>{ const c=byId(b.dataset.prod); c.status='Borrador'; logAct(`Pasaste a producción «${c.title}»`); render(); toast('En producción: completá copy y archivos desde el editor'); contentEditor(c); });
   $$('[data-open]').forEach(b=>b.onclick=()=>contentEditor(byId(b.dataset.open)));
-  on('#psave',()=>{ persist(); edSavedFlash(); toast('Guardado. Las ideas quedan en borrador hasta que toques «Presentar planificación».'); });
+  on('#psave',()=>{ persist(); go('#/app/contenidos/planificaciones'); toast(`Planificación «${p.name}» guardada. Las ideas quedan en borrador hasta que la presentes.`); });
   $$('[data-newobj-plan]').forEach(b=>b.onclick=()=>edObjDialog(p));
   on('#addidea',()=>{ const ids=edIdeas(p); const n=edNewIdea(p,ids.length?ids[ids.length-1].date:p.start); redraw(edFocusTitle(n.id)); });
   on('#addloose',()=>{ const loose=M().contents.filter(c=>!c.planId&&c.brand===p.brand&&c.status==='Idea'&&['sin-presentar','ajustes'].includes(c.ideaSt));

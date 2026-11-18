@@ -46,3 +46,17 @@ roApply();
 /* Preferencias (no es un formulario): mismo aviso visible */
 (function(){ const _b=bConfig; bConfig=function(tab){ _b(tab); const b=$('#psave'); if(!b) return; const prev=b.onclick;
   b.onclick=e=>{ prev&&prev(e); b.insertAdjacentHTML('beforebegin',`<span class="small" style="color:var(--success);margin-right:12px" role="status">${ic('check')} Preferencias guardadas</span>`); b.disabled=true; setTimeout(()=>{ b.disabled=false; },1200); }; }; })();
+
+/* ---------- Versión nueva publicada: avisar para actualizar ---------- */
+(function(){
+  const mine=(document.querySelector('script[src*="11-guardado.js"]')||{}).src||''; const cur=(mine.match(/v=([\d.]+)/)||[])[1];
+  if(!cur||!/^https?:/.test(location.protocol)) return;
+  let shown=false;
+  const check=async()=>{ if(shown||document.hidden) return;
+    try{ const r=await fetch('/version.json?t='+Date.now(),{cache:'no-store'}); if(!r.ok) return; const j=await r.json();
+      if(j.v&&j.v!==cur){ shown=true; const el=document.createElement('div'); el.className='toast update-bar'; el.setAttribute('role','status');
+        el.innerHTML=`${ic('refresh')}<span>Hay una versión nueva de Brandazo.</span><button type="button">Actualizar</button>`;
+        el.querySelector('button').onclick=()=>{ try{ if(window.cloudSave) window.cloudSave(); }catch(e){} setTimeout(()=>location.reload(),400); };
+        $('#toasts').appendChild(el); } }catch(e){} };
+  setInterval(check,5*60*1000); document.addEventListener('visibilitychange',check); setTimeout(check,15000);
+})();

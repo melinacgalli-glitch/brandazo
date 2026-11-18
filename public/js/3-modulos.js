@@ -411,7 +411,7 @@ function bAuto(tab){
   const sel=auSel?findNode(f,auSel):null;
   if(sel){ const n=sel.s;
     $('#nty2').onchange=e=>{ n.type=e.target.value; render(); };
-    on('#nsave',()=>{ n.label=$('#nlb').value.trim()||n.label; if(n.type==='Esperar'){ const v=+$('#ncf').value||1, u=$('#ncu').value; n.hours=u==='días'?v*24:v; n.label=`Esperar ${v} ${v===1?u.replace(/s$/,''):u}`; } if($('#ncf')&&n.type!=='Esperar'&&$('#ncf').value) n.d=$('#ncf').value; f.edited='Recién'; if(f.status==='Activo'){ f.version++; toast(`Guardado como versión ${f.version}`); } else toast('Paso actualizado'); render(); });
+    on('#nsave',()=>{ n.label=$('#nlb').value.trim()||n.label; if(n.type==='Esperar'){ const v=+$('#ncf').value||1, u=$('#ncu').value; n.hours=u==='días'?v*24:v; n.label=`Esperar ${v} ${v===1?u.replace(/s$/,''):u}`; } if($('#ncf')&&n.type!=='Esperar'&&$('#ncf').value) n.d=$('#ncf').value; f.edited='Recién'; if(f.status==='Activo'){ f.version++; toast(`Guardado como versión ${f.version}`); } else toast('Paso guardado'); auSel=null; render(); });
     on('#ndel',()=>{ modal('¿Eliminar este paso?',`<p>Se elimina <b>${esc(n.label)}</b>${n.kind==='condition'?' y todos los pasos de sus ramas':''}.</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-danger" id="mok">Eliminar</button>`); $('#mok').onclick=()=>{ sel.arr.splice(sel.arr.indexOf(n),1); auSel=null; f.edited='Recién'; closeLayer(); render(); toast('Paso eliminado'); }; });
   }
   on('#fact',()=>{ const acts=[]; walk(f.steps,s=>{ if(s.kind==='action') acts.push(s); }); if(acts.length===0){ modal('Falta una acción',`<p>El flujo necesita al menos una acción después del disparador para poder activarse.</p>`,`<button class="btn btn-primary" data-close>Entendido</button>`); return; }
@@ -523,7 +523,7 @@ function emailEditor(e){
     $$('[data-del]').forEach(b=>b.onclick=()=>{ sync(); e.blocks.splice(+b.dataset.del,1); draw(); });
     $$('[data-up]').forEach(b=>b.onclick=()=>{ sync(); const i=+b.dataset.up; [e.blocks[i-1],e.blocks[i]]=[e.blocks[i],e.blocks[i-1]]; draw(); });
     $('#etest').onclick=()=>toast(`Enviamos una prueba a ${S.user.email}`);
-    $('#esave').onclick=()=>{ sync(); save('Borrador'); toast('Borrador guardado'); };
+    $('#esave').onclick=()=>{ sync(); save('Borrador'); layerDirty=false; closeLayer(); render(); toast('Borrador guardado'); };
     $('#esch').onclick=()=>{ if(!valid()) return toast('Completá el asunto y la audiencia'); sync(); const snap=JSON.parse(JSON.stringify(e)); modal('Programar envío',`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div class="field"><label for="sd">Fecha</label><input class="input" type="date" id="sd" value="${iso(addDays(NOW,2))}" min="${iso(NOW)}"></div><div class="field"><label for="sh">Hora</label><input class="input" type="time" id="sh" value="10:00"></div></div><p class="small muted">Hora de Argentina (UTC−3).</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="mok">Programar</button>`);
       $('#mok').onclick=()=>{ Object.assign(e,snap); const d=$('#sd').value; const i=x.emails.findIndex(z=>z.id===e.id); e.status='Programada'; e.date=d; if(i>=0) x.emails[i]=e; else x.emails.unshift(e); closeLayer(); render(); toast(`Programada para el ${fdate(d)} a las ${$('#sh')?$('#sh').value:'10:00'}`); }; };
     $('#esend').onclick=()=>{ if(!valid()) return toast('Completá el asunto y la audiencia'); sync(); const snap=JSON.parse(JSON.stringify(e)); const n=x.contacts.filter(c=>c.consent.email).length;

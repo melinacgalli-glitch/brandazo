@@ -956,3 +956,6 @@ input[type=date],input[type=time]{cursor:pointer}
 /* Aviso de cambios sin guardar dentro de una ventana */
 .discard-bar{margin:12px 16px 0;position:sticky;top:0;z-index:2}
 .modal .discard-bar{margin:0 0 12px}
+
+.toast.update-bar{border-left-color:var(--magenta)}
+.toast.update-bar .ico{color:var(--magenta)}

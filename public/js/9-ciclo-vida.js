@@ -62,7 +62,7 @@ function evBindFicha(o,fuIso){
     if(!Object.keys(upd).length) return toast('No hay cambios');
     e.currentTarget.classList.add('is-loading');
     const txt=[upd.owner!=null?`Responsable: ${upd.owner||'sin asignar'}`:'',upd.nextFollowUpAt!==undefined?`Próximo seguimiento: ${fu?evDate(fu):'sin fecha'}`:'',upd.nextAction!==undefined?`Qué hacer: ${upd.nextAction||'(vacío)'}`:''].filter(Boolean).join(' · ');
-    try{ await evCommit(o,upd,{type:'cambio',text:txt}); toast('Guardado'); evFichaReopen(o.id); }
+    try{ await evCommit(o,upd,{type:'cambio',text:txt}); layerDirty=false; closeLayer(); toast('Seguimiento guardado'); }
     catch(err){ e.currentTarget.classList.remove('is-loading'); toast(evErr(err)); }
   };
   $('#evatok').onclick=async e=>{
@@ -71,7 +71,7 @@ function evBindFicha(o,fuIso){
     const upd={}; if($('#evatfu')&&fu!==fuIso&&fu) upd.nextFollowUpAt=evTsFrom(fu);
     const na=$('#evatna')?$('#evatna').value.trim():''; if($('#evatna')&&na!==(o.nextAction||'')) upd.nextAction=na||null;
     e.currentTarget.classList.add('is-loading');
-    try{ await evCommit(o,upd,{type:type==='Nota'?'nota':'contacto',via:type==='Nota'?null:type,text:tx.value.trim()+(upd.nextFollowUpAt?` · Próximo seguimiento: ${evDate(fu)}`:'')+(upd.nextAction?` · Qué hacer: ${upd.nextAction}`:'')}); toast('Actividad registrada'); evFichaReopen(o.id); }
+    try{ await evCommit(o,upd,{type:type==='Nota'?'nota':'contacto',via:type==='Nota'?null:type,text:tx.value.trim()+(upd.nextFollowUpAt?` · Próximo seguimiento: ${evDate(fu)}`:'')+(upd.nextAction?` · Qué hacer: ${upd.nextAction}`:'')}); layerDirty=false; closeLayer(); toast('Actividad registrada'); }
     catch(err){ e.currentTarget.classList.remove('is-loading'); toast(evErr(err)); }
   };
   $$('[data-evpay]').forEach(b=>b.onclick=()=>evPayForm(o,b.dataset.evpay));
@@ -123,7 +123,7 @@ function evStageForm(o,to){
     if(to!=='perdida'&&o.lostReason){ upd.lostReason=null; }
     const extra=to==='perdida'?v('#snote'):(to==='en-negociacion'?'':v('#snote'));
     e.currentTarget.classList.add('is-loading');
-    try{ await evCommit(o,upd,{type:'etapa',from:o.stage,to,via,text:[text,extra].filter(Boolean).join(' · '),details:det}); closeLayer(); toast(`Pasó a ${name}`); evFichaReopen(o.id); }
+    try{ await evCommit(o,upd,{type:'etapa',from:o.stage,to,via,text:[text,extra].filter(Boolean).join(' · '),details:det}); closeLayer(); toast(`Pasó a ${name}`); }
     catch(err){ e.currentTarget.classList.remove('is-loading'); toast(evErr(err)); }
   };
 }
@@ -135,7 +135,7 @@ function evPayForm(o,which){
   $('#pok').onclick=async e=>{ const d=$('#pd').value||evToday(); const won={...w};
     if(which==='deposit'){ won.depositPaid=true; won.depositPaidAt=evTsFrom(d); } else { won.balancePaid=true; won.balancePaidAt=evTsFrom(d); }
     e.currentTarget.classList.add('is-loading');
-    try{ await evCommit(o,{won},{type:'cobro',text:`Cobro ${del}: ${evMoney(amt)} el ${evDate(d)}${$('#pn').value.trim()?' · '+$('#pn').value.trim():''}`,details:{which,amountMinor:amt,date:d}}); closeLayer(); toast(`Cobro ${del} registrado`); evFichaReopen(o.id); }
+    try{ await evCommit(o,{won},{type:'cobro',text:`Cobro ${del}: ${evMoney(amt)} el ${evDate(d)}${$('#pn').value.trim()?' · '+$('#pn').value.trim():''}`,details:{which,amountMinor:amt,date:d}}); closeLayer(); toast(`Cobro ${del} registrado`); }
     catch(err){ e.currentTarget.classList.remove('is-loading'); toast(evErr(err)); } };
 }
 

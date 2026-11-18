@@ -10,7 +10,8 @@ const put = (p, data) => fetch(`${FS}/${p}`, { method: 'PATCH', headers: H, body
 const get = p => fetch(`${FS}/${p}`, { headers: H }).then(r => r.json());
 const list = p => fetch(`${FS}/${p}?pageSize=100`, { headers: H }).then(r => r.json());
 const applyOob = (code) => fetch(`${AU}/identitytoolkit.googleapis.com/v1/accounts:update?key=x`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oobCode: code }) });
-const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails.push(m); };
+const fails = [];
+let page; const reopen = async () => { await page.waitForTimeout(700); if (!(await page.$('#evtl'))) await page.click('[data-op=op1]'); await page.waitForSelector('#evtl', { timeout: 15000 }); }; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails.push(m); };
 
 (async () => {
   await fetch(`http://127.0.0.1:8080/emulator/v1/projects/${P}/databases/(default)/documents`, { method: 'DELETE' });
@@ -30,7 +31,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
 
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
-  const page = await ctx.newPage();
+  page = await ctx.newPage();
   const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => { if (m.type() === 'error' && !/PERMISSION_DENIED|favicon|status of 400|status of 502/.test(m.text())) errs.push(m.text()); }); page.on('response', r => { if (r.status() >= 400 && !/accounts:signInWithPassword|\/cuenta\/(verificar|recuperar)/.test(r.url())) errs.push('HTTP ' + r.status() + ' ' + r.url().slice(0, 120)); });
 
   // 1) Prototipo local (sin ?emu): sigue funcionando como antes. Cargamos datos "míos" en el navegador.
@@ -97,6 +98,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.waitForTimeout(300); await page.click('[data-op=op1]'); await page.waitForSelector('[data-evmove=contactado]');
   ok(!(await page.$('.ev-stage-cur + * .btn-primary')) && (await page.textContent('.ev-stage-cur')).includes('Nueva cotización'), 'la etapa actual se ve marcada y ninguna otra aparece resaltada');
   await page.click('[data-evmove=contactado]'); await page.waitForSelector('#svia'); await page.selectOption('#svia', 'WhatsApp'); await page.fill('#snote', 'Le escribí, espera la propuesta'); await page.fill('#sna', 'Escribirle para ver si leyó la propuesta'); await page.click('#sok');
+  await page.waitForTimeout(500); ok(!(await page.$('#layer .drawer')), 'al guardar la etapa se cierra la ficha'); await reopen();
   await page.waitForSelector('#evtl li:has-text("Le escribí")', { timeout: 15000 }); ok(true, 'Contactado: queda en la historia con el canal y la nota');
   let op = await get('tenants/cafelito/opportunities/op1');
   ok(op.fields.nextAction && op.fields.nextAction.stringValue === 'Escribirle para ver si leyó la propuesta', '«qué hay que hacer» guardado');
@@ -104,15 +106,15 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok(op.fields.stage.stringValue === 'contactado' && op.fields.nextFollowUpAt.timestampValue, 'cambio de etapa guardado con próximo seguimiento');
   await page.click('[data-evmove=propuesta-enviada]'); await page.waitForSelector('#samt'); await page.fill('#samt', ''); await page.click('#sok'); await page.waitForTimeout(300);
   ok(/Ingresá el importe/.test(await page.textContent('#layer')), 'Propuesta sin importe: lo pide');
-  await page.fill('#samt', '1.300.000'); await page.click('#sok'); await page.waitForSelector('text=Propuesta enviada el', { timeout: 15000 });
+  await page.fill('#samt', '1.300.000'); await page.click('#sok'); await reopen(); await page.waitForSelector('text=Propuesta enviada el', { timeout: 15000 });
   op = await get('tenants/cafelito/opportunities/op1'); ok(op.fields.proposal.mapValue.fields.amountMinor.integerValue === '130000000', 'importe de la propuesta en centavos (1.300.000 → 130000000)');
-  await page.fill('#evatx', 'Llamé, pide sumar 20 personas'); await page.selectOption('#evat', 'Llamada'); await page.click('#evatok');
+  await page.fill('#evatx', 'Llamé, pide sumar 20 personas'); await page.selectOption('#evat', 'Llamada'); await page.click('#evatok'); await reopen();
   await page.waitForSelector('#evtl li:has-text("pide sumar 20")', { timeout: 15000 }); ok(true, 'Registrar actividad sin cambiar de etapa');
   await page.click('[data-evmove=ganada]'); await page.waitForSelector('#sdep');
   ok(await page.inputValue('#sdep') === '650.000', 'seña del 50 % calculada sola ($ 650.000)');
   ok(/Saldo a cobrar: \$ 650\.000/.test(await page.textContent('#sbal')), 'muestra el saldo a cobrar');
-  await page.click('#sok'); await page.waitForSelector('[data-evpay=deposit]', { timeout: 15000 }); await page.waitForTimeout(800);
-  await page.click('[data-evpay=deposit]'); await page.waitForSelector('#pok'); await page.click('#pok'); await page.waitForSelector('[data-evpay=balance]', { timeout: 15000 });
+  await page.click('#sok'); await reopen(); await page.waitForSelector('[data-evpay=deposit]', { timeout: 15000 });
+  await page.click('[data-evpay=deposit]'); await page.waitForSelector('#pok'); await page.click('#pok'); await reopen(); await page.waitForSelector('[data-evpay=balance]', { timeout: 15000 });
   op = await get('tenants/cafelito/opportunities/op1'); const won = op.fields.won.mapValue.fields;
   ok(won.amountMinor.integerValue === '130000000' && won.depositMinor.integerValue === '65000000' && won.depositPaid.booleanValue === true, 'ganada: total, seña y cobro de la seña guardados');
   const acts = await list('tenants/cafelito/activities'); ok((acts.documents || []).length === 5, 'historia completa: 5 movimientos (' + (acts.documents || []).length + ')');
