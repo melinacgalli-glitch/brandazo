@@ -12,8 +12,7 @@ function pillarsBlock(list,key){
   const k=esc(key);
   return `<ol class="pillar-list">${list.map((x,i)=>{ const p=pObj(x); return `<li class="pillar"><span class="pillar-n">${String(i+1).padStart(2,'0')}</span>
      <b class="pillar-t">${esc(p.name)}</b><p class="pillar-d">${p.desc?esc(p.desc):'<span class="muted">Sin descripción</span>'}</p><span class="pillar-st${p.stage?'':' empty'}">${p.stage?esc(p.stage):'Sin etapa'}</span>
-     <div class="pillar-a"><button type="button" class="icon-btn" data-pcopy="${k}|${i}" aria-label="Copiar ${esc(p.name)}" title="Copiar">${ic('copy')}</button>
-      <button type="button" class="icon-btn" data-pedit="${k}|${i}" aria-label="Editar ${esc(p.name)}" title="Editar">${ic('edit')}</button>
+     <div class="pillar-a"><button type="button" class="icon-btn" data-pedit="${k}|${i}" aria-label="Editar ${esc(p.name)}" title="Editar">${ic('edit')}</button>
       ${i>0?`<button type="button" class="icon-btn" data-pup="${k}|${i}" aria-label="Subir ${esc(p.name)}" title="Subir">${ic('up')}</button>`:'<span class="icon-btn" aria-hidden="true" style="visibility:hidden"></span>'}
       <button type="button" class="icon-btn" data-pdel="${k}|${i}" aria-label="Borrar ${esc(p.name)}" title="Borrar">${ic('trash')}</button></div></li>`; }).join('')||'<li class="small muted" style="list-style:none">Sin pilares todavía.</li>'}</ol>
    <button type="button" class="btn btn-sm" data-padd="${k}" style="margin-top:12px">${ic('plus')} Agregar pilar</button>`;
@@ -31,12 +30,11 @@ function pillarForm(key,i){
     layerDirty=false; closeLayer(); render(); toast(edit?'Pilar guardado':`Pilar «${v}» agregado`); };
 }
 document.addEventListener('click',e=>{
-  const b=e.target.closest&&e.target.closest('[data-padd],[data-pedit],[data-pdel],[data-pup],[data-pcopy]'); if(!b) return; e.preventDefault();
+  const b=e.target.closest&&e.target.closest('[data-padd],[data-pedit],[data-pdel],[data-pup]'); if(!b) return; e.preventDefault();
   if(b.dataset.padd!=null) return pillarForm(b.dataset.padd);
-  const [key,is]=(b.dataset.pedit||b.dataset.pdel||b.dataset.pup||b.dataset.pcopy).split('|'), i=+is, list=pillarList(key), p=pObj(list[i]||'');
+  const [key,is]=(b.dataset.pedit||b.dataset.pdel||b.dataset.pup).split('|'), i=+is, list=pillarList(key), p=pObj(list[i]||'');
   if(b.dataset.pedit!=null) return pillarForm(key,i);
   if(b.dataset.pup!=null){ [list[i-1],list[i]]=[list[i],list[i-1]]; render(); return; }
-  if(b.dataset.pcopy!=null){ const t=`${p.name}${p.desc?' — '+p.desc:''}${p.stage?' ('+p.stage+')':''}`; try{ navigator.clipboard.writeText(t).then(()=>toast('Pilar copiado'),()=>toast(t)); }catch(_){ toast(t); } return; }
   if(b.dataset.pdel!=null){ const used=M().contents.filter(c=>c.pillar===p.name).length;
     modal('¿Borrar el pilar?',`<p>Se borra <b>${esc(p.name)}</b>.${used?` ${used} contenido${used>1?'s lo usan':' lo usa'}: van a quedar sin pilar.`:''}</p>`,`<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="pdok">Borrar</button>`);
     $('#pdok').onclick=()=>{ list.splice(i,1); M().contents.forEach(c=>{ if(c.pillar===p.name) c.pillar=''; }); closeLayer(); render(); toast('Pilar borrado'); }; }

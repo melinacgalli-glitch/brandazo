@@ -1003,7 +1003,7 @@ input[type=date],input[type=time]{cursor:pointer}
 .pillar-a{grid-area:a;display:flex;gap:2px;justify-content:flex-end}
 .pillar-a .icon-btn{width:32px;height:32px}
 @media (min-width:900px){
-  .pillar{grid-template-columns:48px minmax(160px,1fr) minmax(0,2fr) 150px 140px;grid-template-areas:"n t d s a";align-items:center}
+  .pillar{grid-template-columns:48px minmax(160px,1fr) minmax(0,2fr) 150px 108px;grid-template-areas:"n t d s a";align-items:center}
   .pillar-d{margin:0}
   .pillar-st{margin-top:0}
 }
