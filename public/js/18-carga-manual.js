@@ -5,14 +5,14 @@
    (por teléfono), cotización en «Nueva cotización», tarea y nota en la historia.
    ===================================================================== */
 const MAN_API=CLOUD.emu?'http://127.0.0.1:5001/brandazo/southamerica-east1/api/api/v1/crm/manual':'/api/v1/crm/manual';
-const MAN_CH=['WhatsApp','Teléfono','Instagram','Facebook','Mail','Recomendación','En persona','Otro'];
+const MAN_CH=['Web','WhatsApp','Teléfono','Instagram','Facebook','Mail','Recomendación','En persona','Otro'];
 const MAN_TYPES=['Corporativo','Cumpleaños','Casamiento','Lanzamiento o activación','Otro'];
 /* Últimos 10 dígitos de un teléfono argentino (sin 54, 9, 0 ni 15) — solo para avisar si ya existe */
 function manPhoneKey(v){ let d=String(v||'').replace(/\D/g,''); if(d.startsWith('00')) d=d.slice(2); if(d.startsWith('549')) d=d.slice(3); else if(d.startsWith('54')) d=d.slice(2); if(d.startsWith('0')) d=d.slice(1);
   if(d.length===12) for(const a of [2,3,4]) if(d.slice(a,a+2)==='15'){ d=d.slice(0,a)+d.slice(a+2); break; } return d.length>=8?d.slice(-10):''; }
 function manFind(phone){ const k=manPhoneKey(phone); if(!k) return null; return Object.values(EV.contacts||{}).find(c=>manPhoneKey(c.phoneE164||c.phoneRaw)===k)||null; }
 
-function manForm(withEvent=true){
+function manForm(withEvent=true,pre={}){
   if(!(S.company&&S.company.cloud)) return toast('La carga manual está en la versión en la nube');
   evListen();
   const members=[...new Set(S.members.filter(m=>m.status==='Activo').map(m=>m.name||m.email).filter(Boolean))];
@@ -23,7 +23,9 @@ function manForm(withEvent=true){
    <p class="small muted" style="margin-bottom:12px">${withEvent?'Para los pedidos que te llegan por WhatsApp, teléfono o en persona. Queda en «Nueva cotización» con su tarea de seguimiento, igual que los de la web.':'Queda en Contactos. Si después te pide presupuesto, cargalo con «Cargar pedido».'}</p>
    <div class="form-grid">${F('mnn','Nombre o empresa','placeholder="Ej.: Juan Gómez" maxlength="120"')}${F('mnp','Teléfono / WhatsApp','placeholder="Ej.: 351 555-0199" inputmode="tel" maxlength="30"')}</div>
    <div id="mndup"></div>
-   <div class="form-grid">${F('mne','Email (opcional)','type="email" maxlength="200"')}<div class="field"><label for="mnc">¿Por dónde llegó?</label><select class="select" id="mnc">${MAN_CH.map(c=>`<option>${c}</option>`).join('')}</select></div></div>
+   <div class="form-grid">${F('mne','Email (opcional)','type="email" maxlength="200"')}<div class="field"><label for="mnc">¿Por dónde llegó?</label><select class="select" id="mnc">${MAN_CH.map(c=>`<option ${c===(withEvent?'WhatsApp':'')?'selected':''}>${c}</option>`).join('')}</select></div></div>
+   ${withEvent?'':`<div class="field"><label for="mnty">Tipo</label><select class="select" id="mnty"><option value="Lead">Lead (todavía no compró)</option><option value="Cliente">Cliente (ya compró)</option></select></div>
+   <div class="field"><span class="label">Unidades de negocio</span><div class="unit-checks">${S.brands.map((b,i)=>`<label class="check"><input type="checkbox" data-mnu value="${esc(b.name)}" ${S.brands.length===1?'checked':''}> ${esc(b.name)}</label>`).join('')}</div><span class="err" role="alert" id="mnuerr"></span></div>`}
    ${withEvent?`<h4 style="margin:16px 0 8px">El evento</h4>
    <div class="form-grid"><div class="field"><label for="mnt">Tipo de evento</label><select class="select" id="mnt">${MAN_TYPES.map(t=>`<option>${t}</option>`).join('')}</select></div>${F('mnd','Fecha',`type="date" min="${today}"`)}</div>
    <div class="form-grid">${F('mng','Invitados (aprox.)','type="number" min="1" max="5000" inputmode="numeric"')}${F('mnh','Hora de inicio (opcional)','type="time"')}</div>
@@ -36,6 +38,7 @@ function manForm(withEvent=true){
    `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="mnok">${withEvent?'Cargar pedido':'Guardar contacto'}</button>`);
   const dup=()=>{ const c=manFind($('#mnp').value); $('#mndup').innerHTML=c?`<div class="alert alert-info" style="margin-bottom:12px">${ic('info')}<div>Ya tenés a <b>${esc(c.name||'este contacto')}</b> con ese teléfono: ${withEvent?'el pedido se suma a ese contacto':'no se va a duplicar'}.</div></div>`:''; };
   $('#mnp').oninput=dup;
+  if(pre.name) $('#mnn').value=pre.name; if(pre.phone){ $('#mnp').value=pre.phone; dup(); } if(pre.email) $('#mne').value=pre.email;
   const av=()=>{ const d=$('#mnd')&&$('#mnd').value; if(!d||!$('#mnav')) return; const won=EV.ops.find(o=>o.stage==='ganada'&&o.won&&o.won.depositPaid&&(o.event||{}).date===d), blk=((EV.settings||{}).blockedDates||[]).find(x=>x.date===d);
     $('#mnav').innerHTML=won?`<span style="color:var(--warning)">${ic('alert')} Ese día ya tiene un evento con seña (${esc(evName(won))}).</span>`:blk?`<span style="color:var(--warning)">${ic('alert')} Ese día está bloqueado${blk.note?' ('+esc(blk.note)+')':''}.</span>`:''; };
   if($('#mnd')) $('#mnd').onchange=av;
@@ -44,7 +47,9 @@ function manForm(withEvent=true){
     const okN=fieldErr(n,!n.value.trim()?'Escribí el nombre':''), okP=fieldErr(p,p.value.replace(/\D/g,'').length<6?'Escribí el teléfono':''), okE=fieldErr(e,e.value.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim())?'El email no es válido':'');
     let okD=true, amt=null; if(withEvent){ const d=$('#mnd'); okD=fieldErr(d,!d.value?'Elegí la fecha del evento':d.value<today?'La fecha ya pasó':''); const m=$('#mnm'); amt=m.value.trim()?evParseMoney(m.value):null; if(!fieldErr(m,m.value.trim()&&!amt?'Revisá el importe (ej.: 850.000)':'')) okD=false; }
     if(!(okN&&okP&&okE&&okD)) return;
-    const body={tenantId:S.company.tid,channel:$('#mnc').value,contact:{name:n.value.trim(),phone:p.value.trim(),email:e.value.trim()}};
+    const units=$$('#layer [data-mnu]:checked').map(x=>x.value);
+    if(!withEvent){ const bad=!units.length; $('#mnuerr').textContent=bad?'Elegí al menos una unidad':''; $('#mnuerr').closest('.field').classList.toggle('has-error',bad); if(bad) return; }
+    const body={tenantId:S.company.tid,channel:$('#mnc').value,contact:{name:n.value.trim(),phone:p.value.trim(),email:e.value.trim()},...(withEvent?{}:{type:$('#mnty').value,units})};
     if(withEvent) Object.assign(body,{event:{type:$('#mnt').value,date:$('#mnd').value,guests:+$('#mng').value||null,startTime:$('#mnh').value||null,place:$('#mnl').value.trim(),inCapital:$('#mnz').value===''?null:$('#mnz').value==='1'},notes:$('#mnx').value.trim(),owner:$('#mno').value,campaignId:$('#mncp').value||null,amountMinor:amt});
     const b=$('#mnok'); b.classList.add('is-loading'); b.disabled=true;
     try{
@@ -79,7 +84,7 @@ function manForm(withEvent=true){
 })();
 
 /* ---------- Tienda: venta ya pagada cargada a mano (mientras la web no manda las compras) ---------- */
-function manSaleForm(){
+function manSaleForm(pre={}){
   if(!(S.company&&S.company.cloud)) return toast('La carga de ventas está en la versión en la nube');
   evListen();
   const units=S.brands.filter(b=>typeof unitSells==='function'&&unitSells(b.name)==='tienda').map(b=>b.name);
@@ -105,6 +110,7 @@ function manSaleForm(){
   const bind=()=>{ $$('#slrows [data-sdel]').forEach(b=>b.onclick=()=>{ if($$('#slrows .sale-row').length>1){ b.closest('.sale-row').outerHTML=''; tot(); } }); $$('#slrows input').forEach(i=>i.oninput=tot); };
   bind(); $('#sladd').onclick=()=>{ $('#slrows').insertAdjacentHTML('beforeend',row()); bind(); };
   $('#mnp').oninput=()=>{ const c=manFind($('#mnp').value); $('#mndup').innerHTML=c?`<div class="alert alert-info" style="margin-bottom:12px">${ic('info')}<div>Ya tenés a <b>${esc(c.name||'este contacto')}</b> con ese teléfono: la venta se suma a ese contacto.</div></div>`:''; };
+  if(pre.name) $('#mnn').value=pre.name; if(pre.phone){ $('#mnp').value=pre.phone; $('#mnp').oninput(); } if(pre.email) $('#mne').value=pre.email;
   $('#slok').onclick=async()=>{
     const n=$('#mnn'), p=$('#mnp'), e=$('#mne'), pd=$('#slpd');
     const items=$$('#slrows .sale-row').map(r=>({name:r.querySelector('[data-sin]').value.trim(),quantity:+r.querySelector('[data-sq]').value||0,unitPriceMinor:evParseMoney(r.querySelector('[data-sp]').value)}));
@@ -132,4 +138,30 @@ function manSaleForm(){
   vTienda=function(){ const h=_vt(); if(!(S.company&&S.company.cloud)||!SH.loaded||SH.err) return h;
     return `<div class="toolbar" style="margin-bottom:12px"><span class="small muted">Las compras de la web todavía se cargan a mano hasta que la tienda las mande sola.</span><span class="grow"></span><button class="btn btn-sm btn-primary" data-mansale>${ic('plus')} Cargar venta</button></div>`+h; };
   document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mansale]'); if(!b) return; e.preventDefault(); manSaleForm(); });
+})();
+
+/* ---------- Ficha del contacto: todo lo que compró en cada unidad + «Registrar venta» ---------- */
+(function(){
+  if(typeof evContacto!=='function') return;
+  const _ec=evContacto;
+  evContacto=function(id){ _ec(id); const c=EV.contacts[id]; if(!c) return;
+    if(typeof shListen==='function') shListen();
+    const dr=$('#layer .drawer'); if(dr) dr.dataset.contact=id;
+    if(typeof SH==='object'&&!SH.loaded){ const t=setInterval(()=>{ if(SH.loaded){ clearInterval(t); const d=$('#layer .drawer'); if(d&&d.dataset.contact===id) evContacto(id); } },500); setTimeout(()=>clearInterval(t),10000); }
+    const pre={name:c.name||'',phone:c.phoneRaw||c.phoneDisplay||'',email:c.email||''};
+    const secs=$$('#layer .drawer section.card'), q=secs.find(x=>/Pedidos de presupuesto/.test((x.querySelector('h3')||{}).textContent||''));
+    if(q){ const h=q.querySelector('h3'); h.textContent=h.textContent.replace('Pedidos de presupuesto','Cotizaciones de eventos'); }
+    const orders=(typeof SH==='object'?SH.orders:[]).filter(o=>o.contactId===id).sort((a,b)=>(shPaidMs(b)||0)-(shPaidMs(a)||0));
+    const box=document.createElement('section'); box.className='card';
+    box.innerHTML=`<h3 style="margin-bottom:12px">Compras en la tienda (${orders.length})</h3>${orders.length?orders.map(o=>{ const [sl,sc]=SH_ST[o.status]||[o.status,'']; return `<div class="settings-row" style="gap:12px;align-items:center"><div style="flex:1;min-width:0"><b>${esc(shItems(o))}</b><div class="small muted">${esc(o.brand||'')} · pagado ${o.paidAt?evWhen(o.paidAt):'—'}${(o.pickup||{}).date?' · retira '+evDate(o.pickup.date):''}</div></div><span class="badge ${sc}">${sl}</span><b class="mono">${evMoney(o.totalMinor)}</b></div>`; }).join(''):`<p class="small muted">${SH.loaded?'Sin compras.':'Cargando…'}</p>`}`;
+    if(q) q.after(box); else { const body=$('#layer .drawer [style*="overflow:auto"]'); if(body) body.appendChild(box); }
+    const wa=$$('#layer .drawer section.card')[0]; if(wa){ const act=document.createElement('div'); act.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px';
+      act.innerHTML=`<button type="button" class="btn" data-regsale>${ic('plus')} Registrar venta</button>`; wa.appendChild(act);
+      act.querySelector('[data-regsale]').onclick=()=>{ closeLayer();
+        modal('Registrar venta',`<p class="small muted" style="margin-bottom:12px">${esc(c.name||'')} · elegí qué compró.</p><div style="display:grid;gap:8px">
+          <button type="button" class="btn" data-rs="evento">${ic('calendar')} Cotización de un evento (Cafelito Ambulante)</button>
+          <button type="button" class="btn" data-rs="tienda">${ic('dollar')} Compra en la tienda (ya pagada)</button></div>
+          <p class="small muted" style="margin-top:12px">Suscripciones de Work e inscripciones de Academy: próximamente.</p>`,`<button class="btn" data-close>Cancelar</button>`);
+        $$('#layer [data-rs]').forEach(b=>b.onclick=()=>{ const k=b.dataset.rs; closeLayer(); if(k==='evento') manForm(true,pre); else manSaleForm(pre); }); }; }
+  };
 })();

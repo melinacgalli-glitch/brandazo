@@ -8,7 +8,7 @@
 const { normalizePhoneAR } = require('./phone');
 const { PIPELINE, todayInTZ } = require('./eventQuotes');
 
-const CHANNELS = ['WhatsApp', 'Teléfono', 'Instagram', 'Facebook', 'Mail', 'Recomendación', 'En persona', 'Otro'];
+const CHANNELS = ['Web', 'WhatsApp', 'Teléfono', 'Instagram', 'Facebook', 'Mail', 'Recomendación', 'En persona', 'Otro'];
 const EVENT_TYPES = ['Corporativo', 'Cumpleaños', 'Casamiento', 'Lanzamiento o activación', 'Otro']; // los mismos del cotizador
 const str = (v, max) => typeof v === 'string' ? v.trim().slice(0, max) : '';
 const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s + 'T12:00:00Z'));
@@ -68,11 +68,15 @@ async function handleManual(req, deps) {
     const contactRef = contactId ? tenantRef.collection('contacts').doc(contactId) : tenantRef.collection('contacts').doc();
     const prev = contactId ? await tx.get(contactRef) : null, contact = prev && prev.exists ? prev.data() : null;
     const source = { channel: `Carga manual · ${channel}`, manual: true, createdBy: user.uid, createdByName: by };
+    // Contacto solo: tipo (Lead/Cliente) y unidades de negocio elegidas; con evento: Lead de la unidad del tablero
+    const units = !ev && Array.isArray(b.units) ? [...new Set(b.units.map(u => str(u, 120)).filter(Boolean))].slice(0, 10) : [];
+    const cBrand = ev ? brand : (units[0] || brand), cTags = ev ? [brand] : (units.length ? units : [brand]), cType = !ev && b.type === 'Cliente' ? 'Cliente' : 'Lead';
     if (contact) {
-      tx.update(contactRef, { updatedAt: at, ...(email && !contact.email ? { email } : {}), ...(ev ? { quoteCount: deps.FieldValue.increment(1), lastQuoteAt: at } : {}) });
+      const tags = [...new Set([...(Array.isArray(contact.tags) ? contact.tags : []), ...cTags])];
+      tx.update(contactRef, { updatedAt: at, tags, ...(cType === 'Cliente' ? { type: 'Cliente' } : {}), ...(email && !contact.email ? { email } : {}), ...(ev ? { quoteCount: deps.FieldValue.increment(1), lastQuoteAt: at } : {}) });
     } else {
       tx.set(contactRef, { name, phoneRaw, phoneE164: phone.e164, phoneDisplay: phone.display, phoneNormalized: phone.normalized, email: email || null,
-        brand, type: 'Lead', tags: [brand], firstSource: { ...source, at }, marketingConsent: null, quoteCount: ev ? 1 : 0, lastQuoteAt: ev ? at : null, createdAt: at, updatedAt: at });
+        brand: cBrand, type: cType, tags: cTags, firstSource: { ...source, at }, marketingConsent: null, quoteCount: ev ? 1 : 0, lastQuoteAt: ev ? at : null, createdAt: at, updatedAt: at });
     }
     if (!byPhone.exists) tx.set(phoneRef, { contactId: contactRef.id, createdAt: at });
     if (mailRef && !(byMail && byMail.exists)) tx.set(mailRef, { contactId: contactRef.id, createdAt: at });
