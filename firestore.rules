@@ -126,6 +126,8 @@ service cloud.firestore {
       match /contacts/{id} { allow read: if isMember(t); allow write: if false; }
       match /eventQuotes/{id} { allow read: if isMember(t); allow write: if false; }
       match /orders/{id} { allow read: if isMember(t); allow write: if false; } // pedidos de la tienda: solo los escribe el servidor
+      match /subscriptions/{id} { allow read: if isMember(t); allow write: if false; } // suscripciones (Work): solo el servidor
+      match /enrollments/{id} { allow read: if isMember(t); allow write: if false; } // inscripciones (Academy): solo el servidor
       match /tasks/{id} {
         allow read: if isMember(t);
         // El equipo solo marca la tarea como hecha

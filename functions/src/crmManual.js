@@ -30,6 +30,7 @@ async function handleManual(req, deps) {
   if (!member.exists) return fail(403, 'NOT_MEMBER', 'No sos parte de esta empresa.');
   const by = member.data().name || user.name || user.email || 'Equipo';
   if (b.kind === 'order') return handleManualOrder(b, { deps, user, by, tenantRef });
+  if (['subscription', 'enrollment', 'sub-status', 'enr-status'].includes(b.kind)) return require('./crmSales').handleSale(b, { deps, user, by, tenantRef });
 
   // Validación (mensajes para la pantalla)
   const c = b.contact || {}, details = [];

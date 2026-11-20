@@ -118,6 +118,7 @@ test('lo del servidor no se toca desde el navegador', async () => {
   await assertFails(setDoc(doc(d, 'tenants/cafelito/orders/P-2'), { status: 'paid', totalMinor: 1 }));
   await assertFails(getDoc(doc(d, 'tenants/cafelito/contactsByEmail/a@b.com')));
   await assertFails(getDoc(doc(db(extrana), 'tenants/cafelito/orders/P-1')));
+  for (const col of ['subscriptions', 'enrollments']) { await assertSucceeds(getDoc(doc(d, `tenants/cafelito/${col}/x1`))); await assertFails(setDoc(doc(d, `tenants/cafelito/${col}/x2`), { status: 'active' })); await assertFails(getDoc(doc(db(extrana), `tenants/cafelito/${col}/x1`))); }
 });
 
 test('configuración del tablero: solo Dueño/Admin', async () => {

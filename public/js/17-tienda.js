@@ -99,7 +99,7 @@ function shOrder(id){
   const _bm=brandModal;
   brandModal=function(i){ _bm(i); const ok=$('#ok'), nm=$('#bnm'); if(!ok||!nm) return;
     const cur=i!=null?(S.brands[i].sells||unitSells(S.brands[i].name)):'crm';
-    nm.closest('.field').insertAdjacentHTML('afterend',`<div class="field"><label for="usells">Cómo se cierra la venta</label><select class="select" id="usells"><option value="crm" ${cur==='crm'?'selected':''}>Con el contacto, en el CRM (ej.: Cafelito Ambulante)</option><option value="tienda" ${cur==='tienda'?'selected':''}>En la tienda online, con el carrito (ej.: Cafelito Cakes)</option></select><span class="hint small muted">Define de dónde salen las ventas de sus campañas, funnel y objetivos.</span></div>`);
+    nm.closest('.field').insertAdjacentHTML('afterend',`<div class="field"><label for="usells">Cómo se cierra la venta</label><select class="select" id="usells"><option value="crm" ${cur==='crm'?'selected':''}>Con el contacto, en el CRM (ej.: Cafelito Ambulante)</option><option value="tienda" ${cur==='tienda'?'selected':''}>En la tienda online, con el carrito (ej.: Cafelito Cakes)</option><option value="suscripcion" ${cur==='suscripcion'?'selected':''}>Con una suscripción mensual (ej.: Cafelito Work)</option><option value="inscripcion" ${cur==='inscripcion'?'selected':''}>Con la inscripción a un curso (ej.: Cafelito Academy)</option></select><span class="hint small muted">Define de dónde salen las ventas de sus campañas, funnel y objetivos.</span></div>`);
     const orig=ok.onclick;
     ok.onclick=async ev=>{ const v=$('#usells').value, name=$('#bnm').value.trim(); await orig(ev);
       const b=S.brands.find(x=>x.name===name); if(b&&b.sells!==v&&!$('#layer .modal')){ b.sells=v; render(); } };
@@ -155,6 +155,10 @@ const krLive=o=>({...o,krs:(o.krs||[]).map(k=>{ const v=krAuto(k,o); return v==n
   const _op=objPct; objPct=function(o){ return _op(krLive(o)); };
   const _oc=objCard;
   objCard=function(o){ let h=_oc(krLive(o)); const auto=(o.krs||[]).filter(k=>k.src);
+    const manual=(o.krs||[]).filter(k=>!k.src), mode=typeof unitSells==='function'?unitSells(o.brand):'';
+    if(manual.length&&(['tienda','suscripcion','inscripcion'].includes(mode)||(mode==='crm'&&typeof EV==='object'&&EV.settings&&EV.settings.brand===o.brand))){ const i=h.indexOf('<div class="small muted" style="margin-bottom:6px">Vinculado a');
+      const tip=`<div class="alert alert-info kr-tip" style="margin:4px 0 12px">${ic('info')}<div>${manual.length>1?'Hay resultados que se cargan':`«${esc(manual[0].t)}» se carga`} a mano. ¿Querés que ${manual.length>1?'se completen solos':'se complete solo'} con las ventas reales de ${esc(o.brand)}? <button type="button" class="btn btn-sm btn-ghost" data-oedit="${o.id}">Elegir cómo se mide</button></div></div>`;
+      h=i>0?h.slice(0,i)+tip+h.slice(i):h; }
     if(auto.length){ const pend=auto.some(k=>krAuto(k,o)==null); const note=`<p class="small muted kr-auto">${ic('refresh')} ${pend?(shCloud()?'Cargando los resultados automáticos…':'Los resultados automáticos se ven en la versión en la nube.'):`Se completa${auto.length>1?'n':''} solo${auto.length>1?'s':''}: ${auto.map(k=>esc((KR_SRC.find(s=>s[0]===k.src)||[,''])[1])).join(' · ')}.`}</p>`;
       const i=h.indexOf('<div class="small muted" style="margin-bottom:6px">Vinculado a'); h=i>0?h.slice(0,i)+note+h.slice(i):h; }
     return h; };
