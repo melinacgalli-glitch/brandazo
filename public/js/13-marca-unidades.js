@@ -82,7 +82,7 @@ function objEdit(o){
 
 /* ---------- CRM: semáforo por etapa ---------- */
 (function(){
-  const COL={'nueva-cotizacion':'#3B82F6',contactado:'#EAB308','propuesta-enviada':'#F97316','en-negociacion':'#A855F7',ganada:'#22C55E',perdida:'#EF4444'};
+  const COL={'nueva-cotizacion':'#3B82F6',contactado:'#EAB308','en-negociacion':'#A855F7',ganada:'#22C55E',perdida:'#EF4444'};
   const css=Object.entries(COL).map(([k,c])=>`.kcol[data-evstage="${k}"]{border-top:4px solid ${c}}.kcol[data-evstage="${k}"] .ev-card:not(.late){border-left:3px solid ${c}}.kcol[data-evstage="${k}"] .kcol-h b::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:${c};margin-right:8px;flex:none}`).join('\n');
   const st=document.createElement('style'); st.textContent=css+`
   .ev-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-muted);margin:0 0 12px}.ev-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}

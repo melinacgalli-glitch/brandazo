@@ -171,10 +171,10 @@ test('tareas: el equipo las marca como hechas, nada más', async () => {
 
 test('ciclo de vida: cada etapa con sus datos mínimos, en centavos', async () => {
   const ref = doc(db(ventas), 'tenants/cafelito/opportunities/op1'), fu = Timestamp.now();
-  await assertFails(updateDoc(ref, { stage: 'propuesta-enviada', nextFollowUpAt: fu }));
-  await assertFails(updateDoc(ref, { stage: 'propuesta-enviada', nextFollowUpAt: fu, proposal: { amountMinor: 1420000.5 } }));
-  await assertSucceeds(updateDoc(ref, { stage: 'propuesta-enviada', nextFollowUpAt: fu, proposal: { amountMinor: 142000000, sentAt: '2026-11-17', validUntil: null, link: null } }));
+  await assertFails(updateDoc(ref, { stage: 'propuesta-enviada', nextFollowUpAt: fu, proposal: { amountMinor: 142000000 } })); // etapa eliminada
+  await assertFails(updateDoc(ref, { stage: 'en-negociacion', nextFollowUpAt: fu, negotiation: { topic: 'Precio' }, proposal: { amountMinor: 1420000.5 } }));
   await assertSucceeds(updateDoc(ref, { stage: 'en-negociacion', nextFollowUpAt: fu, negotiation: { topic: 'Precio' } }));
+  await assertSucceeds(updateDoc(ref, { stage: 'en-negociacion', nextFollowUpAt: fu, negotiation: { topic: 'Precio' }, proposal: { amountMinor: 142000000, sentAt: '2026-11-17', validUntil: null, link: null, source: 'negociacion' } }));
   await assertFails(updateDoc(ref, { stage: 'ganada', nextFollowUpAt: null }));
   await assertFails(updateDoc(ref, { stage: 'ganada', nextFollowUpAt: null, won: { amountMinor: 100, depositMinor: 200 } }));
   await assertSucceeds(updateDoc(ref, { stage: 'ganada', nextFollowUpAt: null, won: { amountMinor: 130000000, depositMinor: 65000000, depositPaid: false, depositPaidAt: null, balancePaid: false, balancePaidAt: null } }));

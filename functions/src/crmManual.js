@@ -46,6 +46,8 @@ async function handleManual(req, deps) {
     if (!isDate(ev.date)) details.push({ field: 'event.date', issue: 'Elegí la fecha del evento' });
     else if (ev.date < today) details.push({ field: 'event.date', issue: 'La fecha ya pasó' });
   }
+  const amountMinor = b.amountMinor == null ? null : Number(b.amountMinor);
+  if (amountMinor != null && !(Number.isInteger(amountMinor) && amountMinor > 0 && amountMinor < 1e12)) details.push({ field: 'amountMinor', issue: 'Revisá el importe' });
   if (details.length) return fail(422, 'VALIDATION_FAILED', 'Revisá los datos marcados.', details);
 
   const now = deps.now ? deps.now() : new Date(), at = deps.Timestamp.fromDate(now);
@@ -81,7 +83,7 @@ async function handleManual(req, deps) {
       if (!pSnap.exists) tx.set(pipelineRef, { name: PIPELINE.name, stages: PIPELINE.stages.map(([id, n], i) => ({ id, name: n, order: i })), createdAt: at });
       tx.set(oppRef, { pipeline: PIPELINE.id, stage: 'nueva-cotizacion', title: `${ev.type} · ${contact ? contact.name : name} · ${ev.date}`, contactId: contactRef.id, brand, owner,
         event: ev, selection: null, dietary: [], notes: str(b.notes, 2000),
-        estimate: { status: 'manual', brandazoSubtotalMinor: null, lines: [], currency: 'ARS', taxIncluded: false, validated: false },
+        estimate: { status: 'manual', brandazoSubtotalMinor: ev && amountMinor ? amountMinor : null, lines: [], currency: 'ARS', taxIncluded: false, validated: false },
         source, attribution: null, campaignId: str(b.campaignId, 60) || null, warnings, lostReason: null,
         nextFollowUpAt: deps.Timestamp.fromMillis(now.getTime() + follow * 36e5), createdAt: at, updatedAt: at });
       tx.set(tenantRef.collection('tasks').doc(), { type: 'primer-contacto', title: `Enviar presupuesto: ${contact ? contact.name : name}`, opportunityId: oppRef.id, contactId: contactRef.id, assignee: owner, dueAt: deps.Timestamp.fromMillis(now.getTime() + follow * 36e5), status: 'pendiente', createdAt: at });

@@ -7,8 +7,8 @@
    - Envío con Resend (secreto RESEND = {"apiKey","from"}). Sin configurar: no manda nada y lo deja anotado. */
 const crypto = require('node:crypto');
 const { sendMail } = require('./mailer');
-const OPEN = ['nueva-cotizacion', 'contactado', 'propuesta-enviada', 'en-negociacion'];
-const STAGE = { 'nueva-cotizacion': 'Nueva cotización', contactado: 'Contactado', 'propuesta-enviada': 'Propuesta enviada', 'en-negociacion': 'En negociación' };
+const OPEN = ['nueva-cotizacion', 'contactado', 'en-negociacion'];
+const STAGE = { 'nueva-cotizacion': 'Nueva cotización', contactado: 'Contactado', 'en-negociacion': 'En negociación' };
 const TZ_OFFSET_H = 3; // Córdoba: UTC−3 todo el año
 const APP = 'https://www.brandazo.com.ar';
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

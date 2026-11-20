@@ -56,7 +56,7 @@ test('procedimiento de validación del contrato (pasos 2 a 9) y lo que queda gua
     const tareas = await T.collection('tasks').where('opportunityId', '==', primera.body.opportunity.id).get();
     assert.equal(tareas.size, 1); assert.equal(tareas.docs[0].data().type, 'primer-contacto');
     const pipe = (await T.collection('pipelines').doc('cafelito-eventos').get()).data();
-    assert.deepEqual(pipe.stages.map(s => s.name), ['Nueva cotización', 'Contactado', 'Propuesta enviada', 'En negociación', 'Ganada', 'Perdida']);
+    assert.deepEqual(pipe.stages.map(s => s.name), ['Nueva cotización', 'Contactado', 'En negociación', 'Ganada', 'Perdida']);
   });
   await t.test('3 · reenvío de la misma solicitud → 200 duplicada, mismo receiptId, sin duplicar nada', async () => {
     const antes = (await T.collection('opportunities').get()).size;

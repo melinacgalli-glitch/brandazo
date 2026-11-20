@@ -105,10 +105,11 @@ let page; const reopen = async () => { await page.waitForTimeout(700); if (!(awa
   ok(op.fields.nextAction && op.fields.nextAction.stringValue === 'Escribirle para ver si leyó la propuesta', '«qué hay que hacer» guardado');
   { const tl = await page.textContent('#evtl'); ok((tl.match(/Le escribí, espera la propuesta/g) || []).length === 1, 'la nota no se repite en la historia'); }
   ok(op.fields.stage.stringValue === 'contactado' && op.fields.nextFollowUpAt.timestampValue, 'cambio de etapa guardado con próximo seguimiento');
-  await page.click('[data-evmove=propuesta-enviada]'); await page.waitForSelector('#samt'); await page.fill('#samt', ''); await page.click('#sok'); await page.waitForTimeout(300);
-  ok(/Ingresá el importe/.test(await page.textContent('#layer')), 'Propuesta sin importe: lo pide');
-  await page.fill('#samt', '1.300.000'); await page.click('#sok'); await reopen(); await page.waitForSelector('text=Propuesta enviada el', { timeout: 15000 });
-  op = await get('tenants/cafelito/opportunities/op1'); ok(op.fields.proposal.mapValue.fields.amountMinor.integerValue === '130000000', 'importe de la propuesta en centavos (1.300.000 → 130000000)');
+  ok(!(await page.$('[data-evmove=propuesta-enviada]')), 'ya no existe la etapa «Propuesta enviada»');
+  await page.click('[data-evmove=en-negociacion]'); await page.waitForSelector('#samt'); await page.fill('#snote', 'Pide sumar invitados'); await page.fill('#samt', 'abc'); await page.click('#sok'); await page.waitForTimeout(300);
+  ok(/Revisá el importe/.test(await page.textContent('#layer')), 'En negociación: un importe mal escrito se marca');
+  await page.fill('#samt', '1.300.000'); await page.click('#sok'); await reopen(); await page.waitForSelector('text=Importe actualizado', { timeout: 15000 });
+  op = await get('tenants/cafelito/opportunities/op1'); ok(op.fields.stage.stringValue === 'en-negociacion' && op.fields.proposal.mapValue.fields.amountMinor.integerValue === '130000000', 'importe actualizado en centavos (1.300.000 → 130000000)');
   await page.fill('#evatx', 'Llamé, pide sumar 20 personas'); await page.selectOption('#evat', 'Llamada'); await page.click('#evatok'); await reopen();
   await page.waitForSelector('#evtl li:has-text("pide sumar 20")', { timeout: 15000 }); ok(true, 'Registrar actividad sin cambiar de etapa');
   await page.click('[data-evmove=ganada]'); await page.waitForSelector('#sdep');

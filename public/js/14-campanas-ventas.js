@@ -3,7 +3,7 @@
    - Cada campaña tiene un código de seguimiento (utm_campaign) y un armador de links para los anuncios.
    - Las cotizaciones que llegan con ese código quedan vinculadas solas a la campaña
      (también se pueden asignar a mano desde la ficha: opportunity.campaignId).
-   - La campaña muestra sus resultados reales: cotizaciones, propuestas, ganadas, facturación,
+   - La campaña muestra sus resultados reales: cotizaciones, en negociación, ganadas, facturación,
      tasa de cierre y costo por cotización / por venta.
    - El funnel puede tomar sus resultados reales de las cotizaciones del CRM.
    ===================================================================== */
@@ -37,11 +37,11 @@ function campSales(c){
   if(!cloud) return head+builder+`<p class="small muted">Las cotizaciones vinculadas se ven en la versión en la nube.</p></section>`;
   if(!ensureEV(/#\/app\/campanas\//)) return head+builder+`<p class="small muted">Cargando cotizaciones…</p></section>`;
   const ops=EV.ops.filter(o=>{ const k=oppCampaign(o); return k&&k.id===c.id; });
-  const adv=ops.filter(o=>['propuesta-enviada','en-negociacion','ganada'].includes(o.stage)), won=ops.filter(o=>o.stage==='ganada'), lost=ops.filter(o=>o.stage==='perdida');
+  const adv=ops.filter(o=>['en-negociacion','ganada'].includes(o.stage)), won=ops.filter(o=>o.stage==='ganada'), lost=ops.filter(o=>o.stage==='perdida');
   const wonAmt=won.reduce((a,o)=>a+oppAmount(o),0), spentMinor=Math.round((+c.spent||0)*100);
   const closed=won.length+lost.length, rate=closed?Math.round(won.length/closed*100):null;
   const stat=(l,v,d,cls='')=>`<div class="stat ${cls}"><div class="l">${l}</div><div class="v">${v}</div>${d?`<div class="d">${d}</div>`:''}</div>`;
-  const stats=`<div class="stat-grid" style="margin-top:12px">${stat('Cotizaciones',ops.length,ops.length?`${adv.length} con propuesta`:'todavía ninguna','st-info')}${stat('Ganadas',won.length,rate==null?'sin cierres todavía':`${rate}% de las cerradas`,'st-ok')}${stat('Facturación ganada',wonAmt?evMoney(wonAmt):'<span class="muted">$ 0</span>','sin IVA','st-ok')}${stat('Costo por venta',spentMinor&&won.length?evMoney(Math.round(spentMinor/won.length)):'<span class="muted">Sin datos</span>',spentMinor?(ops.length?`${evMoney(Math.round(spentMinor/ops.length))} por cotización`:''):'cargá la inversión de la campaña','st-warn')}</div>`;
+  const stats=`<div class="stat-grid" style="margin-top:12px">${stat('Cotizaciones',ops.length,ops.length?`${adv.length} en negociación o ganadas`:'todavía ninguna','st-info')}${stat('Ganadas',won.length,rate==null?'sin cierres todavía':`${rate}% de las cerradas`,'st-ok')}${stat('Facturación ganada',wonAmt?evMoney(wonAmt):'<span class="muted">$ 0</span>','sin IVA','st-ok')}${stat('Costo por venta',spentMinor&&won.length?evMoney(Math.round(spentMinor/won.length)):'<span class="muted">Sin datos</span>',spentMinor?(ops.length?`${evMoney(Math.round(spentMinor/ops.length))} por cotización`:''):'cargá la inversión de la campaña','st-warn')}</div>`;
   const list=ops.length?`<div class="table-wrap" style="margin-top:12px"><table class="t"><thead><tr><th>Contacto</th><th>Evento</th><th>Etapa</th><th style="text-align:right">Importe</th></tr></thead><tbody>${ops.sort((a,b)=>String(b.event&&b.event.date).localeCompare(String(a.event&&a.event.date))).map(o=>`<tr><td><a href="#/app/crm/eventos?t=${encodeURIComponent(S.company.tid)}&op=${o.id}">${esc(evName(o))}</a></td><td class="small">${esc((o.event||{}).type||'')} · ${evDate((o.event||{}).date)}</td><td class="small">${esc(evStageName(o.stage))}</td><td style="text-align:right">${evMoney(oppAmount(o))}</td></tr>`).join('')}</tbody></table></div>`
     :`<div class="alert alert-info" style="margin-top:12px">${ic('info')}<div>Todavía no llegó ninguna cotización con el código <b class="mono">${esc(campCode(c))}</b>. También podés asignar una cotización a esta campaña desde su ficha en el CRM.</div></div>`;
   return head+builder+stats+list+'</section>';
@@ -77,14 +77,14 @@ function campSales(c){
 
 /* ---------- Funnel: resultados reales desde las cotizaciones del CRM ---------- */
 (function(){
-  F_SOURCES.splice(1,0,['crm-q-all','CRM · cotizaciones recibidas'],['crm-q-adv','CRM · cotizaciones con propuesta'],['crm-q-won','CRM · cotizaciones ganadas']);
+  F_SOURCES.splice(1,0,['crm-q-all','CRM · cotizaciones recibidas'],['crm-q-adv','CRM · cotizaciones en negociación o ganadas'],['crm-q-won','CRM · cotizaciones ganadas']);
   const _fr=fReal;
   fReal=function(f,st){ const src=st.source||'manual'; if(!src.startsWith('crm-q-')) return _fr(f,st);
     if(!(S.company&&S.company.cloud&&typeof EV==='object'&&EV.loaded)) return null;
     const range=periodRange(fPeriod(f)), brand=fBrand(f), campIds=new Set((f.campaigns||[]).map(l=>l.id));
     const inR=t=>{ if(!range) return true; const d=t&&t.toDate?t.toDate():null; return d&&d>=range[0]&&d<=range[1]; };
     return EV.ops.filter(o=>o.brand===brand&&inR(o.createdAt)&&(!st.campOnly||(oppCampaign(o)&&campIds.has(oppCampaign(o).id)))
-      &&(src==='crm-q-all'||(src==='crm-q-won'?o.stage==='ganada':['propuesta-enviada','en-negociacion','ganada'].includes(o.stage)))).length; };
+      &&(src==='crm-q-all'||(src==='crm-q-won'?o.stage==='ganada':['en-negociacion','ganada'].includes(o.stage)))).length; };
   const _be=bEstrategia;
   bEstrategia=function(tab){ _be(tab); if(tab==='funnel'&&location.hash.split('/')[4]) ensureEV(/#\/app\/estrategia\/funnel\//); };
   VIEWS.estrategia.bind=bEstrategia;

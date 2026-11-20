@@ -82,14 +82,15 @@ service cloud.firestore {
           && onlyChanges(['stage', 'owner', 'lostReason', 'lostNote', 'canRecontact', 'nextFollowUpAt', 'nextAction', 'updatedAt', 'stageHistory', 'proposal', 'won', 'negotiation', 'campaignId'])
           && (!('campaignId' in request.resource.data) || request.resource.data.campaignId == null || (request.resource.data.campaignId is string && request.resource.data.campaignId.size() <= 64))
           && (!('nextAction' in request.resource.data) || request.resource.data.nextAction == null || (request.resource.data.nextAction is string && request.resource.data.nextAction.size() <= 200))
-          && request.resource.data.stage in ['nueva-cotizacion', 'contactado', 'propuesta-enviada', 'en-negociacion', 'ganada', 'perdida']
+          && request.resource.data.stage in ['nueva-cotizacion', 'contactado', 'en-negociacion', 'ganada', 'perdida']
           && (request.resource.data.stage != 'perdida' || request.resource.data.lostReason is string)
           && request.resource.data.owner is string
           // Datos mínimos de cada etapa (importes en centavos, enteros)
-          && (request.resource.data.stage != 'propuesta-enviada' || (request.resource.data.proposal.amountMinor is int && request.resource.data.proposal.amountMinor > 0))
+          // Importe actualizado (en negociación): opcional, pero si está tiene que ser un importe válido
+          && (!('proposal' in request.resource.data) || request.resource.data.proposal == null || (request.resource.data.proposal.amountMinor is int && request.resource.data.proposal.amountMinor > 0))
           && (request.resource.data.stage != 'ganada' || (request.resource.data.won.amountMinor is int && request.resource.data.won.amountMinor > 0
                 && request.resource.data.won.depositMinor is int && request.resource.data.won.depositMinor >= 0 && request.resource.data.won.depositMinor <= request.resource.data.won.amountMinor))
-          && (!(request.resource.data.stage in ['contactado', 'propuesta-enviada', 'en-negociacion']) || request.resource.data.nextFollowUpAt is timestamp);
+          && (!(request.resource.data.stage in ['contactado', 'en-negociacion']) || request.resource.data.nextFollowUpAt is timestamp);
         allow create, delete: if false;
       }
 

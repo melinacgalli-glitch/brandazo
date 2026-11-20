@@ -5,7 +5,7 @@
    Desde el navegador solo se cambian: etapa, responsable, motivo de pérdida,
    próximo seguimiento e historial de etapas (lo controlan las reglas de Firestore).
    ===================================================================== */
-const EV_STAGES=[['nueva-cotizacion','Nueva cotización'],['contactado','Contactado'],['propuesta-enviada','Propuesta enviada'],['en-negociacion','En negociación'],['ganada','Ganada'],['perdida','Perdida']];
+const EV_STAGES=[['nueva-cotizacion','Nueva cotización'],['contactado','Contactado'],['en-negociacion','En negociación'],['ganada','Ganada'],['perdida','Perdida']];
 const EV_LOST=['Precio','Fecha no disponible','No respondió','Eligió otro proveedor','Cambió de planes','Pedido no válido','Otro'];
 const EV_WARN={SHORT_NOTICE:'Evento en menos de 7 días',PHONE_NOT_NORMALIZED:'Revisar teléfono',ADDON_NOT_IN_PLAN:'Adicional fuera del plan',ESTIMATE_MISMATCH:'El presupuesto de la web no coincide',POSSIBLE_SPAM:'Posible spam'};
 const EV_PLAN={full:'Plan Full',classic:'Plan Classic',basic:'Plan Basic'};
@@ -116,7 +116,7 @@ function evFicha(id){
     <div class="table-wrap"><table class="t"><thead><tr><th>Concepto</th><th style="text-align:right">Cant.</th><th style="text-align:right">Total</th></tr></thead><tbody>
     ${(es.lines||[]).map(l=>`<tr><td>${esc(l.label)}</td><td style="text-align:right">${l.quantity}</td><td style="text-align:right">${evMoney(l.totalMinor)}</td></tr>`).join('')}
     <tr><td><b>Subtotal</b></td><td></td><td style="text-align:right"><b>${evMoney(es.brandazoSubtotalMinor)}</b></td></tr></tbody></table></div>
-    <p class="small muted" style="margin-top:8px">${es.status==='match'?'Coincide con lo que vio la persona en la web.':es.status==='mismatch'?`La web mostró ${evMoney(es.webSubtotalMinor)}: revisar antes de enviar la propuesta.`:'La web no mandó su cálculo.'} ${es.transfer==='to_quote'?'El traslado se cotiza aparte.':''}</p></section>
+    <p class="small muted" style="margin-top:8px">${es.status==='match'?'Coincide con lo que vio la persona en la web.':es.status==='mismatch'?`La web mostró ${evMoney(es.webSubtotalMinor)}: revisar antes de confirmar el importe.`:'La web no mandó su cálculo.'} ${es.transfer==='to_quote'?'El traslado se cotiza aparte.':''}</p></section>
    <section class="card"><h3 style="margin-bottom:12px">Origen</h3><dl class="kv">
     ${row('Canal',esc(src.channel||'Sin datos'))}${row('Fuente',esc(at.utmSource||'Directo / sin datos'))}${row('Medio',esc(at.utmMedium||'—'))}${row('Campaña',esc(at.utmCampaign||'—'))}${row('Anuncio',esc(at.utmContent||'—'))}
     ${row('Vino de',esc(at.referrer||'—'))}${row('Clic de Meta',at.fbclid?'Sí':'No')}</dl></section>

@@ -15,7 +15,7 @@ before(async () => {
   await db.doc(`${T}/contacts/c1`).set({ name: 'Azafrán escuela de gastronomía', phoneE164: '+5493513061277' });
   const op = (id, d) => db.doc(`${T}/opportunities/${id}`).set({ pipeline: 'cafelito-eventos', brand: 'Cafelito Ambulante', event: { type: 'Lanzamiento o activación', date: '2026-12-12' }, estimate: { brandazoSubtotalMinor: 67000000 }, ...d });
   await op('hoy', { stage: 'contactado', owner: 'Melina Galli', contactId: 'c1', nextFollowUpAt: TS.fromMillis(Date.parse('2026-11-18T12:00:00Z')), nextAction: 'Escribirle por WhatsApp para ver si leyó la propuesta' });
-  await op('vencido', { stage: 'propuesta-enviada', owner: 'Melina Galli', contactId: 'c1', nextFollowUpAt: TS.fromMillis(Date.parse('2026-11-15T12:00:00Z')), proposal: { amountMinor: 70000000 } });
+  await op('vencido', { stage: 'en-negociacion', owner: 'Melina Galli', contactId: 'c1', nextFollowUpAt: TS.fromMillis(Date.parse('2026-11-15T12:00:00Z')), proposal: { amountMinor: 70000000 } });
   await op('manana', { stage: 'contactado', owner: 'Melina Galli', contactId: 'c1', nextFollowUpAt: TS.fromMillis(Date.parse('2026-11-19T12:00:00Z')) });
   await op('ganada', { stage: 'ganada', owner: 'Melina Galli', contactId: 'c1', nextFollowUpAt: TS.fromMillis(Date.parse('2026-11-17T12:00:00Z')) });
   await op('dejuli', { stage: 'en-negociacion', owner: 'Juli Ventas', contactId: 'c1', nextFollowUpAt: TS.fromMillis(Date.parse('2026-11-18T20:00:00Z')) });

@@ -31,6 +31,7 @@ function manForm(withEvent=true){
    <div class="field"><label for="mnx">Lo que pidió (opcional)</label><textarea class="input" id="mnx" rows="3" maxlength="2000" placeholder="Ej.: barra de café para 80 personas, con personalización de vasos. Lo recomendó Ana."></textarea></div>
    <div class="form-grid"><div class="field"><label for="mno">Responsable</label><select class="select" id="mno">${members.map(n=>`<option ${n===(S.user.name||'')?'selected':''}>${esc(n)}</option>`).join('')||`<option>${esc(S.user.name||'')}</option>`}</select></div>
     <div class="field"><label for="mncp">Campaña (opcional)</label><select class="select" id="mncp"><option value="">Sin campaña</option>${camps.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></div></div>
+   <div class="field"><label for="mnm">Importe estimado (sin IVA, opcional)</label><div style="display:flex;align-items:center;gap:6px"><span class="muted">$</span><input class="input" id="mnm" inputmode="decimal" placeholder="Ej.: 850.000" style="text-align:right"></div><span class="hint small muted">Si ya le pasaste un número. Si no, lo cargás al pasar a «En negociación».</span><span class="err" role="alert"></span></div>
    <p class="small muted" id="mnav"></p>`:''}`,
    `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="mnok">${withEvent?'Cargar pedido':'Guardar contacto'}</button>`);
   const dup=()=>{ const c=manFind($('#mnp').value); $('#mndup').innerHTML=c?`<div class="alert alert-info" style="margin-bottom:12px">${ic('info')}<div>Ya tenés a <b>${esc(c.name||'este contacto')}</b> con ese teléfono: ${withEvent?'el pedido se suma a ese contacto':'no se va a duplicar'}.</div></div>`:''; };
@@ -41,15 +42,15 @@ function manForm(withEvent=true){
   $('#mnok').onclick=async()=>{
     const n=$('#mnn'), p=$('#mnp'), e=$('#mne');
     const okN=fieldErr(n,!n.value.trim()?'Escribí el nombre':''), okP=fieldErr(p,p.value.replace(/\D/g,'').length<6?'Escribí el teléfono':''), okE=fieldErr(e,e.value.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim())?'El email no es válido':'');
-    let okD=true; if(withEvent){ const d=$('#mnd'); okD=fieldErr(d,!d.value?'Elegí la fecha del evento':d.value<today?'La fecha ya pasó':''); }
+    let okD=true, amt=null; if(withEvent){ const d=$('#mnd'); okD=fieldErr(d,!d.value?'Elegí la fecha del evento':d.value<today?'La fecha ya pasó':''); const m=$('#mnm'); amt=m.value.trim()?evParseMoney(m.value):null; if(!fieldErr(m,m.value.trim()&&!amt?'Revisá el importe (ej.: 850.000)':'')) okD=false; }
     if(!(okN&&okP&&okE&&okD)) return;
     const body={tenantId:S.company.tid,channel:$('#mnc').value,contact:{name:n.value.trim(),phone:p.value.trim(),email:e.value.trim()}};
-    if(withEvent) Object.assign(body,{event:{type:$('#mnt').value,date:$('#mnd').value,guests:+$('#mng').value||null,startTime:$('#mnh').value||null,place:$('#mnl').value.trim(),inCapital:$('#mnz').value===''?null:$('#mnz').value==='1'},notes:$('#mnx').value.trim(),owner:$('#mno').value,campaignId:$('#mncp').value||null});
+    if(withEvent) Object.assign(body,{event:{type:$('#mnt').value,date:$('#mnd').value,guests:+$('#mng').value||null,startTime:$('#mnh').value||null,place:$('#mnl').value.trim(),inCapital:$('#mnz').value===''?null:$('#mnz').value==='1'},notes:$('#mnx').value.trim(),owner:$('#mno').value,campaignId:$('#mncp').value||null,amountMinor:amt});
     const b=$('#mnok'); b.classList.add('is-loading'); b.disabled=true;
     try{
       const r=await fetch(MAN_API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await C.user.getIdToken()},body:JSON.stringify(body)});
       const j=await r.json().catch(()=>({}));
-      if(!r.ok){ const d=(j.error&&j.error.details)||[]; const map={'contact.name':'#mnn','contact.phone':'#mnp','contact.email':'#mne','event.date':'#mnd'};
+      if(!r.ok){ const d=(j.error&&j.error.details)||[]; const map={'contact.name':'#mnn','contact.phone':'#mnp','contact.email':'#mne','event.date':'#mnd',amountMinor:'#mnm'};
         d.forEach(x=>{ const el=$(map[x.field]); if(el) fieldErr(el,x.issue); }); if(!d.length) toast((j.error&&j.error.message)||'No se pudo guardar. Probá de nuevo.'); b.classList.remove('is-loading'); b.disabled=false; return; }
       layerDirty=false; closeLayer(); EV.dirty=false; render(); // los datos nuevos pudieron llegar con la ventana abierta
       toast(withEvent?(j.match==='existing'?`Pedido cargado en el contacto existente: ${j.existingName}`:'Pedido cargado en «Nueva cotización»'):(j.match==='existing'?`Ya existía: ${j.existingName}`:'Contacto guardado'));
@@ -71,7 +72,7 @@ function manForm(withEvent=true){
   const _ff=evFicha;
   evFicha=function(id){ _ff(id); const o=EV.ops.find(z=>z.id===id); if(!o) return;
     const secs=$$('#layer .drawer section.card'), es=secs.find(s=>/Presupuesto estimado/.test((s.querySelector('h3')||{}).textContent||''));
-    if(o.estimate&&o.estimate.status==='manual'&&es) es.innerHTML=`<h3 style="margin-bottom:8px">Presupuesto</h3><p class="small muted">Pedido cargado a mano: todavía no tiene presupuesto. El importe se carga al pasar la tarjeta a «Propuesta enviada».</p>`;
+    if(o.estimate&&o.estimate.status==='manual'&&es) es.innerHTML=`<h3 style="margin-bottom:8px">Presupuesto</h3><p class="small${o.estimate.brandazoSubtotalMinor?'':' muted'}">${o.estimate.brandazoSubtotalMinor?`Importe estimado cargado a mano: <b>${evMoney(o.estimate.brandazoSubtotalMinor)}</b> sin IVA. Si cambia, actualizalo al pasar a «En negociación».`:'Pedido cargado a mano: todavía no tiene importe. Cargalo al pasar la tarjeta a «En negociación».'}</p>`;
     if(o.event&&o.event.inCapital==null){ $$('#layer .drawer dt').forEach(dt=>{ if(dt.textContent==='Zona') dt.nextElementSibling.innerHTML='<span class="muted">Sin datos</span>'; }); }
     if(!o.selection){ $$('#layer .drawer dt').forEach(dt=>{ if(['Plan','Adicionales','Personalización','Torta / Cold brew','Alimentación'].includes(dt.textContent)){ dt.nextElementSibling.remove(); dt.remove(); } }); }
   };

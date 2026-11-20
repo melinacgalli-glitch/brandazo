@@ -20,7 +20,7 @@ const IDEM_DAYS = 30;
 const TZ = 'America/Argentina/Cordoba';
 const PIPELINE = {
   id: 'cafelito-eventos', name: 'Cafelito Eventos',
-  stages: [['nueva-cotizacion', 'Nueva cotización'], ['contactado', 'Contactado'], ['propuesta-enviada', 'Propuesta enviada'], ['en-negociacion', 'En negociación'], ['ganada', 'Ganada'], ['perdida', 'Perdida']]
+  stages: [['nueva-cotizacion', 'Nueva cotización'], ['contactado', 'Contactado'], ['en-negociacion', 'En negociación'], ['ganada', 'Ganada'], ['perdida', 'Perdida']]
 };
 
 const rid = (prefix, n = 20) => { const a = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'; const b = randomBytes(n); let s = ''; for (const x of b) s += a[x % a.length]; return prefix + s; };

@@ -30,11 +30,13 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   // Pedido nuevo por WhatsApp
   await page.fill('#mnn', 'Juan Gómez'); await page.fill('#mnp', '0351 15 444-1234'); await page.selectOption('#mnc', 'WhatsApp');
   await page.selectOption('#mnt', 'Cumpleaños'); await page.fill('#mnd', '2030-03-14'); await page.fill('#mng', '80'); await page.selectOption('#mnz', '1');
-  await page.fill('#mnx', 'Barra de café para su cumple de 40.'); await page.click('#mnok');
+  await page.fill('#mnx', 'Barra de café para su cumple de 40.'); await page.fill('#mnm', 'mucho'); await page.click('#mnok'); await page.waitForTimeout(300);
+  ok(/Revisá el importe/.test(await page.textContent('#layer')), 'un importe mal escrito se marca');
+  await page.fill('#mnm', '850.000'); await page.click('#mnok');
   await page.waitForSelector('#layer .drawer', { timeout: 15000 });
   const f = await page.textContent('#layer');
   ok(/Juan Gómez/.test(f) && /14 mar 2030/.test(f) && /80/.test(f) && /Carga manual · WhatsApp/.test(f), 'se crea la cotización y se abre su ficha con los datos y el canal');
-  ok(/todavía no tiene presupuesto/.test(f) && !/La web no mandó/.test(f) && !/Plan Full|Torta: no/.test(f), 'la ficha no inventa presupuesto ni plan');
+  ok(/Importe estimado cargado a mano: \$ 850\.000/.test(f) && !/La web no mandó/.test(f) && !/Plan Full|Torta: no/.test(f), 'la ficha muestra el importe cargado y no inventa plan');
   ok(/Pedido cargado a mano por/.test(f), 'queda la nota en la historia');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   ok(/Juan Gómez/.test(await page.textContent('[data-evstage="nueva-cotizacion"]')), 'aparece en «Nueva cotización»');
@@ -47,6 +49,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.fill('#mnd', '2030-05-02'); await page.click('#mnok'); await page.waitForSelector('#layer .drawer', { timeout: 15000 });
   const contacts = await list('tenants/cafelito/contacts');
   ok(contacts.length === 2, 'no duplica el contacto: ' + contacts.length);
+  ok(/todavía no tiene importe/.test(await page.textContent('#layer')), 'sin importe, la ficha lo dice (no muestra $ 0)');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   // Solo contacto
   await page.goto(BASE + '#/app/crm/contactos'); await page.waitForSelector('[data-mannew="contacto"]'); await page.click('[data-mannew="contacto"]'); await page.waitForSelector('#mnok');
