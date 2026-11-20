@@ -29,6 +29,7 @@ async function handleManual(req, deps) {
   const member = await tenantRef.collection('members').doc(user.uid).get();
   if (!member.exists) return fail(403, 'NOT_MEMBER', 'No sos parte de esta empresa.');
   const by = member.data().name || user.name || user.email || 'Equipo';
+  if (b.kind === 'order') return handleManualOrder(b, { deps, user, by, tenantRef });
 
   // Validación (mensajes para la pantalla)
   const c = b.contact || {}, details = [];
@@ -95,4 +96,63 @@ async function handleManual(req, deps) {
   return { status: 201, body: { ...out, warnings } };
 }
 
-module.exports = { handleManual, CHANNELS, EVENT_TYPES };
+
+/* Venta de la tienda cargada a mano (ya pagada). Queda en tenants/{t}/orders igual que las que manda la web:
+   suma en CRM → Tienda, campañas, funnel y objetivos. Si tiene el n.º de pago de Mercado Pago, la usa como
+   clave: cargarla dos veces da error, y cuando la web mande esa compra se actualiza la misma (no se duplica). */
+async function handleManualOrder(b, { deps, user, by, tenantRef }) {
+  const c = b.contact || {}, o = b.order || {}, details = [];
+  const name = str(c.name, 120), phoneRaw = str(c.phone, 30), email = str(c.email, 200).toLowerCase();
+  if (!name) details.push({ field: 'contact.name', issue: 'Escribí el nombre' });
+  if (!phoneRaw && !email) details.push({ field: 'contact.phone', issue: 'Escribí el teléfono o el email' });
+  if (phoneRaw && phoneRaw.replace(/\D/g, '').length < 6) details.push({ field: 'contact.phone', issue: 'Revisá el teléfono' });
+  if (email && !isEmail(email)) details.push({ field: 'contact.email', issue: 'El email no es válido' });
+  const paymentId = str(String(o.paymentId == null ? '' : o.paymentId), 40).replace(/[^0-9A-Za-z-]/g, '');
+  const items = (Array.isArray(o.items) ? o.items : []).slice(0, 50).map(i => ({ name: str(i && i.name, 160), quantity: Math.trunc(+(i && i.quantity)), unitPriceMinor: Math.trunc(+(i && i.unitPriceMinor)), ...(str(i && i.variant, 160) ? { variant: str(i.variant, 160) } : {}) }));
+  if (!items.length || items.some(i => !i.name || !(i.quantity >= 1 && i.quantity <= 1000) || !(i.unitPriceMinor > 0 && i.unitPriceMinor < 1e12)))
+    details.push({ field: 'order.items', issue: 'Cada producto necesita nombre, cantidad y precio' });
+  const paidDate = str(o.paidDate, 10);
+  if (!isDate(paidDate)) details.push({ field: 'order.paidDate', issue: 'Elegí la fecha de pago' });
+  else if (paidDate > todayInTZ(deps.now ? deps.now() : new Date())) details.push({ field: 'order.paidDate', issue: 'La fecha de pago no puede ser futura' });
+  const pickupDate = str(o.pickupDate, 10);
+  if (pickupDate && !isDate(pickupDate)) details.push({ field: 'order.pickupDate', issue: 'Revisá la fecha de retiro' });
+  const status = o.status === 'picked_up' ? 'picked_up' : 'paid';
+  if (details.length) return fail(422, 'VALIDATION_FAILED', 'Revisá los datos marcados.', details);
+
+  const now = deps.now ? deps.now() : new Date(), at = deps.Timestamp.fromDate(now);
+  const total = items.reduce((a, i) => a + i.quantity * i.unitPriceMinor, 0);
+  const paidAt = deps.Timestamp.fromDate(new Date(paidDate + 'T12:00:00-03:00'));
+  const brand = str(b.brand, 120) || 'Cafelito Cakes';
+  const orderRef = tenantRef.collection('orders').doc(paymentId ? 'MP-' + paymentId : 'MAN-' + now.getTime().toString(36) + Math.random().toString(36).slice(2, 6));
+  const phone = phoneRaw ? normalizePhoneAR(phoneRaw) : null;
+  const phoneRef = phone ? tenantRef.collection('contactsByPhone').doc(phone.key) : null;
+  const mailRef = email ? tenantRef.collection('contactsByEmail').doc(email) : null;
+  const dupQ = paymentId ? tenantRef.collection('orders').where('payment.paymentId', '==', paymentId).limit(1) : null;
+  const utm = str(o.utmCampaign, 120).toLowerCase() || null;
+
+  const out = await deps.db.runTransaction(async tx => {
+    const [exist, dup, byPhone, byMail] = await Promise.all([tx.get(orderRef), dupQ ? tx.get(dupQ) : null, phoneRef ? tx.get(phoneRef) : null, mailRef ? tx.get(mailRef) : null]);
+    if (exist.exists || (dup && !dup.empty)) return { dup: true };
+    let contactId = byPhone && byPhone.exists ? byPhone.data().contactId : byMail && byMail.exists ? byMail.data().contactId : null;
+    const contactRef = contactId ? tenantRef.collection('contacts').doc(contactId) : tenantRef.collection('contacts').doc();
+    const prev = contactId ? await tx.get(contactRef) : null, contact = prev && prev.exists ? prev.data() : null;
+    const source = { channel: 'Carga manual · Tienda', manual: true, createdBy: user.uid, createdByName: by };
+    tx.set(orderRef, { orderId: paymentId || orderRef.id, brand, status, counted: true, statusAt: at, createdAt: paidAt, paidAt, paidMonth: paidDate.slice(0, 7),
+      totalMinor: total, discountMinor: 0, currency: 'ARS', items, pickup: pickupDate || str(o.timeSlot, 40) ? { date: pickupDate || null, timeSlot: str(o.timeSlot, 40) || null, place: str(o.place, 120) || null } : null,
+      contactId: contactRef.id, customerName: contact ? contact.name : name, payment: paymentId ? { provider: 'mercadopago', paymentId } : null,
+      attribution: utm ? { utmCampaign: utm } : null, utmCampaign: utm, source, notes: str(o.notes, 1000), warnings: [],
+      history: [{ status, at: now.toISOString(), eventId: 'manual', stale: false, by }], firstReceivedAt: at, updatedAt: at });
+    if (contact) tx.update(contactRef, { updatedAt: at, lastOrderAt: at, orderCount: deps.FieldValue.increment(1), orderSpentMinor: deps.FieldValue.increment(total), type: 'Cliente',
+      ...(email && !contact.email ? { email } : {}), ...(Array.isArray(contact.tags) && !contact.tags.includes(brand) ? { tags: [...contact.tags, brand] } : {}) });
+    else tx.set(contactRef, { name, phoneRaw: phoneRaw || null, phoneE164: phone ? phone.e164 : null, phoneDisplay: phone ? phone.display : null, phoneNormalized: phone ? phone.normalized : false,
+      email: email || null, brand, type: 'Cliente', tags: [brand], firstSource: { ...source, at }, marketingConsent: null, orderCount: 1, orderSpentMinor: total, lastOrderAt: at, quoteCount: 0, createdAt: at, updatedAt: at });
+    if (phoneRef && !byPhone.exists) tx.set(phoneRef, { contactId: contactRef.id, createdAt: at });
+    if (mailRef && !byMail.exists) tx.set(mailRef, { contactId: contactRef.id, createdAt: at });
+    tx.set(tenantRef.collection('audit').doc(), { at, by: user.uid, byName: by, action: 'venta-tienda-manual', orderId: orderRef.id, contactId: contactRef.id });
+    return { orderId: orderRef.id, contactId: contactRef.id, match: contact ? 'existing' : 'new', existingName: contact ? contact.name : null, totalMinor: total };
+  });
+  if (out.dup) return fail(409, 'ORDER_EXISTS', 'Esa venta ya está cargada (mismo n.º de pago de Mercado Pago).', [{ field: 'order.paymentId', issue: 'Ya hay una venta con este n.º de pago' }]);
+  return { status: 201, body: out };
+}
+
+module.exports = { handleManual, handleManualOrder, CHANNELS, EVENT_TYPES };

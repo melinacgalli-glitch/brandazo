@@ -77,3 +77,59 @@ function manForm(withEvent=true){
     if(!o.selection){ $$('#layer .drawer dt').forEach(dt=>{ if(['Plan','Adicionales','Personalización','Torta / Cold brew','Alimentación'].includes(dt.textContent)){ dt.nextElementSibling.remove(); dt.remove(); } }); }
   };
 })();
+
+/* ---------- Tienda: venta ya pagada cargada a mano (mientras la web no manda las compras) ---------- */
+function manSaleForm(){
+  if(!(S.company&&S.company.cloud)) return toast('La carga de ventas está en la versión en la nube');
+  evListen();
+  const units=S.brands.filter(b=>typeof unitSells==='function'&&unitSells(b.name)==='tienda').map(b=>b.name);
+  if(!units.length&&S.brands.some(b=>b.name==='Cafelito Cakes')) units.push('Cafelito Cakes');
+  const today=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  const row=()=>`<div class="sale-row"><input class="input" data-sin placeholder="Producto (ej.: Pistacho & Frambuesa)" maxlength="160" aria-label="Producto"><input class="input" data-sq type="number" min="1" value="1" aria-label="Cantidad"><div class="sale-price"><span class="muted">$</span><input class="input" data-sp inputmode="decimal" placeholder="Precio" style="text-align:right" aria-label="Precio"></div><button type="button" class="icon-btn" data-sdel aria-label="Quitar producto">${ic('trash')}</button></div>`;
+  const camps=u=>M().campaigns.filter(c=>c.brand===u);
+  modal('Cargar venta de la tienda',`
+   <p class="small muted" style="margin-bottom:12px">Para una compra ya pagada en la tienda online. Suma en Tienda, en su campaña y en los objetivos de la unidad.</p>
+   ${units.length>1?`<div class="field"><label for="slu">Unidad</label><select class="select" id="slu">${units.map(u=>`<option>${esc(u)}</option>`).join('')}</select></div>`:''}
+   <div class="form-grid">${F('mnn','Cliente','placeholder="Nombre y apellido" maxlength="120"')}${F('mnp','Teléfono','inputmode="tel" maxlength="30"')}</div><div id="mndup"></div>
+   <div class="form-grid">${F('mne','Email','type="email" maxlength="200"')}${F('slpay','N.º de pago de Mercado Pago','inputmode="numeric" maxlength="40" placeholder="Ej.: 189604761267"','Está en el mail de la compra. Evita que se cuente dos veces cuando la web empiece a mandar las compras.')}</div>
+   <div class="field"><span class="label">Productos</span><div id="slrows">${row()}</div><button type="button" class="btn btn-sm btn-ghost" id="sladd">${ic('plus')} Agregar producto</button><span class="err" role="alert" id="slerr"></span></div>
+   <p class="sale-total">Total: <b id="sltot">$ 0</b></p>
+   <div class="form-grid">${F('slpd','Fecha de pago',`type="date" max="${today}" value="${today}"`)}<div class="field"><label for="slst">Estado</label><select class="select" id="slst"><option value="paid">Pagado · por retirar</option><option value="picked_up">Ya lo retiró</option></select></div></div>
+   <div class="form-grid">${F('slrd','Día de retiro (opcional)','type="date"')}${F('slts','Horario (opcional)','maxlength="40" placeholder="Ej.: Mañana"')}</div>
+   <div class="field"><label for="slc">Campaña (opcional)</label><select class="select" id="slc"></select></div>
+   <div class="field"><label for="slno">Notas (opcional)</label><input class="input" id="slno" maxlength="1000" placeholder="Ej.: dedicatoria, aclaraciones"></div>`,
+   `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="slok">Cargar venta</button>`);
+  const unit=()=>$('#slu')?$('#slu').value:(units[0]||'Cafelito Cakes');
+  const fillC=()=>{ $('#slc').innerHTML=`<option value="">Sin campaña</option>`+camps(unit()).map(c=>`<option value="${esc(campCode(c))}">${esc(c.name)}</option>`).join(''); }; fillC(); if($('#slu')) $('#slu').onchange=fillC;
+  const tot=()=>{ let t=0; $$('#slrows .sale-row').forEach(r=>{ const p=evParseMoney(r.querySelector('[data-sp]').value), q=+r.querySelector('[data-sq]').value||0; if(p) t+=p*q; }); $('#sltot').textContent=evMoney(t); return t; };
+  const bind=()=>{ $$('#slrows [data-sdel]').forEach(b=>b.onclick=()=>{ if($$('#slrows .sale-row').length>1){ b.closest('.sale-row').outerHTML=''; tot(); } }); $$('#slrows input').forEach(i=>i.oninput=tot); };
+  bind(); $('#sladd').onclick=()=>{ $('#slrows').insertAdjacentHTML('beforeend',row()); bind(); };
+  $('#mnp').oninput=()=>{ const c=manFind($('#mnp').value); $('#mndup').innerHTML=c?`<div class="alert alert-info" style="margin-bottom:12px">${ic('info')}<div>Ya tenés a <b>${esc(c.name||'este contacto')}</b> con ese teléfono: la venta se suma a ese contacto.</div></div>`:''; };
+  $('#slok').onclick=async()=>{
+    const n=$('#mnn'), p=$('#mnp'), e=$('#mne'), pd=$('#slpd');
+    const items=$$('#slrows .sale-row').map(r=>({name:r.querySelector('[data-sin]').value.trim(),quantity:+r.querySelector('[data-sq]').value||0,unitPriceMinor:evParseMoney(r.querySelector('[data-sp]').value)}));
+    const badItems=items.some(i=>!i.name||!(i.quantity>=1)||!i.unitPriceMinor);
+    const okN=fieldErr(n,!n.value.trim()?'Escribí el nombre':''), okP=fieldErr(p,!p.value.trim()&&!e.value.trim()?'Escribí el teléfono o el email':p.value.trim()&&p.value.replace(/\D/g,'').length<6?'Revisá el teléfono':'');
+    const okE=fieldErr(e,e.value.trim()&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.value.trim())?'El email no es válido':''), okD=fieldErr(pd,!pd.value?'Elegí la fecha de pago':pd.value>today?'No puede ser futura':'');
+    $('#slerr').textContent=badItems?'Cada producto necesita nombre, cantidad y precio':''; $('#slerr').closest('.field').classList.toggle('has-error',badItems);
+    if(!(okN&&okP&&okE&&okD)||badItems) return;
+    const body={tenantId:S.company.tid,kind:'order',brand:unit(),contact:{name:n.value.trim(),phone:p.value.trim(),email:e.value.trim()},
+      order:{paymentId:$('#slpay').value.trim(),items,paidDate:pd.value,status:$('#slst').value,pickupDate:$('#slrd').value,timeSlot:$('#slts').value.trim(),utmCampaign:$('#slc').value,notes:$('#slno').value.trim()}};
+    const b=$('#slok'); b.classList.add('is-loading'); b.disabled=true;
+    try{
+      const r=await fetch(MAN_API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await C.user.getIdToken()},body:JSON.stringify(body)});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok){ const d=(j.error&&j.error.details)||[]; const map={'contact.name':'#mnn','contact.phone':'#mnp','contact.email':'#mne','order.paidDate':'#slpd','order.pickupDate':'#slrd','order.paymentId':'#slpay'};
+        d.forEach(x=>{ const el=$(map[x.field]); if(el) fieldErr(el,x.issue); else if(x.field==='order.items') $('#slerr').textContent=x.issue; }); if(!d.length) toast((j.error&&j.error.message)||'No se pudo guardar. Probá de nuevo.'); b.classList.remove('is-loading'); b.disabled=false; return; }
+      layerDirty=false; closeLayer(); if(typeof SH==='object') SH.month=body.order.paidDate.slice(0,7); render();
+      toast(`Venta cargada: ${evMoney(j.totalMinor)}${j.match==='existing'?` · cliente ${j.existingName}`:''}`);
+    }catch(err){ b.classList.remove('is-loading'); b.disabled=false; toast('Sin conexión: no se guardó. Probá de nuevo.'); }
+  };
+}
+(function(){
+  if(typeof vTienda!=='function') return;
+  const _vt=vTienda;
+  vTienda=function(){ const h=_vt(); if(!(S.company&&S.company.cloud)||!SH.loaded||SH.err) return h;
+    return `<div class="toolbar" style="margin-bottom:12px"><span class="small muted">Las compras de la web todavía se cargan a mano hasta que la tienda las mande sola.</span><span class="grow"></span><button class="btn btn-sm btn-primary" data-mansale>${ic('plus')} Cargar venta</button></div>`+h; };
+  document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mansale]'); if(!b) return; e.preventDefault(); manSaleForm(); });
+})();

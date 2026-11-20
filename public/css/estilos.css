@@ -1027,3 +1027,9 @@ input[type=date],input[type=time]{cursor:pointer}
 .sh-main .small{overflow-wrap:anywhere}
 .sh-total{font-size:15px;font-weight:600;text-align:right;white-space:nowrap}
 .sh-meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+
+/* Venta de la tienda cargada a mano: filas de productos */
+.sale-row{display:grid;grid-template-columns:minmax(0,1fr) 72px 150px 36px;gap:8px;align-items:center;margin-bottom:8px}
+.sale-price{display:flex;align-items:center;gap:6px}
+.sale-total{text-align:right;margin:0 0 12px;font-size:15px}
+@media (max-width:560px){ .sale-row{grid-template-columns:72px minmax(0,1fr) 36px} .sale-row [data-sin]{grid-column:1/-1} }

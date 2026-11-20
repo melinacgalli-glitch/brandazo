@@ -74,14 +74,18 @@ async function handleShopOrder(req, deps) {
     const at = deps.Timestamp.fromDate(now);
     const statusAt = new Date(body.statusAt), paidAt = body.paidAt ? new Date(body.paidAt) : null;
     const idemRef = tenantRef.collection('idempotency').doc('shop_' + body.eventId);
-    const orderRef = tenantRef.collection('orders').doc(body.orderId);
+    let orderRef = tenantRef.collection('orders').doc(body.orderId);
+    const payId = body.payment && body.payment.paymentId ? String(body.payment.paymentId) : null;
+    const manualQ = payId ? tenantRef.collection('orders').where('payment.paymentId', '==', payId).limit(2) : null;
     const phoneRef = phone ? tenantRef.collection('contactsByPhone').doc(phone.key) : null;
     const mail = emailKey(body.customer.email);
     const mailRef = mail ? tenantRef.collection('contactsByEmail').doc(mail) : null;
     const settingsRef = tenantRef.collection('settings').doc('cafelito-tienda');
 
     const result = await deps.db.runTransaction(async tx => {
-      const [idem, orderSnap, byPhone, byMail, settingsSnap] = await Promise.all([tx.get(idemRef), tx.get(orderRef), phoneRef ? tx.get(phoneRef) : null, mailRef ? tx.get(mailRef) : null, tx.get(settingsRef)]);
+      let [idem, orderSnap, byPhone, byMail, settingsSnap, manual] = await Promise.all([tx.get(idemRef), tx.get(orderRef), phoneRef ? tx.get(phoneRef) : null, mailRef ? tx.get(mailRef) : null, tx.get(settingsRef), manualQ ? tx.get(manualQ) : null]);
+      // Venta cargada a mano antes con el mismo n.º de pago: se actualiza esa (no se duplica)
+      if (!orderSnap.exists && manual) { const m = manual.docs.find(d => d.id !== body.orderId && (d.data().source || {}).manual); if (m) { orderRef = m.ref; orderSnap = m; } }
       if (idem.exists) { const d = idem.data(); return d.bodyHash !== bodyHash ? { conflict: true } : { replay: d.response }; }
       const settings = settingsSnap.exists ? settingsSnap.data() : {};
       const brand = settings.brand || 'Cafelito Cakes';
@@ -105,9 +109,9 @@ async function handleShopOrder(req, deps) {
       const response = { status: prev ? (stale ? 'stale' : 'updated') : 'created', orderId: body.orderId, receivedAt: now.toISOString(), order: { status, counted }, contact: { id: contactRef.id, match }, warnings };
 
       tx.set(orderRef, {
-        orderId: body.orderId, brand, status, counted,
+        orderId: body.orderId, brand, status, counted, ...(prev && prev.source && prev.source.manual ? { manualMergedAt: at } : {}),
         statusAt: stale ? prev.statusAt : deps.Timestamp.fromDate(statusAt),
-        createdAt: body.createdAt ? deps.Timestamp.fromDate(new Date(body.createdAt)) : (prev ? prev.createdAt : at),
+        createdAt: body.createdAt ? deps.Timestamp.fromDate(new Date(body.createdAt)) : (prev && prev.createdAt ? prev.createdAt : at),
         paidAt: paid ? deps.Timestamp.fromDate(paid) : null, paidMonth: paid ? monthInTZ(paid) : null,
         totalMinor: body.totalMinor, discountMinor: body.discountMinor || 0, currency: 'ARS',
         items: body.items, pickup: body.pickup || (prev && prev.pickup) || null,
@@ -117,7 +121,7 @@ async function handleShopOrder(req, deps) {
         source: body.source || (prev && prev.source) || null, notes: body.notes || (prev && prev.notes) || '',
         warnings: warnings.map(w => w.code),
         history: [...((prev && prev.history) || []), historyItem].slice(-30),
-        firstReceivedAt: prev ? prev.firstReceivedAt : at, updatedAt: at
+        firstReceivedAt: (prev && prev.firstReceivedAt) || at, updatedAt: at
       });
 
       const delta = counted === wasCounted ? 0 : counted ? 1 : -1;

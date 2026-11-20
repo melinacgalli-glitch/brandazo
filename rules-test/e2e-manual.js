@@ -61,6 +61,21 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   // El navegador sigue sin poder crear contactos directo (reglas)
   const direct = await page.evaluate(async () => { try { await fbDb.collection(`tenants/${S.company.tid}/contacts`).add({ name: 'x' }); return 'ok'; } catch (e) { return e.code; } });
   ok(direct === 'permission-denied', 'desde el navegador no se pueden crear contactos sin pasar por el servidor');
+  // Venta de la tienda cargada a mano (ya pagada)
+  await page.evaluate(() => { S.brands.push({ name: 'Cafelito Cakes', color: '#FF2D87', sells: 'tienda' }); });
+  await page.goto(BASE + '#/app/crm/tienda'); await page.waitForSelector('[data-mansale]', { timeout: 15000 }); await page.click('[data-mansale]'); await page.waitForSelector('#slok');
+  await page.click('#slok'); ok(/Cada producto necesita/.test(await page.textContent('#layer')), 'pide los productos con precio');
+  await page.fill('#mnn', 'Luisina Magris'); await page.fill('#mnp', '3385448801'); await page.fill('#mne', 'luisinasmagris@gmail.com'); await page.fill('#slpay', '189604761267');
+  await page.fill('#slrows [data-sin]', 'Pistacho & Frambuesa'); await page.fill('#slrows [data-sp]', '63.000');
+  ok(/\$ 63\.000/.test(await page.textContent('#sltot')), 'calcula el total');
+  await page.fill('#slrd', '2030-11-21'); await page.fill('#slts', 'Mañana'); await page.click('#slok'); await page.waitForTimeout(2500);
+  const tt = await page.textContent('#root');
+  ok(/Pedidos pagados\s*1/.test(tt) && /Facturación\s*\$ 63\.000/.test(tt) && /Por retirar\s*1/.test(tt), 'la venta suma en la Tienda (1 pedido, $ 63.000, por retirar)');
+  const ords = await list('tenants/cafelito/orders'); ok(ords.length === 1 && ords[0].name.endsWith('/MP-189604761267'), 'se guarda con el n.º de pago de Mercado Pago');
+  await page.click('[data-mansale]'); await page.waitForSelector('#slok'); await page.fill('#mnn', 'Luisina Magris'); await page.fill('#mnp', '3385448801'); await page.fill('#slpay', '189604761267');
+  await page.fill('#slrows [data-sin]', 'Pistacho & Frambuesa'); await page.fill('#slrows [data-sp]', '63.000'); await page.click('#slok'); await page.waitForTimeout(1500);
+  ok(/Ya hay una venta con este n\.º de pago/.test(await page.textContent('#layer')), 'no deja cargar dos veces la misma compra');
+  await page.click('#layer .modal-foot [data-close]'); await page.waitForTimeout(200); if (await page.$('[data-discard]')) await page.click('[data-discard]');
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto(BASE + '#/app/crm/eventos'); await page.waitForSelector('[data-mannew]'); await page.click('[data-mannew]'); await page.waitForSelector('#mnok');
   ok(await page.evaluate(() => document.querySelector('#layer .modal').scrollWidth <= document.querySelector('#layer .modal').clientWidth + 1), 'el formulario entra en el celular');
   await page.screenshot({ path: process.env.SHOT || '/tmp/manual-390.png' });

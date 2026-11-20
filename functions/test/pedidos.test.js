@@ -66,3 +66,14 @@ test('firma inválida e Idempotency-Key distinto del eventId se rechazan', async
   assert.strictEqual((await send(order('P-3001', 'paid'), { secret: 'otro' })).status, 401);
   assert.strictEqual((await send(order('P-3002', 'paid'), { idem: 'otra-cosa-123' })).status, 400);
 });
+
+test('si la venta ya se había cargado a mano con el mismo n.º de pago, la web la actualiza (no la duplica)', async () => {
+  const now = admin.firestore.Timestamp.now();
+  await db.doc(`${T()}/orders/MP-777001`).set({ orderId: '777001', brand: 'Cafelito Cakes', status: 'paid', counted: true, statusAt: now, paidAt: now, paidMonth: '2026-11', totalMinor: 6300000, items: [{ name: 'Pistacho & Frambuesa', quantity: 1, unitPriceMinor: 6300000 }], contactId: 'cman', customerName: 'Luisina', payment: { provider: 'mercadopago', paymentId: '777001' }, source: { manual: true }, history: [], updatedAt: now });
+  await db.doc(`${T()}/contacts/cman`).set({ name: 'Luisina', orderCount: 1, orderSpentMinor: 6300000 });
+  const r = await send(order('W-5001', 'paid', { totalMinor: 6300000, items: [{ name: 'Pistacho & Frambuesa', quantity: 1, unitPriceMinor: 6300000 }], payment: { provider: 'mercadopago', paymentId: '777001' }, customer: { name: 'Luisina Magris', phone: '3385448801' } }));
+  assert.strictEqual(r.status, 200, JSON.stringify(r.body)); assert.strictEqual(r.body.status, 'updated');
+  assert.strictEqual((await db.doc(`${T()}/orders/W-5001`).get()).exists, false, 'no crea otra venta');
+  const o = (await db.doc(`${T()}/orders/MP-777001`).get()).data(); assert.strictEqual(o.orderId, 'W-5001'); assert.ok(o.manualMergedAt);
+  const c = (await db.doc(`${T()}/contacts/cman`).get()).data(); assert.strictEqual(c.orderCount, 1); assert.strictEqual(c.orderSpentMinor, 6300000);
+});

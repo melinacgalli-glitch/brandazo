@@ -61,6 +61,8 @@ La tienda de Cafelito Cakes (carrito + pago con Mercado Pago) le avisa a Brandaz
 | `consent` | No | `marketing` (true/false), `text` (texto exacto de la casilla), `capturedAt`. |
 | `discountMinor`, `notes`, `source` | No | Descuento, dedicatoria/aclaraciones, página del checkout. |
 
+**Mandar siempre `payment.paymentId`** (el n.º de pago de Mercado Pago): mientras la integración no esté lista, Melina carga a mano las compras con ese número, y cuando llegue el aviso de la web Brandazo actualiza esa misma venta en lugar de contarla dos veces.
+
 Brandazo controla que la suma de los productos menos el descuento dé el total; si no coincide, guarda el pedido igual con el aviso `TOTAL_MISMATCH`.
 
 ### Respuestas
