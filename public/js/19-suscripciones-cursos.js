@@ -145,7 +145,7 @@ function vCursos(){
   const i=CRM_NUBE_TABS.findIndex(t=>t[0]==='tienda'); CRM_NUBE_TABS.splice(i+1,0,['suscripciones','Suscripciones'],['cursos','Cursos']);
   const _v=vCrm, _b=bCrm, cloud=()=>!!(S.company&&S.company.cloud);
   vCrm=function(tab){ if(!(cloud()&&(tab==='suscripciones'||tab==='cursos'))) return _v(tab);
-    return pageHead('CRM',tab==='suscripciones'?'Suscripciones mensuales de Cafelito Work.':'Cursos e inscripciones de Cafelito Academy.','')+subTabs('crm',CRM_NUBE_TABS,tab)+(tab==='suscripciones'?vSubs():vCursos()); };
+    return pageHead('CRM',tab==='suscripciones'?'Suscripciones mensuales y su estado.':'Cursos e inscripciones.','')+subTabs('crm',CRM_NUBE_TABS,tab)+(tab==='suscripciones'?vSubs():vCursos()); };
   bCrm=function(tab){ if(!(cloud()&&(tab==='suscripciones'||tab==='cursos'))) return _b(tab); evListen(); };
   VIEWS.crm.view=vCrm; VIEWS.crm.bind=bCrm;
   document.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-lcplan],[data-lccourse],[data-lcnewsub],[data-lcnewenr],[data-lcs],[data-lce]'); if(!t) return; e.preventDefault(); const d=t.dataset;

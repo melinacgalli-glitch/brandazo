@@ -49,7 +49,7 @@ function vTienda(){
   if(!shCloud()) return `<div class="card empty"><p class="muted">Los pedidos de la tienda se ven en la versión en la nube.</p></div>`;
   shListen(); if(!SH.loaded) return `<div class="card empty"><p class="muted">Cargando pedidos…</p></div>`;
   if(SH.err) return `<div class="alert alert-err">${ic('alert')}<div>${esc(SH.err)}</div></div>`;
-  if(!SH.orders.length) return emptyBlock('dollar','Todavía no llegó ningún pedido de la tienda','Cuando la web de Cafelito empiece a avisar los pedidos pagados (lo está preparando el equipo web), aparecen acá solos, con el cliente, lo que compró, el día de retiro y la campaña que lo trajo.','');
+  if(!SH.orders.length) return emptyBlock('dollar','Todavía no llegó ningún pedido de la tienda','Las ventas de tu tienda online aparecen acá con el cliente, lo que compró, el día de retiro y la campaña que la trajo. Podés cargarlas a mano con «Cargar venta».','');
   const cur=shTZ.format(new Date()).slice(0,7); if(!SH.month) SH.month=cur;
   const months=[...new Set([cur,...SH.orders.map(o=>o.paidMonth).filter(Boolean)])].sort().reverse();
   const inMonth=SH.orders.filter(o=>o.paidMonth===SH.month), st=shStats(inMonth);
@@ -87,7 +87,7 @@ function shOrder(id){
   CRM_NUBE_TABS.splice(1,0,['tienda','Tienda']);
   const _v=vCrm, _b=bCrm;
   vCrm=function(tab){ if(!(shCloud()&&tab==='tienda')) return _v(tab);
-    return pageHead('CRM','Pedidos de la tienda online que llegan desde cafelito.com.ar, en vivo.','')+subTabs('crm',CRM_NUBE_TABS,'tienda')+vTienda(); };
+    return pageHead('CRM','Ventas de la tienda online y su retiro o entrega.','')+subTabs('crm',CRM_NUBE_TABS,'tienda')+vTienda(); };
   bCrm=function(tab){ if(!(shCloud()&&tab==='tienda')) return _b(tab);
     const m=$('#shm'); if(m) m.onchange=()=>{ SH.month=m.value; render(); };
     $$('[data-shop]').forEach(r=>r.onclick=()=>shOrder(r.dataset.shop)); };

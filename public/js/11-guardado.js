@@ -44,8 +44,10 @@ function roApply(){
     f.querySelector('[data-roedit]').onclick=()=>{ RO.edit[key]=true; render(); setTimeout(()=>{ const first=document.querySelector(`#${id} .field input:not([type=hidden]), #${id} .field textarea`); if(first) first.focus(); },50); };
   });
 }
-new MutationObserver(()=>roApply()).observe(document.getElementById('root'),{childList:true});
-roApply();
+function roStatement(){ ['fpos','fposm'].forEach(id=>{ const f=document.getElementById(id); if(!f) return; const big=f.querySelector('.statement'), ta=f.querySelector('#ps,#mps'); if(!big||!ta) return;
+  const reading=!!f.querySelector('[data-roedit]'), fld=ta.closest('.field'); if(reading){ if(fld) fld.style.display='none'; } else big.style.display='none'; }); }
+new MutationObserver(()=>{ roApply(); roStatement(); }).observe(document.getElementById('root'),{childList:true});
+roApply(); roStatement();
 
 /* Preferencias (no es un formulario): mismo aviso visible */
 (function(){ const _b=bConfig; bConfig=function(tab){ _b(tab); const b=$('#psave'); if(!b) return; const prev=b.onclick;

@@ -40,7 +40,7 @@ document.addEventListener('change',e=>{ if(e.target.matches&&e.target.matches('[
   const V=VIEWS.marca, _v=V.view, _b=V.bind;
   V.view=withMain(function(tab){ return _v.call(this,tab)
     .replace(/<button class="btn" id="newbrand">[\s\S]*?<\/button>/,'')
-    .replace('Identidad, tono y recursos de cada unidad de negocio, listos para usar en contenidos y campañas.',`La identidad de ${esc(mainName())}: es la misma para todas sus unidades de negocio. Lo que cambia por unidad (mensaje, público, campañas) está en Estrategia.`); });
+    .replace('Identidad, tono y recursos de cada unidad de negocio, listos para usar en contenidos y campañas.','Identidad, tono y recursos de la marca, listos para usar en contenidos y campañas.'); });
   V.bind=withMain(_b);
   // La unidad de negocio no tiene logo propio (usa el de la marca): se quita el campo del formulario de unidad
   const _bm=brandModal;

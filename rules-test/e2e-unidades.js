@@ -56,7 +56,7 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   ok(await p.evaluate(() => unitPillars('Cafelito Coffee House').includes('Hospitalidad')), 'cada unidad puede usar los pilares de la marca principal');
   // Marca: una sola identidad
   await p.evaluate(() => { S.brand = 0; location.hash = '#/app/marca/general'; }); await p.waitForSelector('#fbr');
-  const mt = await p.textContent('#root'); ok(/Marca · Cafelito/.test(mt) && !(await p.$('#newbrand')) && /misma para todas sus unidades/.test(mt), 'Marca muestra la identidad única de Cafelito, sin separar por unidad');
+  const mt = await p.textContent('#root'); ok(/Marca · Cafelito/.test(mt) && !(await p.$('#newbrand')), 'Marca muestra la identidad única de Cafelito, sin separar por unidad');
   ok(await p.evaluate(() => !!M().kits.__marca), 'la identidad quedó guardada como la de la marca principal');
   // Funnel: unidad y después objetivo
   await p.evaluate(() => { location.hash = '#/app/estrategia/funnel'; }); await p.waitForTimeout(300);

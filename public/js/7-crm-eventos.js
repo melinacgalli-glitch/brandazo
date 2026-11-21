@@ -59,7 +59,7 @@ function vEventos(){
    <div class="stat"><div class="l">Ganadas</div><div class="v">${all.filter(o=>o.stage==='ganada').length}</div><div class="d">${evMoney(sum(all.filter(o=>o.stage==='ganada')))}</div></div></div>`;
   const bar=`<div class="toolbar"><select class="select sm" id="evow" aria-label="Responsable"><option value="">Responsable: todos</option>${owners.map(o=>`<option ${o===EV.owner?'selected':''}>${esc(o)}</option>`).join('')}</select>
    <span class="small muted">Marca de las cotizaciones: <b style="color:var(--ink)">${esc(brand||'Sin definir')}</b></span>${evAdmin()?`<button class="btn btn-sm" id="evcfg">${ic('settings')} Configurar</button>`:''}<span class="grow"></span><span class="small muted">Tocá una tarjeta para ver la ficha o arrastrala a otra etapa</span></div>`;
-  if(!EV.ops.length) return stats+bar+`<div class="card empty"><div class="eico">${ic('mail')}</div><h3>Todavía no llegaron cotizaciones</h3><p class="muted small">Cuando alguien pida presupuesto en el cotizador de Cafelito Ambulante, aparece acá al instante, con su contacto y el presupuesto calculado.</p></div>`;
+  if(!EV.ops.length) return stats+bar+`<div class="card empty"><div class="eico">${ic('mail')}</div><h3>Todavía no llegaron cotizaciones</h3><p class="muted small">Las oportunidades que llegan desde tu web o que cargás a mano aparecen acá, con su contacto y su importe.</p></div>`;
   return stats+bar+`<div class="kanban">${EV_STAGES.map(([id,name])=>{ const items=all.filter(o=>o.stage===id);
     return `<section class="kcol" data-evstage="${id}" aria-label="${name}"><div class="kcol-h"><b>${name}<span class="badge">${items.length}</span></b><div class="small muted">${evMoney(sum(items))}</div></div><div class="kcol-b">
     ${items.map(o=>{ const t=evTs(o.nextFollowUpAt), lt=!['ganada','perdida'].includes(o.stage)&&t&&t.getTime()<now, ev=o.event||{};
@@ -151,7 +151,7 @@ function vContactosNube(){
   const all=Object.values(EV.contacts), q=evQ.toLowerCase();
   const list=all.filter(c=>(!evType||(evType==='Cliente'?evWon(c):!evWon(c)))&&(!q||((c.name||'')+(c.email||'')+(c.phoneDisplay||c.phoneRaw||'')).toLowerCase().includes(q))).sort((a,b)=>((evLast(b)&&evLast(b).toMillis())||0)-((evLast(a)&&evLast(a).toMillis())||0));
   const consent=all.filter(c=>c.marketingConsent&&c.marketingConsent.granted).length;
-  if(!all.length) return `<div class="card empty"><div class="eico">${ic('users')}</div><h3>Todavía no hay contactos</h3><p class="muted small">Cada persona que pide presupuesto en cafelito.com.ar queda acá como contacto, sin duplicarse aunque pida varias veces.</p></div>`;
+  if(!all.length) return `<div class="card empty"><div class="eico">${ic('users')}</div><h3>Todavía no hay contactos</h3><p class="muted small">Cada persona que te consulta o te compra queda acá como contacto, sin duplicarse aunque vuelva varias veces.</p></div>`;
   return `<div class="stat-grid"><div class="stat"><div class="l">Contactos</div><div class="v">${all.length}</div></div><div class="stat"><div class="l">Clientes</div><div class="v">${all.filter(evWon).length}</div><div class="d">con al menos una venta</div></div><div class="stat"><div class="l">Leads</div><div class="v">${all.filter(c=>!evWon(c)).length}</div><div class="d">todavía sin venta</div></div><div class="stat"><div class="l">Aceptan promociones</div><div class="v">${consent}</div><div class="d">de ${all.length}</div></div></div>
   <div class="toolbar"><label class="search-in">${ic('search')}<span class="sr">Buscar</span><input class="input" id="evq" placeholder="Buscar por nombre, email o teléfono" value="${esc(evQ)}"></label>
    <div class="seg">${[['','Todos'],['Lead','Leads'],['Cliente','Clientes']].map(([k,l])=>`<button data-evty="${k}" aria-pressed="${evType===k}">${l}</button>`).join('')}</div></div>
@@ -198,7 +198,7 @@ function bCrmNube(tab){
   const cloud=()=>!!(S.company&&S.company.cloud);
   const tabOf=tab=>CRM_NUBE_TABS.some(t=>t[0]===tab)?tab:'eventos';
   vCrm=function(tab){ if(!cloud()) return _v(tab); evListen(); const t=tabOf(tab);
-    const sub={eventos:'Cotizaciones de eventos que llegan desde cafelito.com.ar, en vivo.',contactos:'Las personas que pidieron presupuesto, sin duplicados.',actividades:'Tareas de seguimiento de las cotizaciones.'}[t];
+    const sub={eventos:'Oportunidades de venta y su seguimiento, etapa por etapa.',contactos:'Tus clientes y posibles clientes, sin duplicados.',actividades:'Las tareas de seguimiento del equipo.'}[t];
     return pageHead('CRM',sub,'')+subTabs('crm',CRM_NUBE_TABS,t)+(t==='eventos'?vEventos():t==='contactos'?vContactosNube():vActividadesNube()); };
   bCrm=function(tab){ if(!cloud()) return _b(tab); const t=tabOf(tab); if(t==='eventos') return bEventos(); bCrmNube(t); };
   VIEWS.crm.view=vCrm; VIEWS.crm.bind=bCrm;
