@@ -43,7 +43,7 @@ function evRefresh(){
 
 function vEventos(){
   const c=S.company;
-  if(!c.cloud) return emptyBlock('cloud','Cafelito Eventos está en la nube','Este tablero muestra las cotizaciones reales del sitio de Cafelito. Elegí una empresa guardada en la nube.','');
+  if(!c.cloud) return emptyBlock('cloud','Las oportunidades están en la nube','Este tablero muestra las oportunidades reales de tu empresa. Elegí una empresa guardada en la nube.','');
   evListen();
   if(!EV.loaded) return `<div class="card empty"><p class="muted">Cargando cotizaciones…</p></div>`;
   if(EV.err) return `<div class="alert alert-err">${ic('alert')}<div>${esc(EV.err)}</div></div>`;
@@ -128,7 +128,7 @@ function evFicha(id){
 function evConfig(){
   const st=EV.settings||{}, names=S.members.filter(m=>m.status==='Activo').map(m=>m.name||m.email), brands=S.brands.map(b=>b.name);
   const bopts=[...new Set([st.brand,...brands,'Cafelito Ambulante'].filter(Boolean))];
-  modal('Configurar Cafelito Eventos',`<div class="field"><label for="evb">Marca de las cotizaciones</label><select class="select" id="evb">${bopts.map(b=>`<option ${b===st.brand?'selected':''}>${esc(b)}</option>`).join('')}</select><span class="hint small muted">Con esta marca se guardan los contactos y oportunidades nuevos.</span></div>
+  modal('Configurar oportunidades',`<div class="field"><label for="evb">Marca de las cotizaciones</label><select class="select" id="evb">${bopts.map(b=>`<option ${b===st.brand?'selected':''}>${esc(b)}</option>`).join('')}</select><span class="hint small muted">Con esta marca se guardan los contactos y oportunidades nuevos.</span></div>
    <div class="field"><label for="evdo">Responsable por defecto</label><select class="select" id="evdo"><option value="">Sin asignar</option>${names.map(n=>`<option ${n===st.defaultOwner?'selected':''}>${esc(n)}</option>`).join('')}</select><span class="hint small muted">Recibe las cotizaciones nuevas y la tarea «Primer contacto».</span></div>
    <div class="field"><label for="evfh">Primer seguimiento (horas después de recibirla)</label><input class="input" id="evfh" type="number" min="1" max="168" value="${Number(st.followUpHours)||24}"><span class="err" role="alert"></span></div>`,
    `<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="evcok">Guardar</button>`);
@@ -140,7 +140,7 @@ function evConfig(){
 }
 
 /* ---------- Contactos y actividades reales (empresas en la nube) ---------- */
-const CRM_NUBE_TABS=[['eventos','Cafelito Eventos'],['contactos','Contactos'],['actividades','Actividades']];
+const CRM_NUBE_TABS=[['eventos','Oportunidades'],['contactos','Contactos'],['actividades','Actividades']];
 let evQ='', evType='';
 // Cliente: marcado así, o con al menos una venta (evento ganado o compra en la tienda)
 const evWon=c=>c.type==='Cliente'||(c.orderCount||0)>0||EV.ops.some(o=>o.contactId===c.id&&o.stage==='ganada');
