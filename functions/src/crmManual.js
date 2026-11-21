@@ -30,6 +30,7 @@ async function handleManual(req, deps) {
   if (!member.exists) return fail(403, 'NOT_MEMBER', 'No sos parte de esta empresa.');
   const by = member.data().name || user.name || user.email || 'Equipo';
   if (b.kind === 'order') return handleManualOrder(b, { deps, user, by, tenantRef });
+  if (b.kind === 'order-status') return handleOrderStatus(b, { deps, user, by, tenantRef });
   if (['subscription', 'enrollment', 'sub-status', 'enr-status'].includes(b.kind)) return require('./crmSales').handleSale(b, { deps, user, by, tenantRef });
 
   // Validación (mensajes para la pantalla)
@@ -160,4 +161,26 @@ async function handleManualOrder(b, { deps, user, by, tenantRef }) {
   return { status: 201, body: out };
 }
 
-module.exports = { handleManual, handleManualOrder, CHANNELS, EVENT_TYPES };
+/* Cambio de estado de una venta de la tienda hecho a mano: retirado, cancelado o devuelto (o volver a «por retirar»).
+   Cancelado o devuelto deja de contar como venta y se descuenta del cliente; queda en la historia con quién lo hizo. */
+async function handleOrderStatus(b, { deps, user, by, tenantRef }) {
+  const id = str(b.id, 120), status = str(b.status, 20);
+  if (!id || id.includes('/')) return fail(400, 'BAD_ID', 'Falta la venta.');
+  if (!['paid', 'picked_up', 'cancelled', 'refunded'].includes(status)) return fail(422, 'VALIDATION_FAILED', 'Estado no válido.', [{ field: 'status', issue: 'Estado no válido' }]);
+  const now = deps.now ? deps.now() : new Date(), at = deps.Timestamp.fromDate(now);
+  const ref = tenantRef.collection('orders').doc(id);
+  const out = await deps.db.runTransaction(async tx => {
+    const s = await tx.get(ref); if (!s.exists) return { missing: true };
+    const o = s.data(); if (o.status === status) return { same: true };
+    const was = !!o.counted, counted = status === 'paid' || status === 'picked_up';
+    const cRef = o.contactId ? tenantRef.collection('contacts').doc(o.contactId) : null, cSnap = cRef ? await tx.get(cRef) : null;
+    tx.update(ref, { status, counted, statusAt: at, updatedAt: at, history: [...(o.history || []), { status, at: now.toISOString(), eventId: 'manual', stale: false, by }].slice(-30) });
+    if (cSnap && cSnap.exists && was !== counted) tx.update(cRef, { orderCount: deps.FieldValue.increment(counted ? 1 : -1), orderSpentMinor: deps.FieldValue.increment(counted ? (o.totalMinor || 0) : -(o.totalMinor || 0)), updatedAt: at });
+    tx.set(tenantRef.collection('audit').doc(), { at, by: user.uid, byName: by, action: `venta-${status}`, orderId: id, contactId: o.contactId || null });
+    return { ok: true };
+  });
+  if (out.missing) return fail(404, 'NOT_FOUND', 'No se encontró la venta.');
+  return { status: 200, body: { id, status, unchanged: !!out.same } };
+}
+
+module.exports = { handleManual, handleManualOrder, handleOrderStatus, CHANNELS, EVENT_TYPES };

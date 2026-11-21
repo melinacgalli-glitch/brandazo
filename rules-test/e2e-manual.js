@@ -80,6 +80,15 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.fill('#slrows [data-sin]', 'Pistacho & Frambuesa'); await page.fill('#slrows [data-sp]', '63.000'); await page.click('#slok'); await page.waitForFunction(() => /Ya hay una venta/.test(document.querySelector('#layer').textContent), null, { timeout: 15000 }).catch(() => {});
   { const lt = await page.textContent('#layer'); ok(/Ya hay una venta con este n\.º de pago/.test(lt), 'no deja cargar dos veces la misma compra' + (/Ya hay una venta/.test(lt) ? '' : ' · ' + lt.replace(/\s+/g, ' ').slice(0, 400) + ' · ventas: ' + (await list('tenants/cafelito/orders')).length)); }
   await page.click('#layer .modal-foot [data-close]'); await page.waitForTimeout(200); if (await page.$('[data-discard]')) await page.click('[data-discard]');
+  // Retirar y cancelar una venta
+  await page.click('[data-shpick]'); await page.waitForFunction(() => /Por retirar\s*0/.test(document.querySelector('#root').textContent), null, { timeout: 15000 }).catch(() => {});
+  { const tr = await page.textContent('#root'); ok(/Por retirar\s*0/.test(tr) && /Retirado/.test(tr) && /Facturación\s*\$ 63\.000/.test(tr), '«Marcar como retirado» la pasa a Retirado y sigue sumando'); }
+  ok((await list('tenants/cafelito/orders'))[0].fields.status.stringValue === 'picked_up', 'el estado retirado queda guardado');
+  await page.click('[data-shop]'); await page.waitForSelector('[data-shst="cancelled"]'); await page.click('[data-shst="cancelled"]'); await page.waitForSelector('#shstok'); await page.click('#shstok');
+  await page.waitForFunction(() => /Pedidos pagados\s*0/.test(document.querySelector('#root').textContent), null, { timeout: 15000 }).catch(() => {});
+  ok(/Pedidos pagados\s*0/.test(await page.textContent('#root')), 'cancelar la venta la saca de la facturación');
+  await page.click('[data-shop]'); await page.waitForSelector('#layer .drawer'); ok(!(await page.$('[data-shst="picked_up"]')) && /Cancelado/.test(await page.textContent('#layer')), 'la ficha muestra Cancelado y la historia');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(200);
   // Ficha del contacto: Cliente de Cakes, con su compra y «Registrar venta»
   await page.goto(BASE + '#/app/crm/contactos'); await page.waitForSelector('[data-evc]'); const lid = (await list('tenants/cafelito/contacts')).find(d => d.fields.name.stringValue === 'Luisina Magris').name.split('/').pop();
   await page.click(`[data-evc="${lid}"]`); await page.waitForSelector('#layer .drawer'); await page.waitForFunction(() => /Compras en la tienda \(1\)/.test(document.querySelector('#layer').textContent), null, { timeout: 15000 }).catch(() => {});

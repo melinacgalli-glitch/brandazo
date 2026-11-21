@@ -59,7 +59,7 @@ function vTienda(){
   const row=o=>{ const [sl,sc]=SH_ST[o.status]||[o.status,'']; const k=orderCampaign(o), pk=(o.pickup||{}).date, late=o.status==='paid'&&pk&&pk<today;
     return `<button type="button" class="sh-row" data-shop="${esc(o.id)}"><span class="sh-main"><b>${esc(o.customerName||'Sin nombre')}</b><span class="small muted">${esc(shItems(o))}</span></span>
       <span class="sh-total mono">${evMoney(o.totalMinor)}</span>
-      <span class="sh-meta small"><span class="badge ${sc}">${sl}</span><span${late?' style="color:var(--warning)"':''}>Retira: ${pk?evDate(pk):'sin fecha'}</span><span class="muted">${k?esc(k.name):'Sin campaña'}</span><span class="muted">N.º ${esc(o.orderId)} · pagado ${o.paidAt?evWhen(o.paidAt):'—'}</span></span></button>`; };
+      <span class="sh-meta small"><span class="badge ${sc}">${sl}</span><span${late?' style="color:var(--warning)"':''}>Retira: ${pk?evDate(pk):'sin fecha'}</span><span class="muted">${k?esc(k.name):'Sin campaña'}</span><span class="muted">N.º ${esc(o.orderId)} · pagado ${o.paidAt?evWhen(o.paidAt):'—'}</span>${o.status==='paid'?`<span class="btn btn-sm btn-primary" role="button" tabindex="0" data-shpick="${esc(o.id)}">${ic('check')} Marcar como retirado</span>`:''}</span></button>`; };
   const table=list=>`<div class="sh-list">${list.map(row).join('')}</div>`;
   return `<div class="toolbar" style="margin-bottom:16px"><div class="field" style="margin:0"><label for="shm" class="sr">Mes</label><select class="select" id="shm">${months.map(m=>`<option value="${m}" ${m===SH.month?'selected':''}>${shMonthName(m)}</option>`).join('')}</select></div><span class="small muted">Las ventas cuentan en el mes en que se pagaron.</span></div>
    <div class="stat-grid">${stat('Pedidos pagados',st.n,shMonthName(SH.month),'st-info')}${stat('Facturación',st.n?evMoney(st.total):'<span class="muted">$ 0</span>','IVA incluido','st-ok')}${stat('Ticket promedio',st.ticket==null?'<span class="muted">Sin datos</span>':evMoney(st.ticket),'por pedido','st-ok')}${stat('Por retirar',toPick.length,toPick.some(o=>(o.pickup||{}).date&&o.pickup.date<today)?'hay retiros atrasados':'pagados sin retirar','st-warn')}</div>
@@ -78,8 +78,13 @@ function shOrder(id){
     <section class="card"><h3 style="margin-bottom:12px">Cliente y retiro</h3><dl class="kv"><dt>Cliente</dt><dd>${o.contactId&&typeof evContacto==='function'?`<a href="#" data-shc="${esc(o.contactId)}">${esc(o.customerName||'Sin nombre')}</a>`:esc(o.customerName||'Sin nombre')}</dd><dt>Retiro</dt><dd>${p.date?evDate(p.date):'<span class="muted">Sin fecha</span>'}${p.timeSlot?' · '+esc(p.timeSlot):''}${p.place?' · '+esc(p.place):''}</dd>
      <dt>Pago</dt><dd>${o.paidAt?evWhen(o.paidAt):'<span class="muted">Sin datos</span>'}${pay.paymentId?` · Mercado Pago n.º ${esc(pay.paymentId)}`:''}</dd></dl></section>
     <section class="card"><h3 style="margin-bottom:12px">Origen</h3><dl class="kv"><dt>Campaña</dt><dd>${k?`<a href="#/app/campanas/${k.id}">${esc(k.name)}</a>`:a.utmCampaign?`<span class="muted">Código «${esc(a.utmCampaign)}» sin campaña en Brandazo</span>`:'<span class="muted">Sin campaña</span>'}</dd><dt>Fuente</dt><dd>${esc(a.utmSource||'Sin datos')}${a.utmMedium?' · '+esc(a.utmMedium):''}</dd></dl></section>
-    <section class="card"><h3 style="margin-bottom:12px">Historia</h3>${(o.history||[]).map(h=>`<div class="small" style="padding:4px 0">${esc(H[h.status]||h.status)} · ${evWhen(new Date(h.at))}${h.stale?' <span class="muted">(aviso viejo, no cambió el estado)</span>':''}</div>`).join('')}</section>
+    <section class="card"><h3 style="margin-bottom:12px">Estado</h3><p class="small" style="margin-bottom:8px">Ahora: <span class="badge ${sc}">${sl}</span></p><div style="display:flex;gap:8px;flex-wrap:wrap">
+     ${o.status==='paid'?`<button class="btn btn-primary btn-sm" data-shst="picked_up">${ic('check')} Marcar como retirado</button>`:''}${o.status==='picked_up'?`<button class="btn btn-sm" data-shst="paid">Volver a «por retirar»</button>`:''}
+     ${o.status==='paid'||o.status==='picked_up'?`<button class="btn btn-sm" data-shst="cancelled">Cancelar</button><button class="btn btn-sm" data-shst="refunded">Registrar devolución</button>`:''}</div>
+     <p class="small muted" style="margin-top:8px">Cancelada o devuelta deja de sumar a la facturación y a los objetivos.</p></section>
+        <section class="card"><h3 style="margin-bottom:12px">Historia</h3>${(o.history||[]).map(h=>`<div class="small" style="padding:4px 0">${esc(H[h.status]||h.status)} · ${evWhen(new Date(h.at))}${h.stale?' <span class="muted">(aviso viejo, no cambió el estado)</span>':''}</div>`).join('')}</section>
    </div>`);
+  $$('[data-shst]').forEach(x=>x.onclick=()=>shSetStatus(o,x.dataset.shst));
   $$('[data-shc]').forEach(x=>x.onclick=e=>{ e.preventDefault(); closeLayer(); if(typeof evListen==='function') evListen(); setTimeout(()=>evContacto(x.dataset.shc),EV.contactsLoaded?0:1200); });
 }
 (function(){
@@ -181,3 +186,17 @@ const krLive=o=>({...o,krs:(o.krs||[]).map(k=>{ const v=krAuto(k,o); return v==n
       return orig(ev); };
   };
 })();
+
+/* Cambiar el estado de una venta (retirado, cancelado, devuelto). Lo guarda el servidor. */
+async function shSetStatus(o,status){
+  const L={picked_up:'Marcar como retirado',paid:'Volver a «por retirar»',cancelled:'Cancelar la venta',refunded:'Registrar la devolución'}[status];
+  const go=async btn=>{ if(btn){ btn.classList.add('is-loading'); btn.disabled=true; }
+    try{ const r=await fetch(MAN_API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await C.user.getIdToken()},body:JSON.stringify({tenantId:S.company.tid,kind:'order-status',id:o.id,status})});
+      const j=await r.json().catch(()=>({})); if(!r.ok){ toast((j.error&&j.error.message)||'No se pudo guardar.'); if(btn){ btn.classList.remove('is-loading'); btn.disabled=false; } return; }
+      closeLayer(); render(); toast({picked_up:`Listo: ${o.customerName||'la venta'} ya retiró`,paid:'Volvió a «por retirar»',cancelled:'Venta cancelada',refunded:'Devolución registrada'}[status]); }
+    catch(_){ if(btn){ btn.classList.remove('is-loading'); btn.disabled=false; } toast('Sin conexión: no se guardó.'); } };
+  if(status==='picked_up'||status==='paid') return go(null);
+  modal(L+'?',`<p>${esc(o.customerName||'')} · ${evMoney(o.totalMinor)}. Deja de sumar a la facturación, a la campaña y a los objetivos.</p>`,`<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="shstok">${L}</button>`);
+  $('#shstok').onclick=e=>go(e.currentTarget);
+}
+document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-shpick]'); if(!b) return; e.preventDefault(); e.stopPropagation(); const o=SH.orders.find(x=>x.id===b.dataset.shpick); if(o) shSetStatus(o,'picked_up'); },true);
