@@ -70,6 +70,13 @@ exports.recordatoriosSeguimiento = onSchedule({ schedule: '0 8 * * *', timeZone:
   console.log('[recordatorios]', JSON.stringify(r.map(x => ({ ...x, email: x.email ? x.email.replace(/^(.).*@/, '$1…@') : '' }))));
 });
 
+// Planificaciones de contenido: recordatorio diario a quien produce y aviso a quien aprueba cuando está todo terminado.
+// Corre cada hora de 8 a 21 (Córdoba): el recordatorio sale una vez por día; el aviso de «terminado», una sola vez.
+exports.avisosPlanificacion = onSchedule({ schedule: '0 8-21 * * *', timeZone: 'America/Argentina/Cordoba', region: 'southamerica-east1', secrets: [RESEND], timeoutSeconds: 300, memory: '256MiB', retryCount: 1 }, async () => {
+  const r = await require('./src/planAlerts').sendPlanAlerts({ db: getFirestore(), Timestamp, fetch: globalThis.fetch, now: () => Date.now(), resend: reminders.parseCfg(RESEND.value()) });
+  console.log('[planificaciones]', JSON.stringify(r.map(x => ({ ...x, to: x.to ? x.to.replace(/^(.).*@/, '$1…@') : undefined, sent: x.sent ? x.sent.replace(/^(.).*@/, '$1…@') : undefined }))));
+});
+
 // Mails de cuenta con la marca Brandazo (recuperar contraseña, verificar email). Hosting: /api/v1/cuenta/**
 exports.cuenta = onRequest({ region: 'southamerica-east1', secrets: [RESEND], cors: [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/], maxInstances: 3, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
   await account.handleAccount(req, res, { db: getFirestore(), Timestamp, auth: getAuth(), fetch: globalThis.fetch, now: () => Date.now(),

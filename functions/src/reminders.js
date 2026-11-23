@@ -34,7 +34,7 @@ function emailHtml({ who, company, items, today }) {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#FFFFFF;border-radius:12px;padding:24px">
    <tr><td style="font:800 22px Arial,sans-serif;color:#0E0E10"><span style="color:#FF2D87">/</span>brandazo</td></tr>
    <tr><td style="padding-top:16px;font:600 20px/26px Arial,sans-serif;color:#0E0E10">Hola ${esc(who)}, ${items.length === 1 ? 'hoy tenés 1 seguimiento' : `hoy tenés ${items.length} seguimientos`}${late ? ` (${late} vencido${late > 1 ? 's' : ''})` : ''}</td></tr>
-   <tr><td style="padding:4px 0 8px;font:14px/20px Arial,sans-serif;color:#5C5C66">${esc(company)} · CRM · Cafelito Eventos</td></tr>
+   <tr><td style="padding:4px 0 8px;font:14px/20px Arial,sans-serif;color:#5C5C66">${esc(company)} · CRM · Oportunidades</td></tr>
    ${rows}
    <tr><td style="padding-top:16px;border-top:1px solid #E4E4E7;font:12px/18px Arial,sans-serif;color:#5C5C66">Te llega porque sos responsable de estas cotizaciones en Brandazo. Para cambiar la fecha o lo que hay que hacer, abrí la ficha y guardá el nuevo seguimiento.</td></tr>
   </table></td></tr></table></body></html>`;
