@@ -100,7 +100,9 @@ async function handleShopOrder(req, deps) {
       const contact = contactSnap && contactSnap.exists ? contactSnap.data() : null;
       if (!contact) match = 'new';
 
-      const stale = prev && prev.statusAt && prev.statusAt.toMillis() > statusAt.getTime();
+      // Una venta cargada a mano que todavía no recibió avisos de la web nunca hace «viejo» al aviso de la web
+      const fromManual = prev && prev.source && prev.source.manual && !prev.manualMergedAt;
+      const stale = !fromManual && prev && prev.statusAt && prev.statusAt.toMillis() > statusAt.getTime();
       const status = stale ? prev.status : body.status;
       const wasCounted = !!(prev && prev.counted), counted = COUNTED.has(status);
       const paid = paidAt || (prev && prev.paidAt ? prev.paidAt.toDate() : null);

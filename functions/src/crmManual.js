@@ -31,6 +31,7 @@ async function handleManual(req, deps) {
   const by = member.data().name || user.name || user.email || 'Equipo';
   if (b.kind === 'order') return handleManualOrder(b, { deps, user, by, tenantRef });
   if (b.kind === 'order-status') return handleOrderStatus(b, { deps, user, by, tenantRef });
+  if (['auto-save', 'auto-test', 'coupon-check', 'coupon-redeem'].includes(b.kind)) return require('./automations').handleAuto(b, { deps, user, by, tenantRef, role: member.data().role });
   if (['subscription', 'enrollment', 'sub-status', 'enr-status'].includes(b.kind)) return require('./crmSales').handleSale(b, { deps, user, by, tenantRef });
 
   // Validación (mensajes para la pantalla)
