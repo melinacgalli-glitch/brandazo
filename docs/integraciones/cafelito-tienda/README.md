@@ -60,6 +60,7 @@ La tienda de Cafelito Cakes (carrito + pago con Mercado Pago) le avisa a Brandaz
 | `attribution` | No (muy recomendado) | `utmSource`, `utmMedium`, `utmCampaign`, `utmContent`, `utmTerm`, `fbclid`, `gclid`, `landingPage`, `capturedAt`. |
 | `consent` | No | `marketing` (true/false), `text` (texto exacto de la casilla), `capturedAt`. |
 | `discountMinor`, `notes`, `source` | No | Descuento, dedicatoria/aclaraciones, página del checkout. |
+| `coupon` | Si se usó un código | `{"code":"GRACIAS-7KQ4","discountMinor":630000}`. Ver `codigos-descuento.md`. |
 
 **Mandar siempre `payment.paymentId`** (el n.º de pago de Mercado Pago): mientras la integración no esté lista, Melina carga a mano las compras con ese número, y cuando llegue el aviso de la web Brandazo actualiza esa misma venta en lugar de contarla dos veces.
 

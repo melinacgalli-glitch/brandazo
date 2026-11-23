@@ -77,13 +77,15 @@ async function handleShopOrder(req, deps) {
     let orderRef = tenantRef.collection('orders').doc(body.orderId);
     const payId = body.payment && body.payment.paymentId ? String(body.payment.paymentId) : null;
     const manualQ = payId ? tenantRef.collection('orders').where('payment.paymentId', '==', payId).limit(2) : null;
+    const couponCode = body.coupon && body.coupon.code ? String(body.coupon.code).trim().toUpperCase() : null;
+    const couponRef = couponCode ? tenantRef.collection('coupons').doc(couponCode) : null;
     const phoneRef = phone ? tenantRef.collection('contactsByPhone').doc(phone.key) : null;
     const mail = emailKey(body.customer.email);
     const mailRef = mail ? tenantRef.collection('contactsByEmail').doc(mail) : null;
     const settingsRef = tenantRef.collection('settings').doc('cafelito-tienda');
 
     const result = await deps.db.runTransaction(async tx => {
-      let [idem, orderSnap, byPhone, byMail, settingsSnap, manual] = await Promise.all([tx.get(idemRef), tx.get(orderRef), phoneRef ? tx.get(phoneRef) : null, mailRef ? tx.get(mailRef) : null, tx.get(settingsRef), manualQ ? tx.get(manualQ) : null]);
+      let [idem, orderSnap, byPhone, byMail, settingsSnap, manual, cSnap] = await Promise.all([tx.get(idemRef), tx.get(orderRef), phoneRef ? tx.get(phoneRef) : null, mailRef ? tx.get(mailRef) : null, tx.get(settingsRef), manualQ ? tx.get(manualQ) : null, couponRef ? tx.get(couponRef) : null]);
       // Venta cargada a mano antes con el mismo n.º de pago: se actualiza esa (no se duplica)
       if (!orderSnap.exists && manual) { const m = manual.docs.find(d => d.id !== body.orderId && (d.data().source || {}).manual); if (m) { orderRef = m.ref; orderSnap = m; } }
       if (idem.exists) { const d = idem.data(); return d.bodyHash !== bodyHash ? { conflict: true } : { replay: d.response }; }
@@ -108,6 +110,15 @@ async function handleShopOrder(req, deps) {
       const paid = paidAt || (prev && prev.paidAt ? prev.paidAt.toDate() : null);
       const attribution = body.attribution || (prev && prev.attribution) || null;
       const historyItem = { status: body.status, at: body.statusAt, eventId: body.eventId, stale: !!stale };
+      // Código de descuento: se canjea cuando llega el pago (una sola vez; si no sirve, el pedido se guarda igual con un aviso)
+      let couponInfo = (prev && prev.coupon) || null;
+      if (couponRef && !stale) {
+        const cp = cSnap && cSnap.exists ? cSnap.data() : null, paidDay = (paidAt ? paidAt.toISOString() : now.toISOString()).slice(0, 10);
+        let st = !cp ? 'COUPON_NOT_FOUND' : cp.status === 'used' && cp.orderUsed !== orderRef.id ? 'COUPON_ALREADY_USED' : cp.expires < paidDay && !(cp.status === 'used' && cp.orderUsed === orderRef.id) ? 'COUPON_EXPIRED' : null;
+        if (st) warnings.push({ code: st, field: 'coupon.code', message: st === 'COUPON_NOT_FOUND' ? 'El código no existe en Brandazo.' : st === 'COUPON_ALREADY_USED' ? 'El código ya se había usado en otra compra.' : 'El código estaba vencido.' });
+        else if (COUNTED.has(body.status) && cp.status !== 'used') tx.update(couponRef, { status: 'used', usedAt: at, usedDate: paidDay, usedWhere: 'web', usedBy: `integración:${keyId}`, orderUsed: orderRef.id, saleAmountMinor: body.totalMinor });
+        couponInfo = { code: couponCode, discountMinor: body.coupon.discountMinor || null, valid: !st, warning: st || null };
+      }
       const response = { status: prev ? (stale ? 'stale' : 'updated') : 'created', orderId: body.orderId, receivedAt: now.toISOString(), order: { status, counted }, contact: { id: contactRef.id, match }, warnings };
 
       tx.set(orderRef, {
@@ -121,6 +132,7 @@ async function handleShopOrder(req, deps) {
         payment: body.payment || (prev && prev.payment) || null,
         attribution, utmCampaign: attribution && attribution.utmCampaign ? String(attribution.utmCampaign).trim().toLowerCase() : null,
         source: body.source || (prev && prev.source) || null, notes: body.notes || (prev && prev.notes) || '',
+        coupon: couponInfo,
         warnings: warnings.map(w => w.code),
         history: [...((prev && prev.history) || []), historyItem].slice(-30),
         firstReceivedAt: (prev && prev.firstReceivedAt) || at, updatedAt: at

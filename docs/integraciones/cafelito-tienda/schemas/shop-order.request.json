@@ -296,6 +296,28 @@
       "type": "string",
       "maxLength": 1000,
       "description": "Dedicatoria o aclaraciones del pedido."
+    },
+    "coupon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code"
+      ],
+      "description": "Código de descuento que la persona usó en esta compra (por ejemplo los que manda Brandazo: GRACIAS-7KQ4). Mandarlo en el aviso «paid»: Brandazo lo marca como usado en ese momento. Si no es válido, el pedido se guarda igual y la respuesta trae un aviso (COUPON_*).",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40,
+          "pattern": "^[A-Za-z0-9-]+$"
+        },
+        "discountMinor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000000000,
+          "description": "Descuento aplicado por el código, en centavos."
+        }
+      }
     }
   }
 }

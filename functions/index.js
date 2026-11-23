@@ -31,6 +31,10 @@ exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KE
     const out = await availability.handleAvailability(req, { db: getFirestore(), keys: loadKeys(INTEGRATION_KEYS.value()), now: () => new Date() });
     res.set(out.headers || {}).status(out.status).json(out.body); return;
   }
+  if (/\/integrations\/cafelito\/coupons\/check$/.test(path)) { // la web consulta si un código de descuento sirve
+    const out = await require('./src/couponApi').handleCouponCheck(req, { db: getFirestore(), Timestamp, keys: loadKeys(INTEGRATION_KEYS.value()) });
+    res.set(out.headers || {}).status(out.status).json(out.body); return;
+  }
   if (/\/crm\/manual$/.test(path)) { // carga manual de contactos y pedidos de presupuesto (miembros con sesión)
     const out = await handleManual(req, { db: getFirestore(), FieldValue, Timestamp, verifyIdToken: t => getAuth().verifyIdToken(t), fetch: globalThis.fetch, resend: reminders.parseCfg(RESEND.value()) });
     res.status(out.status).json(out.body); return;
