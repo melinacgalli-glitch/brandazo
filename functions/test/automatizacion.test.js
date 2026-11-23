@@ -32,7 +32,7 @@ test('al día siguiente del retiro: un mail a la primera compra, con código, re
   const m = mailer(); const r = await run(m, '2026-11-25', 10);
   assert.strictEqual(m.sent.length, 1, JSON.stringify(r)); const b = m.sent[0];
   assert.deepStrictEqual(b.to, ['cata@example.com']); assert.strictEqual(b.from, 'Cafelito <avisos@brandazo.com.ar>'); assert.strictEqual(b.reply_to, 'administracion@cafelito.co');
-  assert.match(b.subject, /Gracias por tu primera torta, Catalina/); assert.match(b.html, /¡Hola, Catalina!/); assert.match(b.html, /<b>Cafelito Cakes<\/b>/);
+  assert.strictEqual(b.subject, '¡Cafelito tiene un regalo especial para vos! 🎁'); assert.match(b.html, /¡Hola, Catalina!/); assert.match(b.html, /<b>Cafelito Cakes<\/b>/);
   const code = b.html.match(/GRACIAS-[A-Z0-9]{4}/)[0]; assert.match(b.html, /Válido hasta el 25\/12\/2026/);
   const c = (await T().collection('coupons').doc(code).get()).data(); assert.strictEqual(c.contactId, 'cat'); assert.strictEqual(c.expires, '2026-12-25'); assert.strictEqual(c.status, 'active');
   assert.strictEqual((await T().collection('autoSends').doc('primera-compra_sin').get()).data().skipped, 'sin email');

@@ -7,7 +7,7 @@
    ===================================================================== */
 const AU={ tid:null, unsubs:[], cfg:null, sends:[], coupons:[], loaded:0 };
 const AU_DEF={ enabled:false, unit:'Cafelito Cakes', fromName:'Cafelito', replyTo:'', sendHour:10, pct:10, validDays:30, prefix:'GRACIAS',
-  subject:'¡Gracias por tu primera torta, {{nombre}}! Te dejamos un regalo',
+  subject:'¡Cafelito tiene un regalo especial para vos! 🎁',
   body:'¡Hola, {{nombre}}!\n\nGracias por elegir **Cafelito Cakes** para ser parte de tu celebración. Esperamos que hayas disfrutado tu torta tanto como nosotros disfrutamos preparándola.\n\nNos encanta acompañarte en esos momentos especiales. Cada torta que hacemos tiene mucho de lo que nos apasiona: sabores únicos, dedicación y amor por los detalles.\n\nY como queremos volver a verte, tenemos un regalo para vos: **¡un 10% de descuento!** Podés usarlo en tu próximo pedido de tortas o para disfrutar de lo que más te guste en **Cafelito Coffee House**.\n\n{{regalo}}\n\n**P. D.: ¿Qué te pareció tu torta?** Nos encantaría conocer tu opinión. ¡Podés responder directamente a este mail!\n\nUn abrazo,\n**El equipo de Cafelito**' };
 const auCloud=()=>!!(S.company&&S.company.cloud&&typeof fbDb!=='undefined'&&fbDb);
 function auListen(){
