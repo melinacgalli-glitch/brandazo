@@ -1036,3 +1036,6 @@ input[type=date],input[type=time]{cursor:pointer}
 
 /* Contacto cargado a mano: unidades de negocio */
 .unit-checks{display:flex;flex-wrap:wrap;gap:8px 16px}
+
+/* Subida de archivos: al arrastrar encima */
+.upload.drop{border-color:var(--magenta);background:var(--magenta-soft)}

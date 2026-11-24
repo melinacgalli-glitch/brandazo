@@ -18,6 +18,13 @@ service firebase.storage {
       allow delete: if member(t);
     }
 
+    // Archivos de cada contenido (imágenes, videos, documentos): los miembros los ven, suben y borran
+    match /tenants/{t}/contenidos/{contenido}/{archivo} {
+      allow read: if member(t);
+      allow create, update: if member(t) && request.resource.size < 100 * 1024 * 1024 && okType();
+      allow delete: if member(t);
+    }
+
     // Logo de la empresa: lo ven los miembros, lo cambian Dueño o Admin
     match /tenants/{t}/empresa/{archivo} {
       allow read: if member(t);

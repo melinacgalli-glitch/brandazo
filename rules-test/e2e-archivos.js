@@ -37,6 +37,19 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.click('#layer .modal-foot button[data-close]'); await page.waitForTimeout(1500);
   await page.waitForSelector('.lib', { timeout: 8000 }).catch(async () => console.log('   pantalla:', page.url(), (await page.evaluate(() => document.querySelector('#root').innerText)).slice(-400).replace(/\n/g, ' | '), '· capa:', await page.evaluate(() => document.querySelector('#layer').children.length), errs));
   const t = await page.textContent('.lib'); ok(/foto barra\.png/.test(t) && /Manual de marca\.pdf/.test(t) && /Fotos/.test(t) && /Documentos/.test(t), 'la biblioteca muestra los archivos con su categoría automática');
+  // Archivos de un contenido (planificación / contenidos)
+  await page.keyboard.press('Escape').catch(() => {});
+  await page.evaluate(() => { const c = { id: 'cont1', title: 'Reel de prueba', format: 'Reel', channel: 'Instagram', brand: S.brands[0].name, status: 'Borrador', campaign: '', objective: '', owner: S.user.name, date: '2026-12-01', time: '10:00', copy: '', hashtags: '', cta: '', files: [], comments: [] }; M().contents.push(c); persist(); contentEditor(M().contents.find(x => x.id === 'cont1')); });
+  await page.waitForSelector('#addfile');
+  ok(!/biblioteca de marca/.test(await page.textContent('#addfile')) && /tocá para elegirlos/.test(await page.textContent('#addfile')), 'el recuadro de archivos dice lo que hace (sin promesas falsas)');
+  const [fc3] = await Promise.all([page.waitForEvent('filechooser'), page.click('#addfile')]); await fc3.setFiles([path.join(dir, 'foto barra.png')]);
+  await page.waitForFunction(() => /foto barra\.png/.test((document.querySelector('#files') || {}).textContent || ''), null, { timeout: 20000 }).catch(() => {});
+  ok(/foto barra\.png/.test(await page.textContent('#files')) && !!(await page.$('#files a[href*="contenidos"]')), 'la imagen se sube de verdad y aparece con su link');
+  ok((await objs()).some(n => /contenidos\/cont1\/\d+-foto-barra\.png$/.test(n)), 'el archivo quedó en la carpeta del contenido');
+  await page.click('#layer [data-act="save"], #layer #csave, #layer .dr-foot .btn-primary'); await page.waitForTimeout(1500);
+  const saved = await page.evaluate(() => (M().contents.find(x => x.id === 'cont1') || {}).files || []);
+  ok(saved.length === 1 && /^https?:/.test(saved[0].url) && saved[0].t === 'image', 'al guardar, el contenido conserva el archivo: ' + JSON.stringify(saved.map(f => f.n)));
+  await page.keyboard.press('Escape').catch(() => {});
   // persistencia
   await page.reload(); await page.waitForSelector('.app', { timeout: 20000 }); await page.evaluate(() => { S.brand = 0; render(); }); await page.goto(BASE + '#/app/marca/biblioteca'); await page.waitForSelector('.lib', { timeout: 15000 });
   ok(/Manual de marca\.pdf/.test(await page.textContent('.lib')), 'al recargar los archivos siguen ahí');

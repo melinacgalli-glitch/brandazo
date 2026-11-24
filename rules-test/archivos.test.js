@@ -49,3 +49,13 @@ test('logo de la empresa: Dueño/Admin lo cambian, el resto del equipo solo lo v
   await assertFails(deleteObject(ref(v, 'tenants/cafelito/empresa/1-logo.png')));
   await assertSucceeds(deleteObject(ref(d, 'tenants/cafelito/empresa/1-logo.png')));
 });
+
+test('archivos de contenidos: el equipo sube videos hasta 100 MB; otra empresa no ve', async () => {
+  const s = st('u-ventas', 'ventas@cafelito.test');
+  await assertSucceeds(uploadBytes(ref(s, 'tenants/cafelito/contenidos/c1/1-reel.mp4'), png, { contentType: 'video/mp4' }));
+  await assertSucceeds(uploadBytes(ref(s, 'tenants/cafelito/contenidos/c1/2-foto.jpg'), png, { contentType: 'image/jpeg' }));
+  await assertSucceeds(getBytes(ref(s, 'tenants/cafelito/contenidos/c1/2-foto.jpg')));
+  await assertFails(uploadBytes(ref(s, 'tenants/cafelito/contenidos/c1/3-x.exe'), png, { contentType: 'application/x-msdownload' }));
+  await assertFails(getBytes(ref(st('u-ext', 'otra@empresa.test'), 'tenants/cafelito/contenidos/c1/2-foto.jpg')));
+  await assertSucceeds(deleteObject(ref(s, 'tenants/cafelito/contenidos/c1/1-reel.mp4')));
+});
