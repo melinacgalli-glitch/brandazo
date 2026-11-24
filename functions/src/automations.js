@@ -32,13 +32,15 @@ function cleanCfg(c) {
 }
 /* Texto → HTML: párrafos por línea en blanco, **negrita**, {{nombre}}, {{regalo}} (cupón con el código).
    Diseño con la identidad de la marca (logo y web de Marca → Cafelito, color terracota del logo). */
-const C = { bg: '#F6EFEA', card: '#FFFFFF', ink: '#3A2622', soft: '#7A5F58', accent: '#A0665E', accentDark: '#7E4B44', tint: '#F8ECE8', line: '#EADBD4' };
+// Paleta de cafelito.com.ar: crema, terracota (logo y botones) y verde (títulos en cursiva)
+const C = { bg: '#F8F4F0', card: '#FFFFFF', ink: '#3B2E2A', soft: '#7D6A64', accent: '#A4675F', accentDark: '#8A524B', green: '#2F5D45', tint: '#F6ECE7', line: '#EADFD8' };
 function renderMail(cfg, { name, code, expires, logoUrl, web }) {
-  const nm = first(name) || 'hola', serif = "Georgia,'Times New Roman',serif", sans = 'Arial,Helvetica,sans-serif';
+  const nm = first(name) || 'hola', serif = "'Cormorant Garamond',Georgia,'Times New Roman',serif", sans = "'Jost','Helvetica Neue',Helvetica,Arial,sans-serif";
+  const ig = cfg.instagram || 'cafelito.co';
   const site = web ? (/^https?:\/\//.test(web) ? web : 'https://' + web) : '';
   const gift = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 22px"><tr><td style="background:${C.tint};border:2px dashed ${C.accent};border-radius:16px;padding:22px 18px" align="center">
-    <div style="font:700 12px ${sans};letter-spacing:.18em;text-transform:uppercase;color:${C.accent}">Tu regalo</div>
-    <div style="font:700 40px/44px ${serif};color:${C.accentDark};margin:6px 0 2px">${cfg.pct}% OFF</div>
+    <div style="display:inline-block;background:${C.accent};color:#FFFFFF;border-radius:999px;padding:5px 14px;font:600 11px ${sans};letter-spacing:.16em;text-transform:uppercase">Tu regalo</div>
+    <div style="font:italic 600 46px/50px ${serif};color:${C.green};margin:10px 0 2px">${cfg.pct}% off</div>
     <div style="font:15px/22px ${sans};color:${C.ink}">en tu próxima compra en Cafelito</div>
     <div style="margin:16px auto 6px;display:inline-block;background:${C.card};border-radius:10px;padding:10px 22px;font:700 24px/30px 'Courier New',monospace;letter-spacing:.12em;color:${C.ink};border:1px solid ${C.line}">${esc(code)}</div>
     <div style="font:13px/20px ${sans};color:${C.soft};margin-top:6px">Válido hasta el <b style="color:${C.ink}">${esc(fmtDate(expires))}</b> · un solo uso · es solo para vos</div>
@@ -46,13 +48,14 @@ function renderMail(cfg, { name, code, expires, logoUrl, web }) {
       <td style="font:13px/18px ${sans};color:${C.ink};padding:0 10px;border-right:1px solid ${C.line}"><b>En el local</b><br>mostralo en caja</td>
       <td style="font:13px/18px ${sans};color:${C.ink};padding:0 10px"><b>En la web</b><br>escribilo al comprar</td></tr></table>
   </td></tr></table>`;
-  const CTA = site ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:-6px 0 24px"><tr><td align="center"><table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:${C.accent};border-radius:999px"><a href="${esc(site)}" style="display:inline-block;padding:13px 28px;font:700 15px ${sans};color:#FFFFFF;text-decoration:none">Hacé tu próximo pedido</a></td></tr></table></td></tr></table>` : '';
+  const pill = (href, label, solid) => `<tr><td align="center" style="padding:5px 0"><a href="${esc(href)}" style="display:inline-block;white-space:nowrap;min-width:220px;text-align:center;padding:13px 26px;border-radius:999px;font:600 15px ${sans};text-decoration:none;${solid ? `background:${C.accent};color:#FFFFFF;border:1.5px solid ${C.accent}` : `background:transparent;color:${C.green};border:1.5px solid ${C.green}`}">${label}</a></td></tr>`;
+  const CTA = site ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:-4px 0 26px"><tr><td align="center"><table role="presentation" cellspacing="0" cellpadding="0">${pill(site, 'Hacé tu próximo pedido', true)}${pill('https://www.instagram.com/' + ig, 'Seguinos en Instagram', false)}</table></td></tr></table>` : '';
   const inline = t => esc(t).replace(/\{\{nombre\}\}/g, esc(nm)).replace(/\*\*(.+?)\*\*/g, `<b style="color:${C.ink}">$1</b>`).replace(/\n/g, '<br>');
   let usedGift = false;
   const blocks = cfg.body.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
   const paras = blocks.map((p, k) => {
     if (p === '{{regalo}}') { usedGift = true; return gift + CTA; }
-    if (k === 0 && p.length < 60) return `<h1 style="margin:0 0 16px;font:700 30px/36px ${serif};color:${C.ink}">${inline(p)}</h1>`;
+    if (k === 0 && p.length < 60) return `<h1 style="margin:0 0 18px;font:italic 600 38px/42px ${serif};color:${C.green}">${inline(p)}</h1>`;
     if (/^\*\*P\. ?D\./.test(p)) return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:4px 0 18px"><tr><td style="border-left:3px solid ${C.accent};padding:4px 0 4px 14px;font:16px/25px ${sans};color:${C.ink}">${inline(p)}</td></tr></table>`;
     return `<p style="margin:0 0 16px;font:16px/26px ${sans};color:${C.ink}">${inline(p)}</p>`;
   });
@@ -62,7 +65,7 @@ function renderMail(cfg, { name, code, expires, logoUrl, web }) {
   const head = logoUrl ? `<img src="${esc(logoUrl)}" width="180" alt="${esc(cfg.fromName)}" style="display:block;margin:0 auto;width:180px;max-width:60%;height:auto;border:0">`
     : `<div style="font:700 28px ${serif};color:${C.accent};text-align:center">${esc(cfg.fromName)}</div>`;
   const subject = cfg.subject.replace(/\{\{nombre\}\}/g, nm);
-  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(subject)}</title></head>
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600&family=Jost:wght@400;600&display=swap" rel="stylesheet"><title>${esc(subject)}</title></head>
 <body style="margin:0;padding:0;background:${C.bg}">
 <div style="display:none;max-height:0;overflow:hidden">Tenés ${cfg.pct}% de descuento para tu próxima compra en Cafelito.</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${C.bg};padding:28px 12px"><tr><td align="center">
@@ -73,7 +76,8 @@ function renderMail(cfg, { name, code, expires, logoUrl, web }) {
    ${cta}
   </td></tr>
   <tr><td style="padding:22px 18px 0;text-align:center;font:12px/19px ${sans};color:${C.soft}">
-   ${site ? `<a href="${esc(site)}" style="color:${C.accent};text-decoration:none;font-weight:700">${esc(String(web).replace(/^https?:\/\//, ''))}</a><br>` : ''}
+   <div style="font:italic 600 20px ${serif};color:${C.green};margin-bottom:8px">Let coffee connect us.</div>
+   ${site ? `<a href="${esc(site)}" style="color:${C.accent};text-decoration:none;font-weight:600">${esc(String(web).replace(/^https?:\/\//, ''))}</a> · ` : ''}<a href="https://www.instagram.com/${esc(ig)}" style="color:${C.accent};text-decoration:none;font-weight:600">@${esc(ig)}</a><br>
    Te escribimos porque compraste en ${esc(cfg.unit)}. Si no querés recibir más mails nuestros, respondé «BAJA» y no te escribimos más.
   </td></tr>
  </table>
