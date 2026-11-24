@@ -30,25 +30,60 @@ function cleanCfg(c) {
     sendHour: Math.min(21, Math.max(8, Math.trunc(+o.sendHour) || 10)), pct: Math.min(90, Math.max(1, Math.trunc(+o.pct) || 10)), validDays: Math.min(365, Math.max(1, Math.trunc(+o.validDays) || 30)),
     prefix: (str(o.prefix, 12).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'GRACIAS'), since: /^\d{4}-\d{2}-\d{2}$/.test(o.since || '') ? o.since : '', subject: str(o.subject, 200) || DEFAULT.subject, body: str(o.body, 6000) || DEFAULT.body };
 }
-/* Texto → HTML: párrafos por línea en blanco, **negrita**, {{nombre}}, {{regalo}} (recuadro con el código) */
-function renderMail(cfg, { name, code, expires }) {
-  const nm = first(name) || 'hola';
-  const gift = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:6px 0 18px"><tr><td align="center" style="background:#FBEFE6;border-radius:10px;padding:16px">
-    <div style="font:700 24px Georgia,serif;color:#8A3B12">${cfg.pct}% de descuento</div>
-    <div style="font:15px/22px Arial,sans-serif;color:#2B1D14;margin-top:4px">Mostrá este código en el local o escribilo en las notas de tu pedido web:</div>
-    <div style="display:inline-block;margin-top:10px;border:2px dashed #8A3B12;border-radius:8px;padding:6px 16px;font:700 20px monospace;letter-spacing:.08em;color:#8A3B12">${esc(code)}</div>
-    <div style="font:12px/18px Arial,sans-serif;color:#7A6A5E;margin-top:8px">Válido hasta el ${esc(fmtDate(expires))} · un solo uso · personal</div></td></tr></table>`;
-  const inline = t => esc(t).replace(/\{\{nombre\}\}/g, esc(nm)).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+/* Texto → HTML: párrafos por línea en blanco, **negrita**, {{nombre}}, {{regalo}} (cupón con el código).
+   Diseño con la identidad de la marca (logo y web de Marca → Cafelito, color terracota del logo). */
+const C = { bg: '#F6EFEA', card: '#FFFFFF', ink: '#3A2622', soft: '#7A5F58', accent: '#A0665E', accentDark: '#7E4B44', tint: '#F8ECE8', line: '#EADBD4' };
+function renderMail(cfg, { name, code, expires, logoUrl, web }) {
+  const nm = first(name) || 'hola', serif = "Georgia,'Times New Roman',serif", sans = 'Arial,Helvetica,sans-serif';
+  const site = web ? (/^https?:\/\//.test(web) ? web : 'https://' + web) : '';
+  const gift = `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:8px 0 22px"><tr><td style="background:${C.tint};border:2px dashed ${C.accent};border-radius:16px;padding:22px 18px" align="center">
+    <div style="font:700 12px ${sans};letter-spacing:.18em;text-transform:uppercase;color:${C.accent}">Tu regalo</div>
+    <div style="font:700 40px/44px ${serif};color:${C.accentDark};margin:6px 0 2px">${cfg.pct}% OFF</div>
+    <div style="font:15px/22px ${sans};color:${C.ink}">en tu próxima compra en Cafelito</div>
+    <div style="margin:16px auto 6px;display:inline-block;background:${C.card};border-radius:10px;padding:10px 22px;font:700 24px/30px 'Courier New',monospace;letter-spacing:.12em;color:${C.ink};border:1px solid ${C.line}">${esc(code)}</div>
+    <div style="font:13px/20px ${sans};color:${C.soft};margin-top:6px">Válido hasta el <b style="color:${C.ink}">${esc(fmtDate(expires))}</b> · un solo uso · es solo para vos</div>
+    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:14px auto 0"><tr>
+      <td style="font:13px/18px ${sans};color:${C.ink};padding:0 10px;border-right:1px solid ${C.line}"><b>En el local</b><br>mostralo en caja</td>
+      <td style="font:13px/18px ${sans};color:${C.ink};padding:0 10px"><b>En la web</b><br>escribilo al comprar</td></tr></table>
+  </td></tr></table>`;
+  const CTA = site ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:-6px 0 24px"><tr><td align="center"><table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:${C.accent};border-radius:999px"><a href="${esc(site)}" style="display:inline-block;padding:13px 28px;font:700 15px ${sans};color:#FFFFFF;text-decoration:none">Hacé tu próximo pedido</a></td></tr></table></td></tr></table>` : '';
+  const inline = t => esc(t).replace(/\{\{nombre\}\}/g, esc(nm)).replace(/\*\*(.+?)\*\*/g, `<b style="color:${C.ink}">$1</b>`).replace(/\n/g, '<br>');
   let usedGift = false;
-  const paras = cfg.body.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean).map(p => { if (p === '{{regalo}}') { usedGift = true; return gift; } return `<p style="margin:0 0 14px;font:16px/25px Arial,sans-serif;color:#2B1D14">${inline(p)}</p>`; });
-  if (!usedGift) paras.splice(Math.max(1, paras.length - 1), 0, gift);
+  const blocks = cfg.body.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  const paras = blocks.map((p, k) => {
+    if (p === '{{regalo}}') { usedGift = true; return gift + CTA; }
+    if (k === 0 && p.length < 60) return `<h1 style="margin:0 0 16px;font:700 30px/36px ${serif};color:${C.ink}">${inline(p)}</h1>`;
+    if (/^\*\*P\. ?D\./.test(p)) return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:4px 0 18px"><tr><td style="border-left:3px solid ${C.accent};padding:4px 0 4px 14px;font:16px/25px ${sans};color:${C.ink}">${inline(p)}</td></tr></table>`;
+    return `<p style="margin:0 0 16px;font:16px/26px ${sans};color:${C.ink}">${inline(p)}</p>`;
+  });
+  if (!usedGift) paras.splice(Math.max(1, paras.length - 1), 0, gift + CTA);
+  const cta = '';
+  const _cta = site ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:4px 0 22px"><tr><td style="background:${C.accent};border-radius:999px"><a href="${esc(site)}" style="display:inline-block;padding:13px 26px;font:700 15px ${sans};color:#FFFFFF;text-decoration:none">Hacé tu próximo pedido</a></td></tr></table>` : '';
+  const head = logoUrl ? `<img src="${esc(logoUrl)}" width="180" alt="${esc(cfg.fromName)}" style="display:block;margin:0 auto;width:180px;max-width:60%;height:auto;border:0">`
+    : `<div style="font:700 28px ${serif};color:${C.accent};text-align:center">${esc(cfg.fromName)}</div>`;
   const subject = cfg.subject.replace(/\{\{nombre\}\}/g, nm);
-  const html = `<!doctype html><html lang="es"><body style="margin:0;background:#F6F1EC"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F6F1EC;padding:24px 12px"><tr><td align="center">
-   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#FFFFFF;border-radius:12px;padding:28px 28px 20px"><tr><td>
-   <div style="font:700 22px Georgia,serif;color:#2B1D14;margin-bottom:18px">${esc(cfg.fromName)}</div>${paras.join('')}
-   <div style="border-top:1px solid #EFE6DE;margin-top:18px;padding-top:12px;font:12px/18px Arial,sans-serif;color:#7A6A5E">Te escribimos porque compraste en ${esc(cfg.unit)}. Si no querés recibir más mails nuestros, respondé «BAJA» y no te escribimos más.</div>
-   </td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${esc(subject)}</title></head>
+<body style="margin:0;padding:0;background:${C.bg}">
+<div style="display:none;max-height:0;overflow:hidden">Tenés ${cfg.pct}% de descuento para tu próxima compra en Cafelito.</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${C.bg};padding:28px 12px"><tr><td align="center">
+ <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:580px">
+  <tr><td style="padding:6px 0 22px" align="center">${head}</td></tr>
+  <tr><td style="background:${C.card};border-radius:20px;padding:34px 32px 18px;box-shadow:0 1px 2px rgba(58,38,34,.06)">
+   ${paras.join('\n   ')}
+   ${cta}
+  </td></tr>
+  <tr><td style="padding:22px 18px 0;text-align:center;font:12px/19px ${sans};color:${C.soft}">
+   ${site ? `<a href="${esc(site)}" style="color:${C.accent};text-decoration:none;font-weight:700">${esc(String(web).replace(/^https?:\/\//, ''))}</a><br>` : ''}
+   Te escribimos porque compraste en ${esc(cfg.unit)}. Si no querés recibir más mails nuestros, respondé «BAJA» y no te escribimos más.
+  </td></tr>
+ </table>
+</td></tr></table></body></html>`;
   return { subject, html };
+}
+/* Logo y web de la marca principal (Marca → identidad) para el mail */
+async function brandAssets(T) {
+  try { const s = await T.collection('state').doc('m_kits').get(); if (!s.exists) return {}; const k = JSON.parse(s.data().json) || {};
+    const kit = k.__marca || {}; const l = (kit.logos || {}).principal; return { logoUrl: l && l.url ? l.url : '', web: (kit.info || {}).web || '' }; } catch { return {}; }
 }
 const fromOf = (cfgMail, name) => { const m = String(cfgMail.from || '').match(/<\s*([^>]+)\s*>/); return `${name} <${m ? m[1] : cfgMail.from}>`; };
 
@@ -74,7 +109,7 @@ async function runAutomations(deps) {
       if (!(mail.apiKey && mail.from)) { out.push({ tid, skipped: 'falta configurar el envío' }); continue; }
       const expires = plusDays(today, cfg.validDays);
       let code; for (let i = 0; i < 8 && !code; i++) { const k = randCode(cfg.prefix); if (!(await T.collection('coupons').doc(k).get()).exists) code = k; }
-      const { subject, html } = renderMail(cfg, { name: c.name || o.customerName, code, expires });
+      const { subject, html } = renderMail(cfg, { name: c.name || o.customerName, code, expires, ...(await brandAssets(T)) });
       let id; try { id = (await sendMail(deps, { ...mail, from: fromOf(mail, cfg.fromName) }, { to: c.email, subject, html, replyTo: cfg.replyTo || undefined, idempotencyKey: `${tid}-${KEY}-${o.contactId}` })).id; }
       catch (e) { out.push({ tid, error: e.message }); continue; }
       const at = deps.Timestamp.fromMillis(now), b = deps.db.batch();
@@ -101,7 +136,7 @@ async function handleAuto(b, { deps, user, by, tenantRef, role }) {
   if (b.kind === 'auto-test') {
     const mail = deps.resend || {}; if (!(mail.apiKey && mail.from)) return fail(409, 'NO_MAIL', 'Todavía no está configurado el envío de mails.');
     if (!user.email) return fail(400, 'NO_EMAIL', 'Tu usuario no tiene email.');
-    const cfg = cleanCfg(b.config), { subject, html } = renderMail(cfg, { name: by, code: `${cfg.prefix}-PRUEBA`, expires: plusDays(today, cfg.validDays) });
+    const cfg = cleanCfg(b.config), { subject, html } = renderMail(cfg, { name: by, code: `${cfg.prefix}-PRUEBA`, expires: plusDays(today, cfg.validDays), ...(await brandAssets(tenantRef)) });
     try { await sendMail(deps, { ...mail, from: fromOf(mail, cfg.fromName) }, { to: user.email, subject: '[Prueba] ' + subject, html, replyTo: cfg.replyTo || undefined }); }
     catch (e) { return fail(502, 'SEND_FAILED', 'No se pudo enviar: ' + e.message); }
     return { status: 200, body: { sentTo: user.email } };
@@ -126,4 +161,4 @@ async function handleAuto(b, { deps, user, by, tenantRef, role }) {
   return fail(400, 'BAD_KIND', 'Acción desconocida.');
 }
 
-module.exports = { runAutomations, handleAuto, renderMail, cleanCfg, DEFAULT, KEY };
+module.exports = { runAutomations, handleAuto, renderMail, brandAssets, cleanCfg, DEFAULT, KEY };
