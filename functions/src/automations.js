@@ -43,7 +43,7 @@ function renderMail(cfg, { name, code, expires, logoUrl, web }) {
     <div style="font:italic 600 46px/50px ${serif};color:${C.green};margin:10px 0 2px">${cfg.pct}% off</div>
     <div style="font:15px/22px ${sans};color:${C.ink}">en tu próxima compra en Cafelito</div>
     <div style="margin:16px auto 6px;display:inline-block;background:${C.card};border-radius:10px;padding:10px 22px;font:700 24px/30px 'Courier New',monospace;letter-spacing:.12em;color:${C.ink};border:1px solid ${C.line}">${esc(code)}</div>
-    <div style="font:13px/20px ${sans};color:${C.soft};margin-top:6px">Válido hasta el <b style="color:${C.ink}">${esc(fmtDate(expires))}</b> · un solo uso · es solo para vos</div>
+    <div style="font:13px/20px ${sans};color:${C.soft};margin-top:6px">Válido hasta el <b style="color:${C.ink}">${esc(fmtDate(expires))}</b></div>
     <table role="presentation" cellspacing="0" cellpadding="0" style="margin:14px auto 0"><tr>
       <td style="font:13px/18px ${sans};color:${C.ink};padding:0 10px;border-right:1px solid ${C.line}"><b>En el local</b><br>mostralo en caja</td>
       <td style="font:13px/18px ${sans};color:${C.ink};padding:0 10px"><b>En la web</b><br>escribilo al comprar</td></tr></table>
