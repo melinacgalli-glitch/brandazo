@@ -24,3 +24,28 @@ function prodDialog(p){
     return h.replace('<button class="btn btn-primary" id="present"',btn+'<button class="btn btn-primary" id="present"'); };
   document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-prodall]'); if(!b) return; e.preventDefault(); const p=edPlans().find(x=>x.id===b.dataset.prodall); if(p) prodDialog(p); });
 })();
+
+/* ---------- Quien aprueba: automático y nunca la misma persona que planifica (salvo Dueño/Admin) ---------- */
+const edRoleOf=n=>{ const m=S.members.find(x=>(x.name||x.email||'').toLowerCase()===String(n||'').toLowerCase()); return m?m.role:''; };
+const edBoss=()=>{ const m=S.members.find(x=>x.role==='Dueño')||S.members.find(x=>x.role==='Admin'); return m?(m.name||m.email):''; };
+const edSelfApprove=(owner,approver)=>!!owner&&String(owner).toLowerCase()===String(approver||'').toLowerCase()&&!['Dueño','Admin'].includes(edRoleOf(owner));
+(function(){
+  if(typeof edPlanForm!=='function') return;
+  const _pf=edPlanForm;
+  edPlanForm=function(p){ _pf(p); const ow=$('#pow'), ap=$('#pap'), ok=$('#pok'); if(!ow||!ap||!ok) return;
+    const boss=edBoss(), pick=v=>{ const o=[...ap.options].find(x=>x.value.toLowerCase()===String(v).toLowerCase()); if(o) ap.value=o.value; };
+    const fix=()=>{ if(boss&&edSelfApprove(ow.value,ap.value)) pick(boss); };
+    if(!p&&boss&&!['Dueño','Admin'].includes(edRoleOf(S.user.name))) pick(boss); // nueva: aprueba la dueña
+    fix(); ow.addEventListener('change',fix);
+    const orig=ok.onclick;
+    const fld=ap.closest('.field'); if(fld&&!fld.querySelector('.err')) fld.insertAdjacentHTML('beforeend','<span class="err" role="alert"></span>');
+    ok.onclick=e=>{ if(edSelfApprove(ow.value,ap.value)) return fieldErr(ap,`Elegí a otra persona: quien planifica no puede aprobar su propia planificación${boss?` (por ejemplo, ${boss})`:''}.`); fieldErr(ap,''); return orig(e); };
+  };
+  /* Aviso en las planificaciones que ya quedaron con la misma persona */
+  const _vd=vPlanDetail;
+  vPlanDetail=function(id){ const h=_vd(id), p=edPlans().find(x=>x.id===id), boss=edBoss(); if(!p||!boss||!edSelfApprove(p.owner,p.approver)) return h;
+    const warn=`<div class="alert alert-warn" style="margin:0 0 12px">${ic('alert')}<div><b>${esc(p.owner)}</b> planifica y también figura como quien aprueba. Lo tiene que aprobar otra persona. <button type="button" class="btn btn-sm" data-fixapprover="${esc(id)}">Que apruebe ${esc(boss)}</button></div></div>`;
+    const i=h.indexOf('<div class="alert'); return i>0?h.slice(0,i)+warn+h.slice(i):warn+h; };
+  document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-fixapprover]'); if(!b) return; e.preventDefault(); const p=edPlans().find(x=>x.id===b.dataset.fixapprover), boss=edBoss(); if(!p||!boss) return;
+    p.approver=boss; persist(); render(); toast(`Ahora aprueba ${boss}`); });
+})();
