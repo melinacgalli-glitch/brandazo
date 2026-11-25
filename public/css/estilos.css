@@ -1039,3 +1039,13 @@ input[type=date],input[type=time]{cursor:pointer}
 
 /* Subida de archivos: al arrastrar encima */
 .upload.drop{border-color:var(--magenta);background:var(--magenta-soft)}
+
+/* Aviso «Planificación lista para presentar» (abajo a la derecha) */
+.ed-ready{position:fixed;right:20px;bottom:20px;z-index:60;display:flex;gap:12px;align-items:flex-start;max-width:360px;background:var(--surface-raised);border:1px solid var(--line);border-left:4px solid var(--success);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:14px 16px;animation:edReadyIn .25s ease-out}
+.ed-ready-ic{flex:none;width:28px;height:28px;border-radius:50%;background:var(--success-soft);color:var(--success);display:grid;place-items:center}
+.ed-ready-ic svg{width:16px;height:16px}
+.ed-ready-b{display:grid;gap:4px;font-size:14px;line-height:1.4}
+.ed-ready-b span{color:var(--ink-muted)}
+.ed-ready-a{display:flex;gap:8px;margin-top:8px}
+@keyframes edReadyIn{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:560px){ .ed-ready{left:12px;right:12px;bottom:76px;max-width:none} }

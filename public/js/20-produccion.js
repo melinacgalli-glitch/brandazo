@@ -49,3 +49,33 @@ const edSelfApprove=(owner,approver)=>!!owner&&String(owner).toLowerCase()===Str
   document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-fixapprover]'); if(!b) return; e.preventDefault(); const p=edPlans().find(x=>x.id===b.dataset.fixapprover), boss=edBoss(); if(!p||!boss) return;
     p.approver=boss; persist(); render(); toast(`Ahora aprueba ${boss}`); });
 })();
+
+/* ---------- Aviso «Planificación lista para presentar» ----------
+   Cuando todas las ideas sin presentar están completas, aparece un aviso abajo a la derecha
+   (y un recuadro en la planificación) con «Presentar ahora». Si lo cierra, vuelve a aparecer
+   solo si cambia la cantidad de ideas listas. */
+const ED_READY_SEEN={};
+function edReadyInfo(p){ const ideas=edIdeas(p), todo=ideas.filter(c=>['sin-presentar','ajustes'].includes(c.ideaSt));
+  return { n:todo.length, ready:todo.length>0&&todo.every(c=>!edMissing(c).length) }; }
+function edReadyPush(p){
+  const r=edReadyInfo(p), old=document.getElementById('edready'); if(old) old.remove();
+  if(!r.ready||ED_READY_SEEN[p.id]===r.n) return;
+  const who=p.approver&&p.approver!==S.user.name?p.approver:'';
+  document.body.insertAdjacentHTML('beforeend',`<div class="ed-ready" id="edready" role="status"><div class="ed-ready-ic">${ic('check')}</div><div class="ed-ready-b"><b>¡Planificación lista!</b><span>Completaste ${r.n===1?'la idea':`las ${r.n} ideas`} de «${esc(p.name)}». ${who?`Presentala para que ${esc(who)} la apruebe.`:'Presentala para enviarla a aprobación.'}</span>
+    <div class="ed-ready-a"><button class="btn btn-sm btn-primary" data-edready="go">Presentar ahora</button><button class="btn btn-sm btn-ghost" data-edready="later">Más tarde</button></div></div></div>`);
+}
+(function(){
+  if(typeof edSavedFlash!=='function') return;
+  const curPlan=()=>{ const m=location.hash.match(/^#\/app\/contenidos\/planificaciones\/([^/?]+)/); return m?edPlans().find(x=>x.id===m[1]):null; };
+  const _sf=edSavedFlash;
+  edSavedFlash=function(){ _sf(); const p=curPlan(); if(p) edReadyPush(p); };
+  const _vd=vPlanDetail;
+  vPlanDetail=function(id){ const h=_vd(id), p=edPlans().find(x=>x.id===id); setTimeout(()=>{ const q=curPlan(); if(q) edReadyPush(q); else { const o=document.getElementById('edready'); if(o) o.remove(); } },0);
+    if(!p) return h; const r=edReadyInfo(p); if(!r.ready) return h;
+    const box=`<div class="alert alert-ok" style="margin:0 0 12px">${ic('check')}<div><b>Lista para presentar.</b> ${r.n===1?'La idea está completa':`Las ${r.n} ideas están completas`}: tocá «Presentar planificación» para enviarla a aprobación.</div></div>`;
+    const i=h.indexOf('<div class="alert'); return i>0?h.slice(0,i)+box+h.slice(i):h; };
+  document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-edready]'); if(!b) return; const p=curPlan(), box=document.getElementById('edready');
+    if(p) ED_READY_SEEN[p.id]=edReadyInfo(p).n; if(box) box.remove();
+    if(b.dataset.edready==='go'){ const pr=document.getElementById('present'); if(pr&&!pr.disabled) pr.click(); } });
+  window.addEventListener('hashchange',()=>{ if(!/planificaciones\//.test(location.hash)){ const o=document.getElementById('edready'); if(o) o.remove(); } });
+})();
