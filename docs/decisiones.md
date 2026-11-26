@@ -113,3 +113,4 @@ _Última actualización: 2026-11-17_
 - **Pantallas**: historial «Envíos a grupos» en Automatizaciones (estado, enviados, no entregados, códigos canjeados y ventas, cancelar los programados); ficha del contacto: si acepta promociones y los mails que recibió.
 - **Reglas**: `mailings`, `mailSends` lectura para integrantes, escritura solo servidor; `mailTests` solo servidor.
 - `renderMail` ahora acepta regalo opcional, link de baja y motivo del envío (la automatización de primera compra queda igual).
+- 2026-11-26 · Daniela Katch: cargado su email y el permiso para promociones (`source: confirmado-por-melina`, aceptó por WhatsApp; lo confirmó la dueña). Sin contactos duplicados con ese email. El envío de Navidad lo programa la usuaria desde CRM → Ventas.
