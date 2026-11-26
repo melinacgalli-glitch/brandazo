@@ -1114,3 +1114,20 @@ input[type=date],input[type=time]{cursor:pointer}
 .vn-kc-foot span{min-width:0}
 @media (max-width:1100px){ .vn-board{grid-template-columns:repeat(4,minmax(240px,1fr))} }
 .vn-col header{flex-wrap:wrap}
+
+/* Envío a grupos */
+.env-step{border-top:1px solid var(--line);padding:14px 0 6px}
+.env-step:first-child{border-top:0;padding-top:0}
+.env-step h4{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:15px}
+.env-n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:99px;background:var(--magenta);color:var(--on-magenta);font-size:12px;font-weight:700}
+.env-big b{font-size:28px;font-variant-numeric:tabular-nums}
+.env-tog{display:flex;gap:8px;align-items:flex-start;margin:4px 0 10px;cursor:pointer}
+.env-tog input{margin-top:3px;accent-color:var(--magenta)}
+.env-when{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.env-when label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.env-when input[type=radio]{accent-color:var(--magenta)}
+.env-row{border-top:1px solid var(--line);padding:12px 0;display:grid;gap:8px}
+.env-row-h{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.env-kpis{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:var(--ink-muted)}
+.env-kpis b{color:var(--ink);font-variant-numeric:tabular-nums}
+.env-row .btn{justify-self:start}

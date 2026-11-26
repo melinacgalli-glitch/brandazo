@@ -39,8 +39,12 @@ exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KE
     const out = await require('./src/couponApi').handleCouponCheck(req, { db: getFirestore(), Timestamp, keys: loadKeys(INTEGRATION_KEYS.value()) });
     res.set(out.headers || {}).status(out.status).json(out.body); return;
   }
+  if (/\/baja$/.test(path)) { // «No quiero recibir más mails» (link firmado de cada envío)
+    const out = await require('./src/mailings').handleUnsubscribe(req, { db: getFirestore(), Timestamp, resend: reminders.parseCfg(RESEND.value()) });
+    res.status(out.status).set('Content-Type', 'text/html; charset=utf-8').send(out.html); return;
+  }
   if (/\/crm\/manual$/.test(path)) { // carga manual de contactos y pedidos de presupuesto (miembros con sesión)
-    const out = await handleManual(req, { db: getFirestore(), FieldValue, Timestamp, verifyIdToken: t => getAuth().verifyIdToken(t), fetch: globalThis.fetch, resend: reminders.parseCfg(RESEND.value()) });
+    const out = await handleManual(req, { db: getFirestore(), FieldValue, Timestamp, verifyIdToken: t => getAuth().verifyIdToken(t), fetch: globalThis.fetch, resend: reminders.parseCfg(RESEND.value()), resendUrl: process.env.FUNCTIONS_EMULATOR ? process.env.RESEND_URL : undefined });
     res.status(out.status).json(out.body); return;
   }
   if (/\/integrations\/cafelito\/shop-orders$/.test(path)) { // pedidos de la tienda online (Cafelito Cakes)
@@ -88,6 +92,9 @@ exports.avisosPlanificacion = onSchedule({ schedule: '0 8-21 * * *', timeZone: '
 // Automatizaciones reales (mail de primera compra con código de descuento). Cada hora de 8 a 21 (Córdoba).
 exports.automatizaciones = onSchedule({ schedule: '15 8-21 * * *', timeZone: 'America/Argentina/Cordoba', region: 'southamerica-east1', secrets: [RESEND], timeoutSeconds: 300, memory: '256MiB', retryCount: 1 }, async () => {
   const r = await require('./src/automations').runAutomations({ db: getFirestore(), Timestamp, fetch: globalThis.fetch, now: () => Date.now(), resend: reminders.parseCfg(RESEND.value()) });
+  // Envíos a segmentos: los programados cuya hora llegó y los que quedaron a medias por el tope diario
+  const env = await require('./src/mailings').runMailings({ db: getFirestore(), Timestamp, fetch: globalThis.fetch, now: () => Date.now(), resend: reminders.parseCfg(RESEND.value()) });
+  console.log('[envios]', JSON.stringify(env.map(x => ({ tid: x.tid, id: x.id, sent: x.sent, stats: x.stats, skipped: x.skipped }))));
   console.log('[automatizaciones]', JSON.stringify(r.map(x => ({ ...x, sent: x.sent ? x.sent.replace(/^(.).*@/, '$1…@') : undefined }))));
 });
 

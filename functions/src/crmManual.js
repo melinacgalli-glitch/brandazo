@@ -32,6 +32,7 @@ async function handleManual(req, deps) {
   if (b.kind === 'order') return handleManualOrder(b, { deps, user, by, tenantRef });
   if (b.kind === 'order-status') return handleOrderStatus(b, { deps, user, by, tenantRef });
   if (['auto-save', 'auto-test', 'coupon-check', 'coupon-redeem'].includes(b.kind)) return require('./automations').handleAuto(b, { deps, user, by, tenantRef, role: member.data().role });
+  if (['mail-audience', 'mail-test', 'mail-send', 'mail-cancel'].includes(b.kind)) return require('./mailings').handleMailing(b, { deps, user, by, tenantRef, role: member.data().role });
   if (['subscription', 'enrollment', 'sub-status', 'enr-status'].includes(b.kind)) return require('./crmSales').handleSale(b, { deps, user, by, tenantRef });
 
   // Validación (mensajes para la pantalla)
