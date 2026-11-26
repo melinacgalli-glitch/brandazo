@@ -25,7 +25,7 @@ const GOOGLE_ADS = defineSecret('GOOGLE_ADS');
 const RESEND = defineSecret('RESEND');
 
 // CORS solo para pruebas locales; en producción la app llama por el mismo dominio (Hosting)
-exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KEYS, RESEND], cors: [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/], maxInstances: 5, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
+exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KEYS, RESEND], cors: [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/, /^https:\/\/(www\.)?cafelito\.com\.ar$/, /^https:\/\/[a-z0-9-]+\.vercel\.app$/], maxInstances: 5, timeoutSeconds: 30, memory: '256MiB' }, async (req, res) => {
   const path = req.path.replace(/\/+$/, '');
   if (/\/integrations\/cafelito\/availability$/.test(path)) { // fechas no disponibles para el calendario del cotizador
     const out = await availability.handleAvailability(req, { db: getFirestore(), keys: loadKeys(INTEGRATION_KEYS.value()), now: () => new Date() });
@@ -37,6 +37,19 @@ exports.api = onRequest({ region: 'southamerica-east1', secrets: [INTEGRATION_KE
   }
   if (/\/integrations\/cafelito\/coupons\/check$/.test(path)) { // la web consulta si un código de descuento sirve
     const out = await require('./src/couponApi').handleCouponCheck(req, { db: getFirestore(), Timestamp, keys: loadKeys(INTEGRATION_KEYS.value()) });
+    res.set(out.headers || {}).status(out.status).json(out.body); return;
+  }
+  const pub = path.match(/\/public\/([a-z0-9-]+)\/coworking\/(availability|reservations)$/);
+  if (pub) { // salas de coworking, sin clave, directo desde la página de la web (ver src/coworking.js)
+    const out = await require('./src/coworking').handlePublicCoworking(req, { db: getFirestore(), FieldValue, Timestamp, fetch: globalThis.fetch, now: () => new Date() }, pub[1], pub[2]);
+    res.set(out.headers || {}).status(out.status).json(out.body); return;
+  }
+  if (/\/integrations\/cafelito\/coworking\/availability$/.test(path)) {
+    const out = await require('./src/coworking').handleCwAvailability(req, { db: getFirestore(), keys: loadKeys(INTEGRATION_KEYS.value()), now: () => new Date() });
+    res.set(out.headers || {}).status(out.status).json(out.body); return;
+  }
+  if (/\/integrations\/cafelito\/coworking\/reservations$/.test(path)) {
+    const out = await require('./src/coworking').handleCwReservation(req, { db: getFirestore(), FieldValue, Timestamp, keys: loadKeys(INTEGRATION_KEYS.value()), now: () => new Date() });
     res.set(out.headers || {}).status(out.status).json(out.body); return;
   }
   if (/\/baja$/.test(path)) { // «No quiero recibir más mails» (link firmado de cada envío)

@@ -130,6 +130,8 @@ service cloud.firestore {
       match /enrollments/{id} { allow read: if isMember(t); allow write: if false; } // inscripciones (Academy): solo el servidor
       match /contactEvents/{id} { allow read: if isMember(t); allow write: if false; } // lo que cada contacto pidió desde la web
       match /coupons/{id} { allow read: if isMember(t); allow write: if false; } // códigos de descuento: los crea y canjea el servidor
+      match /cwReservations/{id} { allow read: if isMember(t); allow write: if false; } // reservas de salas: las crea, mueve y cancela el servidor
+      match /cwSlots/{id} { allow read: if isMember(t); allow write: if false; }        // medias horas ocupadas (evitan superposiciones)
       match /mailings/{id} { allow read: if isMember(t); allow write: if false; }   // envíos a segmentos: los arma y manda el servidor
       match /mailSends/{id} { allow read: if isMember(t); allow write: if false; }  // uno por persona y envío
       match /mailTests/{id} { allow read, write: if false; }                         // pruebas hechas (solo el servidor)

@@ -18,6 +18,41 @@ const UNIT = { coworking: 'Cafelito Work' };
 const LABEL = { coworking: 'Web · Coworking', contacto: 'Web · Formulario de contacto', newsletter: 'Web · Newsletter', otro: 'Web · Formulario' };
 const rid = p => p + randomBytes(9).toString('base64url');
 
+async function captureCore(deps, tenantRef, body, bodyHash, now) {
+  const at = deps.Timestamp.fromDate(now);
+  const phone = body.contact.phone ? normalizePhoneAR(body.contact.phone) : null, email = body.contact.email ? String(body.contact.email).trim().toLowerCase() : null;
+  const unit = UNIT[body.source] || null, client = body.source === 'coworking';
+  const idemRef = tenantRef.collection('idempotency').doc('contact_' + body.eventId);
+  const phoneRef = phone ? tenantRef.collection('contactsByPhone').doc(phone.key) : null, mailRef = email ? tenantRef.collection('contactsByEmail').doc(email) : null;
+  const attribution = body.attribution || null, consent = body.consent ? { granted: !!body.consent.marketing, text: body.consent.text || null, capturedAt: body.consent.capturedAt || null, source: body.source } : null;
+  const result = await deps.db.runTransaction(async tx => {
+    const [idemS, byPhone, byMail] = await Promise.all([tx.get(idemRef), phoneRef ? tx.get(phoneRef) : null, mailRef ? tx.get(mailRef) : null]);
+    if (idemS.exists) { const d = idemS.data(); return d.bodyHash !== bodyHash ? { conflict: true } : { replay: d.response }; }
+    const cid = byPhone && byPhone.exists ? byPhone.data().contactId : byMail && byMail.exists ? byMail.data().contactId : null;
+    const cRef = cid ? tenantRef.collection('contacts').doc(cid) : tenantRef.collection('contacts').doc();
+    const cs = cid ? await tx.get(cRef) : null, prev = cs && cs.exists ? cs.data() : null;
+    const source = { channel: LABEL[body.source], site: 'cafelito.com.ar', pageUrl: body.source_page || null, utmSource: attribution && attribution.utmSource || null, utmCampaign: attribution && attribution.utmCampaign || null };
+    if (prev) {
+      const tags = [...new Set([...(Array.isArray(prev.tags) ? prev.tags : []), ...(unit ? [unit] : [])])];
+      tx.update(cRef, { updatedAt: at, lastWebAt: at, webCount: deps.FieldValue.increment(1), tags, ...(client && prev.type !== 'Cliente' ? { type: 'Cliente' } : {}),
+        ...(email && !prev.email ? { email } : {}), ...(phone && !prev.phoneE164 && !prev.phoneRaw ? { phoneRaw: body.contact.phone, phoneE164: phone.e164, phoneDisplay: phone.display, phoneNormalized: phone.normalized } : {}),
+        ...(consent ? { marketingConsent: consent } : {}) });
+    } else {
+      tx.set(cRef, { name: body.contact.name, phoneRaw: body.contact.phone || null, phoneE164: phone ? phone.e164 : null, phoneDisplay: phone ? phone.display : null, phoneNormalized: phone ? phone.normalized : false,
+        email, brand: unit || 'Cafelito', type: client ? 'Cliente' : 'Lead', tags: unit ? [unit] : [], firstSource: { ...source, attribution, at }, marketingConsent: consent,
+        quoteCount: 0, webCount: 1, lastWebAt: at, createdAt: at, updatedAt: at });
+    }
+    if (phoneRef && !byPhone.exists) tx.set(phoneRef, { contactId: cRef.id, createdAt: at });
+    if (mailRef && !byMail.exists) tx.set(mailRef, { contactId: cRef.id, createdAt: at });
+    const evRef = tenantRef.collection('contactEvents').doc();
+    tx.set(evRef, { contactId: cRef.id, at, source: body.source, unit, coworking: body.coworking || null, topic: body.topic || null, message: body.message || null, attribution, eventId: body.eventId });
+    const response = { status: 'created', eventId: body.eventId, contact: { id: cRef.id, match: prev ? 'existing' : 'new', type: client ? 'Cliente' : (prev ? prev.type || 'Lead' : 'Lead') } };
+    tx.set(idemRef, { bodyHash, response, createdAt: at, expireAt: deps.Timestamp.fromMillis(now.getTime() + 30 * 864e5) });
+    return { ok: response };
+  });
+  return result;
+}
+
 async function handleContactCapture(req, deps) {
   const requestId = rid('req_'), now = deps.now ? deps.now() : new Date();
   let tenantRef = null, keyId = null;
@@ -40,37 +75,7 @@ async function handleContactCapture(req, deps) {
     if (idem !== body.eventId) throw new ApiError(400, 'IDEMPOTENCY_KEY_MISMATCH', 'El encabezado Idempotency-Key tiene que ser igual al eventId del cuerpo.');
     if (body.source === 'coworking' && !body.coworking) throw new ApiError(422, 'VALIDATION_FAILED', 'Falta lo que pidió.', { details: [{ field: 'coworking', issue: 'es obligatorio cuando source = coworking' }] });
 
-    const bodyHash = sha256(raw), at = deps.Timestamp.fromDate(now);
-    const phone = body.contact.phone ? normalizePhoneAR(body.contact.phone) : null, email = body.contact.email ? String(body.contact.email).trim().toLowerCase() : null;
-    const unit = UNIT[body.source] || null, client = body.source === 'coworking';
-    const idemRef = tenantRef.collection('idempotency').doc('contact_' + body.eventId);
-    const phoneRef = phone ? tenantRef.collection('contactsByPhone').doc(phone.key) : null, mailRef = email ? tenantRef.collection('contactsByEmail').doc(email) : null;
-    const attribution = body.attribution || null, consent = body.consent ? { granted: !!body.consent.marketing, text: body.consent.text || null, capturedAt: body.consent.capturedAt || null, source: body.source } : null;
-    const result = await deps.db.runTransaction(async tx => {
-      const [idemS, byPhone, byMail] = await Promise.all([tx.get(idemRef), phoneRef ? tx.get(phoneRef) : null, mailRef ? tx.get(mailRef) : null]);
-      if (idemS.exists) { const d = idemS.data(); return d.bodyHash !== bodyHash ? { conflict: true } : { replay: d.response }; }
-      const cid = byPhone && byPhone.exists ? byPhone.data().contactId : byMail && byMail.exists ? byMail.data().contactId : null;
-      const cRef = cid ? tenantRef.collection('contacts').doc(cid) : tenantRef.collection('contacts').doc();
-      const cs = cid ? await tx.get(cRef) : null, prev = cs && cs.exists ? cs.data() : null;
-      const source = { channel: LABEL[body.source], site: 'cafelito.com.ar', pageUrl: body.source_page || null, utmSource: attribution && attribution.utmSource || null, utmCampaign: attribution && attribution.utmCampaign || null };
-      if (prev) {
-        const tags = [...new Set([...(Array.isArray(prev.tags) ? prev.tags : []), ...(unit ? [unit] : [])])];
-        tx.update(cRef, { updatedAt: at, lastWebAt: at, webCount: deps.FieldValue.increment(1), tags, ...(client && prev.type !== 'Cliente' ? { type: 'Cliente' } : {}),
-          ...(email && !prev.email ? { email } : {}), ...(phone && !prev.phoneE164 && !prev.phoneRaw ? { phoneRaw: body.contact.phone, phoneE164: phone.e164, phoneDisplay: phone.display, phoneNormalized: phone.normalized } : {}),
-          ...(consent ? { marketingConsent: consent } : {}) });
-      } else {
-        tx.set(cRef, { name: body.contact.name, phoneRaw: body.contact.phone || null, phoneE164: phone ? phone.e164 : null, phoneDisplay: phone ? phone.display : null, phoneNormalized: phone ? phone.normalized : false,
-          email, brand: unit || 'Cafelito', type: client ? 'Cliente' : 'Lead', tags: unit ? [unit] : [], firstSource: { ...source, attribution, at }, marketingConsent: consent,
-          quoteCount: 0, webCount: 1, lastWebAt: at, createdAt: at, updatedAt: at });
-      }
-      if (phoneRef && !byPhone.exists) tx.set(phoneRef, { contactId: cRef.id, createdAt: at });
-      if (mailRef && !byMail.exists) tx.set(mailRef, { contactId: cRef.id, createdAt: at });
-      const evRef = tenantRef.collection('contactEvents').doc();
-      tx.set(evRef, { contactId: cRef.id, at, source: body.source, unit, coworking: body.coworking || null, topic: body.topic || null, message: body.message || null, attribution, eventId: body.eventId });
-      const response = { status: 'created', eventId: body.eventId, contact: { id: cRef.id, match: prev ? 'existing' : 'new', type: client ? 'Cliente' : (prev ? prev.type || 'Lead' : 'Lead') } };
-      tx.set(idemRef, { bodyHash, response, createdAt: at, expireAt: deps.Timestamp.fromMillis(now.getTime() + 30 * 864e5) });
-      return { ok: response };
-    });
+    const result = await captureCore(deps, tenantRef, body, sha256(raw), now);
     if (result.conflict) throw new ApiError(409, 'IDEMPOTENCY_CONFLICT', 'Ese Idempotency-Key ya se usó con un cuerpo distinto.');
     if (result.replay) { await log(200, 'DUPLICATE'); return { status: 200, body: { ...result.replay, status: 'duplicate' }, headers: { 'X-Request-Id': requestId } }; }
     await log(201, null); return { status: 201, body: result.ok, headers: { 'X-Request-Id': requestId } };
@@ -81,4 +86,4 @@ async function handleContactCapture(req, deps) {
     return { status: x.status, body: errorBody(x, requestId), headers: { 'X-Request-Id': requestId, ...(x.headers || {}) } };
   }
 }
-module.exports = { handleContactCapture };
+module.exports = { handleContactCapture, captureCore };

@@ -1131,3 +1131,29 @@ input[type=date],input[type=time]{cursor:pointer}
 .env-kpis{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:var(--ink-muted)}
 .env-kpis b{color:var(--ink);font-variant-numeric:tabular-nums}
 .env-row .btn{justify-self:start}
+
+/* CRM · Salas */
+.cw-bar{flex-wrap:wrap;gap:8px;align-items:center}
+.cw-bar input[type=date]{width:160px}
+.cw-dayname{margin-left:4px}
+.cw-sub{margin:-4px 0 12px}
+.cw-card{padding:12px 16px;overflow-x:auto}
+.cw-grid{min-width:720px}
+.cw-row{display:grid;grid-template-columns:130px 1fr;align-items:stretch;border-top:1px solid var(--line)}
+.cw-row.cw-ticks{border-top:0;height:22px}
+.cw-room{display:flex;flex-direction:column;justify-content:center;padding:8px 10px 8px 0}
+.cw-track{position:relative;min-height:64px}
+.cw-ticks .cw-track{min-height:22px}
+.cw-ticks span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--ink-muted);font-variant-numeric:tabular-nums}
+.cw-line{position:absolute;top:0;bottom:0;border-left:1px dashed var(--line)}
+.cw-closed{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,var(--surface-sunken) 0 6px,transparent 6px 12px)}
+.cw-res{position:absolute;top:6px;bottom:6px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:1px;padding:4px 8px;border-radius:8px;border:1px solid var(--magenta);background:var(--magenta-soft);color:var(--magenta-text);font:inherit;font-size:12px;text-align:left;overflow:hidden;cursor:pointer;min-width:0}
+.cw-res b,.cw-res span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cw-res.blq{background:var(--warning-soft);color:var(--warning);border-color:var(--warning)}
+.cw-res .cw-tag{font-style:normal;font-size:10px;opacity:.8}
+.cw-res:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.cw-list{display:none}
+.cw-li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;width:100%;padding:10px 0;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+@media (max-width:720px){ .cw-card{display:none} .cw-list{display:grid;gap:12px} .cw-list h3{margin:0 0 6px;font-size:15px} }
+.cw-track{min-height:78px}
+.cw-res{line-height:1.3;justify-content:flex-start;padding:6px 8px}
