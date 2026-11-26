@@ -65,7 +65,7 @@ let page; const reopen = async () => { await page.waitForTimeout(700); if (!(awa
   ok(await page.isVisible('#syncst'), 'indicador de guardado en la nube visible');
 
   // 4) CRM → Cafelito Eventos
-  await page.evaluate(() => { const c = S.companies.find(x => x.cloud); switchCompany(c); }); await page.goto(BASE + '#/app/crm'); try { await page.waitForSelector('.kanban', { timeout: 15000 }); } catch (e) { console.log('DBG', await page.evaluate(async () => { try { const s = await fbDb.collection('tenants/cafelito/opportunities').where('pipeline','==','cafelito-eventos').get(); return 'get ok ' + s.size + ' tid=' + EV.tid + ' loaded=' + EV.loaded; } catch (e) { return 'get err ' + e.code + ' ' + e.message; } })); page.on('response', r => { if (r.status() >= 400) console.log('RESP', r.status(), r.url().slice(0, 160)); }); await page.reload(); await page.waitForTimeout(6000); console.log('PANTALLA:', page.url(), (await page.evaluate(() => document.querySelector('#root').innerText)).slice(0, 900), errs); throw e; }
+  await page.evaluate(() => { const c = S.companies.find(x => x.cloud); switchCompany(c); }); await page.goto(BASE + '#/app/crm/eventos'); try { await page.waitForSelector('.kanban', { timeout: 15000 }); } catch (e) { console.log('DBG', await page.evaluate(async () => { try { const s = await fbDb.collection('tenants/cafelito/opportunities').where('pipeline','==','cafelito-eventos').get(); return 'get ok ' + s.size + ' tid=' + EV.tid + ' loaded=' + EV.loaded; } catch (e) { return 'get err ' + e.code + ' ' + e.message; } })); page.on('response', r => { if (r.status() >= 400) console.log('RESP', r.status(), r.url().slice(0, 160)); }); await page.reload(); await page.waitForTimeout(6000); console.log('PANTALLA:', page.url(), (await page.evaluate(() => document.querySelector('#root').innerText)).slice(0, 900), errs); throw e; }
   const board = await page.textContent('.kanban');
   ok(/Estudio Contable Ruiz/.test(board) && !/NO DEBE VERSE/.test(board), 'tablero muestra la cotización real y nada de otra empresa');
   ok(/1\.420\.000/.test(await page.textContent('.stat-grid')), 'presupuesto en pesos desde centavos ($ 1.420.000)');
@@ -89,7 +89,7 @@ let page; const reopen = async () => { await page.waitForTimeout(700); if (!(awa
   await page.click('[data-evdone=t1]'); await page.waitForTimeout(1500);
   const tk = await get('tenants/cafelito/tasks/t1'); ok(tk.fields.status.stringValue === 'hecha', 'marcar como hecha se guarda');
   await page.goto(BASE + '#/app/crm/leads'); await page.waitForSelector('.kanban', { timeout: 15000 }); ok(true, 'una solapa vieja (Leads) cae en Cafelito Eventos en vez de la pantalla vacía');
-  await page.goto(BASE + '#/app/crm'); await page.waitForSelector('.kanban');
+  await page.goto(BASE + '#/app/crm/eventos'); await page.waitForSelector('.kanban');
   await page.click('[data-op=op1]'); await page.waitForSelector('#evsave');
   const href = await page.getAttribute('a[href^="https://wa.me/"]', 'href'); ok(href && href.startsWith('https://wa.me/5493515550187'), 'botón de WhatsApp con el teléfono normalizado');
   await page.waitForTimeout(600); await page.screenshot({ path: require('os').tmpdir() + '/e2e-ficha.png' }); await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); await page.screenshot({ path: require('os').tmpdir() + '/e2e-ficha-movil.png' }); await page.setViewportSize({ width: 1280, height: 860 });

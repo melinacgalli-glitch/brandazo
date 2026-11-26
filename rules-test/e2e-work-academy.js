@@ -32,7 +32,7 @@ const waitText = (page, sel, re, t = 15000) => page.waitForFunction(([s, r]) => 
   ok(/Full time[\s\S]*\$ 85\.000\/mes/.test(await page.textContent('#root')), 'agregar un plan');
   await page.click('[data-lcnewsub]'); await page.waitForSelector('#sbok'); ok(await page.inputValue('#sbpr') === '85.000', 'el precio se completa con el del plan');
   await page.fill('#mnn', 'Sofía Ruiz'); await page.fill('#mnp', '3515550001'); await page.fill('#sbmp', '2c938084abc'); await page.click('#sbok');
-  await waitText(page, '#root', /Sofía Ruiz/);
+  await waitText(page, '#root', /Activas\s*1[\s\S]*Sofía Ruiz/);
   const t1 = await page.textContent('#root');
   ok(/Activas\s*1/.test(t1) && /Ingreso mensual\s*\$ 85\.000/.test(t1) && /Altas\s*1/.test(t1), 'la suscripción suma: 1 activa, $ 85.000 por mes, 1 alta');
   await page.click('[data-lcnewsub]'); await page.waitForSelector('#sbok'); await page.fill('#mnn', 'Sofía Ruiz'); await page.fill('#mnp', '3515550001'); await page.fill('#sbmp', '2c938084abc'); await page.click('#sbok');

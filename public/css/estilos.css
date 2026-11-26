@@ -1049,3 +1049,33 @@ input[type=date],input[type=time]{cursor:pointer}
 .ed-ready-a{display:flex;gap:8px;margin-top:8px}
 @keyframes edReadyIn{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
 @media (max-width:560px){ .ed-ready{left:12px;right:12px;bottom:76px;max-width:none} }
+
+/* CRM · Ventas (planilla unificada) */
+.vn-bar{flex-wrap:wrap;gap:8px}
+.vn-sel{max-width:200px}
+.vn-bar .search-in{flex:1 1 220px;max-width:320px}
+.vn-card{padding:0;overflow:hidden}
+.vn-card .table-wrap{border:0;border-radius:0}
+.vn-next{min-width:150px}
+.vn-t td{vertical-align:top}
+.vn-t tbody tr{cursor:pointer}
+.vn-t tbody tr:hover td{background:var(--surface-sunken)}
+.vn-sort{background:none;border:0;padding:0;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer}
+.vn-sl{display:block;font-size:12px;color:var(--ink-muted);margin-top:3px}
+.vn-late{color:var(--warning)}
+.vn-st{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.vn-st.n{background:#1E2A44;color:#8DB6FF}.vn-st.c{background:var(--warning-soft);color:var(--warning)}.vn-st.g{background:var(--success-soft);color:var(--success)}.vn-st.p{background:var(--danger-soft);color:var(--danger)}
+.vn-unit{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:12px;color:var(--ink-muted);white-space:nowrap}
+.vn-t td.num{white-space:nowrap}
+.vn-next .btn{margin-bottom:2px}
+.vn-tot{display:flex;flex-wrap:wrap;gap:8px 22px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-muted)}
+.vn-tot b{color:var(--ink);font-variant-numeric:tabular-nums}
+@media (max-width:720px){
+ .vn-t thead{display:none}
+ .vn-t tr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px;border-bottom:1px solid var(--line)}
+ .vn-t td{border:0;padding:2px 0}
+ .vn-t td.vn-prod,.vn-t td.vn-next,.vn-t td.num{grid-column:1/-1}
+ .vn-t td.num{text-align:right}
+ .vn-bar .search-in{max-width:none}
+ .vn-tot{justify-content:flex-start}
+}
