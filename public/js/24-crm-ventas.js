@@ -5,7 +5,9 @@
    - «Por cliente»: una fila por persona, con sus unidades (salen de sus compras), lo que aportó y si acepta promociones.
    - Solo lee lo que ya existe: no crea ni copia datos. Importes en centavos.
    ===================================================================== */
-const VN={ q:'', unit:'', st:'', kind:'', per:'todo', mode:'op', sort:'date', dir:-1 };
+const VN={ q:'', unit:'', st:'', kind:'', per:'todo', mode:'op', sort:'date', dir:-1, lay:'lista', seg:'', sel:new Set() };
+const vnSegs=()=>{ const m=M(); m.segments=m.segments||[]; return m.segments; };
+const vnSegSet=()=>{ const g=VN.seg&&vnSegs().find(x=>x.id===VN.seg); return g?new Set(g.contactIds):null; };
 const VN_ST={n:['Nueva','n'],c:['En curso','c'],g:['Ganada','g'],p:['Perdida / Cancelada','p']};
 const VN_KIND={cot:'Cotización',ped:'Pedido de la tienda',sus:'Suscripción',ins:'Inscripción'};
 const vnMs=t=>t&&t.toMillis?t.toMillis():t?Date.parse(t):0;
@@ -38,7 +40,8 @@ function vnOps(){
 function vnRange(){ const d=new Date(), y=d.getFullYear(), m=d.getMonth();
   return {mes:[new Date(y,m,1),new Date(y,m+1,1)],ant:[new Date(y,m-1,1),new Date(y,m,1)],'90':[new Date(Date.now()-90*864e5),new Date(Date.now()+864e5)],todo:null}[VN.per]; }
 function vnFilter(ops){ const r=vnRange(), q=VN.q.toLowerCase();
-  return ops.filter(o=>(!VN.unit||o.unit===VN.unit)&&(!VN.st||o.st===VN.st)&&(!VN.kind||o.kind===VN.kind)&&(!r||(o.date>=r[0].getTime()&&o.date<r[1].getTime()))&&(!q||`${o.cli} ${o.prod} ${o.unit}`.toLowerCase().includes(q))); }
+  const sg=vnSegSet();
+  return ops.filter(o=>(!sg||sg.has(o.contactId))&&(!VN.unit||o.unit===VN.unit)&&(!VN.st||o.st===VN.st)&&(!VN.kind||o.kind===VN.kind)&&(!r||(o.date>=r[0].getTime()&&o.date<r[1].getTime()))&&(!q||`${o.cli} ${o.prod} ${o.unit}`.toLowerCase().includes(q))); }
 const vnShort=u=>String(u||'').replace(/^Cafelito /,'')||'—';
 function vnTotals(ops){ const g=ops.filter(o=>o.st==='g'&&!o.recur&&o.kind!=='sus');
   return { cob:ops.reduce((a,o)=>a+o.paid,0), vend:g.reduce((a,o)=>a+o.amt,0), juego:ops.filter(o=>o.st==='n'||o.st==='c').reduce((a,o)=>a+o.amt,0), mens:ops.filter(o=>o.recur).reduce((a,o)=>a+o.amt,0) }; }
@@ -51,21 +54,23 @@ function vVentas(){
     ${sel('vnu',VN.unit,[['','Todas las unidades'],...units.map(u=>[u,u])],'Unidad')}
     ${VN.mode==='op'?sel('vns',VN.st,[['','Todos los estados'],...Object.entries(VN_ST).map(([k,[l]])=>[k,l])],'Estado')+sel('vnk',VN.kind,[['','Todo tipo de venta'],...Object.entries(VN_KIND)],'Tipo'):''}
     ${sel('vnp',VN.per,[['todo','Todo el tiempo'],['mes','Este mes'],['ant','Mes pasado'],['90','Últimos 90 días']],'Período')}
+    ${vnSegs().length?sel('vng',VN.seg,[['','Todas las personas'],...vnSegs().map(g=>[g.id,'Segmento: '+g.name])],'Segmento')+(VN.seg?`<button class="btn btn-sm" data-vnsegdel title="Borrar este segmento">${ic('trash')}<span class="sr">Borrar segmento</span></button>`:''):''}
+    ${VN.mode==='op'?`<div class="seg" role="group" aria-label="Cómo se ve"><button data-vnl="lista" aria-pressed="${VN.lay==='lista'}">Lista</button><button data-vnl="tablero" aria-pressed="${VN.lay==='tablero'}">Tablero</button></div>`:''}
     <span class="grow"></span><button class="btn btn-sm" id="vncsv">${ic('download')} Descargar</button><button class="btn btn-sm btn-primary" data-vnnew>${ic('plus')} Cargar venta</button></div>`;
-  return bar+(VN.mode==='cl'?vnClientes(all):vnOperaciones(vnFilter(all)));
+  return bar+`<div id="vnbulk" class="vn-bulk" ${VN.sel.size?'':'hidden'}>${vnBulkHtml()}</div>`+(VN.mode==='cl'?vnClientes(all):VN.lay==='tablero'?vnTablero(vnFilter(all)):vnOperaciones(vnFilter(all)));
 }
 function vnOperaciones(ops){
   const k=VN.sort, d=VN.dir, key={date:o=>o.date,cli:o=>o.cli.toLowerCase(),st:o=>o.st,unit:o=>o.unit,prod:o=>o.prod.toLowerCase(),amt:o=>o.amt}[k]||(o=>o.date);
   ops.sort((a,b)=>{ const x=key(a), y=key(b); return x<y?-d:x>y?d:0; });
   const t=vnTotals(ops), th=(id,l,cls='')=>`<th class="${cls}"><button class="vn-sort" data-vnsort="${id}">${l}${VN.sort===id?(VN.dir>0?' ↑':' ↓'):''}</button></th>`;
   const money=o=>!o.amt?'<span class="muted small">Sin importe</span>':o.st==='p'?`<span class="muted" style="text-decoration:line-through">${evMoney(o.amt)}</span>`:o.st==='g'?`<b>${evMoney(o.amt)}</b>${o.recur?'<span class="vn-sl">por mes</span>':''}`:`<span class="muted">${evMoney(o.amt)}</span><span class="vn-sl">posible</span>`;
-  const rows=ops.map(o=>`<tr data-vnop="${esc(o.id)}"><td><b>${esc(o.cli||'Sin nombre')}</b><span class="vn-sl">${esc([o.src,o.date?evDate(vnIso(o.date)):''].filter(Boolean).join(' · '))}</span></td>
+  const rows=ops.map(o=>`<tr data-vnop="${esc(o.id)}">${vnChk(o.contactId,o.cli)}<td><b>${esc(o.cli||'Sin nombre')}</b><span class="vn-sl">${esc([o.src,o.date?evDate(vnIso(o.date)):''].filter(Boolean).join(' · '))}</span></td>
     <td><span class="vn-st ${o.st}">${VN_ST[o.st][0]}</span><span class="vn-sl ${o.late?'vn-late':''}">${esc(o.sub)}</span></td>
     <td class="hide-m"><span class="vn-unit">${esc(vnShort(o.unit))}</span></td><td class="small vn-prod">${esc(o.prod)}</td>
     <td class="num">${money(o)}</td><td class="vn-next">${o.act?`<button class="btn btn-sm ${o.late?'btn-primary':''}" data-vnact="${esc(o.id)}">${esc(o.act[0])}</button>`:''}${o.next?`<span class="vn-sl">${esc(o.next)}</span>`:''}</td></tr>`).join('');
   const tot=`<div class="vn-tot"><span>Cobrado <b>${evMoney(t.cob)}</b></span><span>Vendido <b>${evMoney(t.vend)}</b></span><span>En juego <b>${evMoney(t.juego)}</b></span><span>Mensual fijo <b>${t.mens?evMoney(t.mens):'—'}</b></span><span class="muted">${ops.length} ${ops.length===1?'operación':'operaciones'}</span></div>`;
   if(!ops.length) return `<div class="card empty"><div class="eico">${ic('dollar')}</div><h3>No hay ventas con estos filtros</h3><p class="muted small">Probá con otra unidad, otro estado u otro período.</p></div>`;
-  return `<div class="card vn-card"><div class="table-wrap"><table class="t vn-t"><thead><tr>${th('cli','Cliente')}${th('st','Estado')}${th('unit','Unidad','hide-m')}${th('prod','Producto o servicio')}${th('amt','Importe','num')}<th>Próximo paso</th></tr></thead><tbody>${rows}</tbody></table></div>${tot}</div>`;
+  return `<div class="card vn-card"><div class="table-wrap"><table class="t vn-t"><thead><tr>${vnChkAll(ops.map(o=>o.contactId))}${th('cli','Cliente')}${th('st','Estado')}${th('unit','Unidad','hide-m')}${th('prod','Producto o servicio')}${th('amt','Importe','num')}<th>Próximo paso</th></tr></thead><tbody>${rows}</tbody></table></div>${tot}</div>`;
 }
 function vnClientes(all){
   const by=new Map(); const add=(id,c)=>{ if(!by.has(id)) by.set(id,{id,c,ops:[]}); return by.get(id); };
@@ -76,12 +81,12 @@ function vnClientes(all){
     const open=p.ops.filter(o=>o.st==='n'||o.st==='c'), pend=won.filter(o=>o.act);
     return {id:p.id,name:c.name||(p.ops[0]||{}).cli||'Sin nombre',type:won.length||c.type==='Cliente'?'Cliente':'Lead',units:u,buys:won.length,total:p.ops.reduce((a,o)=>a+o.paid,0),vend:won.filter(o=>!o.recur&&o.kind!=='sus').reduce((a,o)=>a+o.amt,0),
       mens:won.filter(o=>o.recur).reduce((a,o)=>a+o.amt,0),last:Math.max(0,...won.map(o=>o.date)),open:open.length?`${open.length} en curso`:pend.length?esc(pend[0].next):'',src:(c.firstSource||{}).channel||'',cons:c.marketingConsent?(c.marketingConsent.granted?'Sí':'No'):'Sin datos'}; });
-  list=list.filter(p=>(!VN.unit||p.units.includes(VN.unit))&&(!q||p.name.toLowerCase().includes(q))&&(!r||by.get(p.id).ops.some(o=>o.date>=r[0].getTime()&&o.date<r[1].getTime())||(!by.get(p.id).ops.length&&!r)));
+  const sg=vnSegSet(); list=list.filter(p=>(!sg||sg.has(p.id))&&(!VN.unit||p.units.includes(VN.unit))&&(!q||p.name.toLowerCase().includes(q))&&(!r||by.get(p.id).ops.some(o=>o.date>=r[0].getTime()&&o.date<r[1].getTime())||(!by.get(p.id).ops.length&&!r)));
   list.sort((a,b)=>b.total-a.total||b.last-a.last);
   if(!list.length) return `<div class="card empty"><div class="eico">${ic('users')}</div><h3>No hay clientes con estos filtros</h3></div>`;
   const okP=list.filter(p=>p.cons==='Sí').length;
-  return `<div class="card vn-card"><div class="table-wrap"><table class="t vn-t"><thead><tr><th>Cliente</th><th>Tipo</th><th>Unidades</th><th class="num hide-m">Compras</th><th class="num">Total aportado</th><th>Abierto</th><th class="hide-m">Llegó por</th><th class="hide-m">Acepta promociones</th></tr></thead><tbody>
-    ${list.map(p=>`<tr data-vncli="${esc(p.id)}"><td><b>${esc(p.name)}</b></td><td><span class="vn-st ${p.type==='Cliente'?'g':'n'}">${p.type}</span></td><td>${p.units.map(u=>`<span class="vn-unit">${esc(vnShort(u))}</span>`).join(' ')||'<span class="muted small">—</span>'}</td>
+  return `<div class="card vn-card"><div class="table-wrap"><table class="t vn-t"><thead><tr>${vnChkAll(list.map(p=>p.id))}<th>Cliente</th><th>Tipo</th><th>Unidades</th><th class="num hide-m">Compras</th><th class="num">Total aportado</th><th>Abierto</th><th class="hide-m">Llegó por</th><th class="hide-m">Acepta promociones</th></tr></thead><tbody>
+    ${list.map(p=>`<tr data-vncli="${esc(p.id)}">${vnChk(p.id,p.name)}<td><b>${esc(p.name)}</b></td><td><span class="vn-st ${p.type==='Cliente'?'g':'n'}">${p.type}</span></td><td>${p.units.map(u=>`<span class="vn-unit">${esc(vnShort(u))}</span>`).join(' ')||'<span class="muted small">—</span>'}</td>
       <td class="num hide-m">${p.buys}</td><td class="num">${p.total?`<b>${evMoney(p.total)}</b>`:p.vend?`<span class="muted">${evMoney(p.vend)} vendido</span>`:'<span class="muted">—</span>'}${p.mens?`<span class="vn-sl">${evMoney(p.mens)} por mes</span>`:''}</td>
       <td class="small">${p.open||'<span class="muted">—</span>'}</td><td class="small muted hide-m">${esc(p.src)}</td><td class="small hide-m">${p.cons}</td></tr>`).join('')}</tbody></table></div>
     <div class="vn-tot"><span>${list.length} persona${list.length===1?'':'s'}</span><span>${list.filter(p=>p.type==='Cliente').length} clientes</span><span>${okP} aceptan promociones</span></div></div>`;
@@ -96,6 +101,13 @@ function bVentas(){
   $$('[data-vnact]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const o=byId[b.dataset.vnact]; if(o&&o.act) o.act[1](); });
   $$('[data-vnop]').forEach(r=>r.onclick=()=>{ const o=byId[r.dataset.vnop]; if(o) o.open(); });
   $$('[data-vncli]').forEach(r=>r.onclick=()=>evContacto(r.dataset.vncli));
+  $$('[data-vnl]').forEach(b=>b.onclick=()=>{ VN.lay=b.dataset.vnl; re(); });
+  $$('[data-vnkc]').forEach(c=>c.onclick=()=>{ const o=byId[c.dataset.vnkc]; if(o) o.open(); });
+  const g=$('#vng'); if(g) g.onchange=()=>{ VN.seg=g.value; re(); };
+  const gd=$('[data-vnsegdel]'); if(gd) gd.onclick=()=>{ const sg=vnSegs().find(x=>x.id===VN.seg); if(!sg) return;
+    modal('¿Borrar el segmento?',`<p>Se borra el segmento <b>${esc(sg.name)}</b>. Las personas y sus ventas no se tocan.</p>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-danger" id="vnsgok">Borrar segmento</button>`);
+    $('#vnsgok').onclick=()=>{ const m=M(); m.segments=vnSegs().filter(x=>x.id!==sg.id); VN.seg=''; closeLayer(); render(); toast('Segmento borrado'); }; };
+  vnBindSel();
   const nw=$('[data-vnnew]'); if(nw) nw.onclick=()=>{ modal('Cargar venta',`<div style="display:grid;gap:8px"><button class="btn" data-vnn="cot">${ic('calendar')} Pedido de presupuesto (cotización)</button><button class="btn" data-vnn="ped">${ic('dollar')} Venta de la tienda (ya pagada)</button><button class="btn" data-vnn="sus">${ic('refresh')} Suscripción</button><button class="btn" data-vnn="ins">${ic('book')} Inscripción a un curso</button></div>`,`<button class="btn" data-close>Cancelar</button>`);
     $$('#layer [data-vnn]').forEach(x=>x.onclick=()=>{ const k=x.dataset.vnn; closeLayer(); ({cot:()=>manForm(true),ped:()=>manSaleForm(),sus:()=>subForm(),ins:()=>enrForm()})[k](); }); };
   const csv=$('#vncsv'); if(csv) csv.onclick=()=>{ const rows=vnFilter(vnOps()), c=v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`;
@@ -110,7 +122,7 @@ function bVentas(){
   bCrm=function(tab){ if(!cloud()) return _b(tab); if(!tab||tab==='ventas') return bVentas(); return _b(tab); };
   VIEWS.crm.view=vCrm; VIEWS.crm.bind=bCrm;
   /* Que la planilla se actualice cuando llegan datos nuevos */
-  const onV=()=>/^#\/app\/crm(\/ventas)?\/?(\?.*)?$/.test(location.hash);
+  const onV=()=>/^#\/app\/crm(\/(ventas|resumen))?\/?(\?.*)?$/.test(location.hash);
   const wrap=f=>function(){ if(onV()){ if(!$('#layer').children.length) render(); return; } return f.apply(this,arguments); };
   evRefresh=wrap(evRefresh); shRefresh=wrap(shRefresh); lcRefresh=wrap(lcRefresh);
 })();

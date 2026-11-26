@@ -11,7 +11,9 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   const EMAIL = 'duena@cafelito.test', NOW = new Date();
   await put('tenants/cafelito', { name: 'Cafelito Coffee House' });
   await put(`invites/${EMAIL}__cafelito`, { email: EMAIL, tenantId: 'cafelito', tenantName: 'Cafelito', role: 'Dueño', invitedBy: 'alta' });
-  await put('tenants/cafelito/state/base', { json: JSON.stringify({ brands: [{ name: 'Cafelito Ambulante' }, { name: 'Cafelito Cakes' }, { name: 'Cafelito Work' }, { name: 'Cafelito Academy' }], workspaces: [{ name: 'General' }] }), by: 'alta' });
+  await put('tenants/cafelito/state/base', { json: JSON.stringify({ brands: [{ name: 'Cafelito Ambulante' }, { name: 'Cafelito Cakes' }, { name: 'Cafelito Work' }, { name: 'Cafelito Academy' }, { name: 'Cafelito Coffee House' }], workspaces: [{ name: 'General' }] }), by: 'alta' });
+  const Q = `Q${Math.floor(NOW.getMonth() / 3) + 1} ${NOW.getFullYear()}`;
+  await put('tenants/cafelito/state/m_objectives', { json: JSON.stringify([{ id: 'o1', title: 'Vender tortas online', brand: 'Cafelito Cakes', period: Q, owner: 'Melina', krs: [{ t: 'Pedidos', target: 2, unit: '', cur: 0, src: 'shop-orders' }] }]), by: 'alta' });
   await put('tenants/cafelito/contacts/c1', { name: 'Daniela Katch', phoneE164: '+5493515550101', type: 'Cliente', marketingConsent: { granted: true } });
   await put('tenants/cafelito/contacts/c2', { name: 'Azafrán', phoneE164: '+5493515550102', type: 'Lead' });
   await put('tenants/cafelito/contacts/c3', { name: 'Catalina Paz', phoneE164: '+5493515550103', type: 'Cliente' });
@@ -32,10 +34,23 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await fetch(`${AU}/identitytoolkit.googleapis.com/v1/accounts:update?key=x`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oobCode: vc.oobCode }) });
   await page.click('#vok'); await page.waitForSelector('.app', { timeout: 20000 });
 
-  await page.goto(BASE + '#/app/crm'); await page.waitForFunction(() => document.querySelectorAll('[data-vnop]').length >= 6, null, { timeout: 20000 });
+  // Resumen (abre por defecto)
+  await page.goto(BASE + '#/app/crm'); await page.waitForSelector('.vr-kpi', { timeout: 20000 }); await page.waitForTimeout(1500);
   const tabs = await page.$$eval('.tabs .tab', x => x.map(t => t.textContent));
-  ok(tabs[0] === 'Ventas' && tabs.includes('Oportunidades') && tabs.includes('Tienda'), 'la primera solapa es Ventas y las anteriores siguen: ' + tabs.join(', '));
-  ok((await page.getAttribute('.tabs .tab', 'aria-selected')) === 'true', 'el CRM abre en Ventas');
+  ok(tabs[0] === 'Resumen' && tabs[1] === 'Ventas' && tabs.includes('Oportunidades') && tabs.includes('Tienda'), 'solapas: ' + tabs.join(', '));
+  ok((await page.getAttribute('.tabs .tab', 'aria-selected')) === 'true', 'el CRM abre en Resumen');
+  const rs = await page.textContent('#root');
+  ok(/Cobrado\s*\$ 140\.000/.test(rs) && /Vendido\s*\$ 230\.000/.test(rs) && /En juego\s*\$ 670\.000/.test(rs) && /Mensual fijo\s*\$ 35\.500/.test(rs), 'resumen del mes con los mismos totales que Ventas');
+  ok(/Clientes nuevos\s*3/.test(rs), 'clientes nuevos del mes: 3');
+  const cakes = await page.$$eval('.vr-t tbody tr', rs => (rs.find(r => /Cafelito Cakes/.test(r.textContent)) || {}).textContent || '');
+  ok(/\$ 60\.000/.test(cakes) && /Vender tortas online/.test(cakes) && /50%/.test(cakes), 'Cakes: cobró $ 60.000 y su objetivo va 50%: ' + cakes.replace(/\s+/g, ' '));
+  ok(/Sin objetivo/.test(await page.$$eval('.vr-t tbody tr', rs => (rs.find(r => /Cafelito Work/.test(r.textContent)) || {}).textContent || '')), 'Work: avisa que no tiene objetivo');
+  ok(/Torta Tiramisú/.test(rs) && /Evento · Cumpleaños/.test(rs) && /Barismo inicial/.test(rs), 'lo que más se vende');
+  await page.selectOption('#vru', 'Cafelito Cakes'); await page.waitForTimeout(300);
+  ok(/Cobrado\s*\$ 60\.000/.test(await page.textContent('#root')) && (await page.$$('.vr-t tbody tr')).length === 1, 'filtro de unidad en el resumen');
+  await page.selectOption('#vru', '');
+  // Ventas
+  await page.goto(BASE + '#/app/crm/ventas'); await page.waitForFunction(() => document.querySelectorAll('[data-vnop]').length >= 6, null, { timeout: 20000 });
   ok((await page.$$('[data-vnop]')).length === 6, '6 operaciones de 4 orígenes en una sola lista');
   const tot = await page.textContent('.vn-tot');
   // Cobrado: pedido 60.000 + curso 80.000 (la seña sin cobrar no suma). Vendido: 90.000 + 60.000 + 80.000. En juego: 670.000. Mensual: 35.500
@@ -74,11 +89,42 @@ const fails = []; const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') +
   await page.click('[data-vncli="c3"]'); await page.waitForSelector('#layer .drawer');
   ok(/Catalina Paz/.test(await page.textContent('#layer')), 'clic en el cliente abre su ficha');
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  // Tablero
+  await page.click('[data-vnm="op"]'); await page.click('[data-vnl="tablero"]'); await page.waitForSelector('.vn-board');
+  ok((await page.$$('.vn-col')).length === 4 && (await page.$$('.vn-kc')).length === 6, 'tablero: 4 columnas y 6 tarjetas');
+  ok(/Ganada[\s\S]*Daniela Katch/.test(await page.textContent('.vn-board')), 'la ganada está en su columna');
+  await page.click('.vn-kc[data-vnkc="o-P-1"]'); await page.waitForSelector('#layer .drawer'); ok(/Torta Tiramisú/.test(await page.textContent('#layer')), 'clic en una tarjeta abre la ficha');
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  await page.click('[data-vnl="lista"]');
+  // Selección y segmento
+  await page.click('[data-vnm="cl"]'); await page.waitForSelector('[data-vncli]');
+  await page.check('[data-vnchk="c1"]'); await page.check('[data-vnchk="c3"]');
+  ok(!(await page.$('#layer .drawer')), 'marcar la casilla no abre la ficha');
+  const bk = await page.textContent('#vnbulk');
+  ok(/2 personas elegidas/.test(bk) && /1 acepta promociones/.test(bk), 'barra de selección: 2 personas, 1 acepta promociones');
+  await page.click('[data-vnb="seg"]'); await page.fill('#vnsgn', 'Clientas noviembre'); await page.click('#vnsgsave'); await page.waitForTimeout(400);
+  ok((await page.$$('[data-vncli]')).length === 2 && await page.inputValue('#vng') !== '', 'el segmento queda creado y filtrado con 2 personas');
+  ok(await page.evaluate(() => M().segments.length === 1 && M().segments[0].contactIds.length === 2), 'el segmento se guarda con la empresa');
+  await page.selectOption('#vng', ''); await page.waitForTimeout(200);
+  // Catálogo
+  await page.goto(BASE + '#/app/config/catalogo'); await page.waitForFunction(() => /Torta Tiramisú/.test(document.querySelector('#root').textContent), null, { timeout: 15000 });
+  const ct = await page.textContent('#root');
+  ok(/Productos y servicios/.test(ct) && /Cumpleaños/.test(ct), 'catálogo: productos de la tienda y eventos aparecen solos');
+  await page.click('[data-cnewpl="Cafelito Coffee House"]'); await page.waitForSelector('#plok2');
+  ok(await page.inputValue('#plu') === 'Cafelito Coffee House', 'el plan nuevo se carga en la unidad elegida');
+  await page.fill('#pln2', 'Coffee Lover · Descubrimiento'); await page.fill('#plp', '35.500'); await page.click('#plok2'); await page.waitForTimeout(300);
+  ok(/Coffee Lover · Descubrimiento[\s\S]*\$ 35\.500 \/mes/.test(await page.textContent('#root')), 'Coffee Lover queda como suscripción de Coffee House');
+  ok(await page.evaluate(() => M().plans.some(p => p.brand === 'Cafelito Coffee House' && p.priceMinor === 3550000)), 'en centavos y con la unidad');
+  await page.goto(BASE + '#/app/crm/ventas'); await page.waitForSelector('[data-vncli]'); await page.click('[data-vnm="op"]'); await page.waitForSelector('[data-vnop]');
+  if (process.env.SHOT_DIR) { await page.click('[data-vnl="tablero"]'); await page.waitForSelector('.vn-board'); await page.screenshot({ path: process.env.SHOT_DIR + '/tablero.png' }); await page.click('[data-vnl="lista"]');
+    await page.goto(BASE + '#/app/crm/resumen'); await page.waitForSelector('.vr-kpi'); await page.waitForTimeout(800); await page.screenshot({ path: process.env.SHOT_DIR + '/resumen.png', fullPage: true }); await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light')); await page.setViewportSize({ width: 390, height: 844 }); await page.screenshot({ path: process.env.SHOT_DIR + '/resumen-claro-movil.png', fullPage: true }); await page.setViewportSize({ width: 1280, height: 900 }); await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+    await page.goto(BASE + '#/app/config/catalogo'); await page.waitForTimeout(1500); await page.screenshot({ path: process.env.SHOT_DIR + '/catalogo.png', fullPage: true });
+    await page.goto(BASE + '#/app/crm/ventas'); await page.waitForSelector('[data-vnop]'); }
   // Celular
   await page.setViewportSize({ width: 390, height: 844 }); await page.click('[data-vnm="op"]'); await page.waitForTimeout(300);
   const ov = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   ok(ov <= 0, 'en celular no se desborda (' + ov + ' px)');
-  await page.screenshot({ path: process.env.SHOT_DIR ? process.env.SHOT_DIR + '/ventas-movil.png' : '/dev/null' });
+  if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/ventas-movil.png' });
   await page.setViewportSize({ width: 1280, height: 900 }); await page.waitForTimeout(200);
   if (process.env.SHOT_DIR) await page.screenshot({ path: process.env.SHOT_DIR + '/ventas-escritorio.png', fullPage: true });
   ok(!errs.length, 'sin errores en la página ' + errs.join(' | '));

@@ -47,7 +47,7 @@ const lcCampSel=(id,unit)=>`<div class="field"><label for="${id}">Campaña (opci
 const lcUnitSel=(id,units)=>units.length>1?`<div class="field"><label for="${id}">Unidad</label><select class="select" id="${id}">${units.map(u=>`<option>${esc(u)}</option>`).join('')}</select></div>`:'';
 
 /* ---------- Catálogo: planes y cursos ---------- */
-function planForm(i){ const m=catalog(), edit=i!=null, p=edit?m.plans[i]:{name:'',priceMinor:null,brand:''}; const units=lcBrand('suscripcion','Cafelito Work');
+function planForm(i){ const m=catalog(), edit=i!=null, p=edit?m.plans[i]:{name:'',priceMinor:null,brand:''}; const units=[...new Set([...lcBrand('suscripcion','Cafelito Work'),...S.brands.map(x=>x.name)])];
   modal(edit?'Editar plan':'Nuevo plan',`${lcUnitSel('plu',units)}${F('pln2','Nombre del plan',`value="${esc(p.name)}" placeholder="Ej.: Full time" maxlength="80"`)}${lcMoneyField('plp','Precio mensual (lo que se cobra)',p.priceMinor,'Las suscripciones ya hechas conservan su precio.')}`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="plok2">${edit?'Guardar':'Agregar plan'}</button>`);
   if(edit&&$('#plu')) $('#plu').value=p.brand;
   $('#plok2').onclick=()=>{ const n=$('#pln2'), v=n.value.trim(), pr=evParseMoney($('#plp').value);
@@ -55,7 +55,7 @@ function planForm(i){ const m=catalog(), edit=i!=null, p=edit?m.plans[i]:{name:'
     const o={id:edit?p.id:uid(),name:v,priceMinor:pr,brand:$('#plu')?$('#plu').value:(units[0]||'Cafelito Work'),active:true}; if(edit) m.plans[i]=o; else m.plans.push(o);
     layerDirty=false; closeLayer(); render(); toast(edit?'Plan guardado':`Plan «${v}» agregado`); };
 }
-function courseForm(i){ const m=catalog(), edit=i!=null, c=edit?m.courses[i]:{name:'',start:'',end:'',priceMinor:null,seats:null}; const units=lcBrand('inscripcion','Cafelito Academy');
+function courseForm(i){ const m=catalog(), edit=i!=null, c=edit?m.courses[i]:{name:'',start:'',end:'',priceMinor:null,seats:null}; const units=[...new Set([...lcBrand('inscripcion','Cafelito Academy'),...S.brands.map(x=>x.name)])];
   modal(edit?'Editar curso':'Nuevo curso',`${lcUnitSel('cou',units)}${F('con','Nombre del curso',`value="${esc(c.name)}" placeholder="Ej.: Barista inicial" maxlength="120"`)}
    <div class="form-grid">${F('cos','Empieza',`type="date" value="${c.start||''}"`)}${F('coe','Termina',`type="date" value="${c.end||''}"`)}</div>
    <div class="form-grid">${lcMoneyField('cop','Precio (pago único)',c.priceMinor,'')}${F('coq','Cupo (opcional)',`type="number" min="1" max="1000" value="${c.seats||''}"`)}</div>`,`<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="cook">${edit?'Guardar':'Agregar curso'}</button>`);
