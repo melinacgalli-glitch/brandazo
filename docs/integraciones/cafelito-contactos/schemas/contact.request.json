@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.brandazo.com.ar/schemas/integrations/cafelito/contact.request.v1.json",
+  "title": "Contacto desde un formulario de la web (solicitud)",
+  "description": "Cada vez que alguien completa un formulario de cafelito.com.ar (coworking, contacto, newsletter), la web avisa a Brandazo. La persona queda como contacto del CRM sin duplicarse (por WhatsApp o email) y en su ficha queda lo que pidió.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "source",
+    "submittedAt",
+    "contact"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9_.:-]+$",
+      "description": "Identificador único de este envío (por ejemplo un UUID). Igual al encabezado Idempotency-Key."
+    },
+    "source": {
+      "enum": [
+        "coworking",
+        "contacto",
+        "newsletter",
+        "otro"
+      ],
+      "description": "Qué formulario lo mandó."
+    },
+    "submittedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "phone"
+          ]
+        },
+        {
+          "required": [
+            "email"
+          ]
+        }
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 30,
+          "pattern": "^[0-9+()\\-.\\s]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        }
+      }
+    },
+    "coworking": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Solo con source = coworking: lo que pidió en el formulario.",
+      "required": [
+        "people",
+        "date",
+        "from",
+        "to"
+      ],
+      "properties": {
+        "people": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "from": {
+          "type": "string",
+          "pattern": "^\\d{2}:\\d{2}( hs)?$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^\\d{2}:\\d{2}( hs)?$"
+        }
+      }
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Texto libre (por ejemplo el mensaje del formulario de contacto)."
+    },
+    "topic": {
+      "type": "string",
+      "maxLength": 80,
+      "description": "Tema elegido en el formulario de contacto (Torta, Merch, Suscripción, Otro)."
+    },
+    "source_page": {
+      "type": "string",
+      "format": "uri",
+      "maxLength": 2000
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional. Origen de la visita en la que se pidió el presupuesto. Brandazo lo guarda en la cotización sin pisar el origen histórico del contacto.",
+      "properties": {
+        "utmSource": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "utmMedium": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "utmCampaign": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "utmContent": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "utmTerm": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "gclid": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "gbraid": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "wbraid": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "fbclid": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Identificador de clic de anuncios de Meta (parámetro fbclid de la URL de llegada)."
+        },
+        "landingPage": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2000,
+          "description": "Primera página de la visita."
+        },
+        "referrer": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Cuándo se capturaron estos parámetros (inicio de la visita)."
+        }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opcional. Aceptación de PROMOCIONES (casilla de promociones del cotizador). Responder el pedido de presupuesto no necesita consentimiento: lo inició la persona. Sin este bloque, o con marketing=false, Brandazo no envía promociones a ese contacto.",
+      "properties": {
+        "marketing": {
+          "type": "boolean",
+          "description": "true si la persona marcó la casilla de promociones; false si la dejó sin marcar."
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Texto exacto de la casilla de promociones tal como lo vio la persona (se guarda como prueba del consentimiento)."
+        },
+        "capturedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

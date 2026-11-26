@@ -128,6 +128,7 @@ service cloud.firestore {
       match /orders/{id} { allow read: if isMember(t); allow write: if false; } // pedidos de la tienda: solo los escribe el servidor
       match /subscriptions/{id} { allow read: if isMember(t); allow write: if false; } // suscripciones (Work): solo el servidor
       match /enrollments/{id} { allow read: if isMember(t); allow write: if false; } // inscripciones (Academy): solo el servidor
+      match /contactEvents/{id} { allow read: if isMember(t); allow write: if false; } // lo que cada contacto pidió desde la web
       match /coupons/{id} { allow read: if isMember(t); allow write: if false; } // códigos de descuento: los crea y canjea el servidor
       match /autoSends/{id} { allow read: if isMember(t); allow write: if false; } // mails enviados por automatizaciones
       match /tasks/{id} {
