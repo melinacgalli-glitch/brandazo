@@ -100,3 +100,7 @@ _Última actualización: 2026-11-17_
 - **Configuración → Productos y servicios**: por unidad, planes de suscripción y cursos (se cargan acá, cualquier unidad puede tener planes o cursos) y, solo lectura, productos de la tienda y tipos de evento que aparecen solos con las ventas.
 - **Coffee Lover**: cargados los planes «Coffee Lover · Descubrimiento» $ 35.500/mes y «Coffee Lover · Selección» $ 42.000/mes en Cafelito Coffee House (pedido de la usuaria; el catálogo estaba vacío, sin duplicados).
 - Seña cobrada suma a Cobrado (confirmado).
+
+## 2026-11-26 · Envío de mails a un segmento (aprobado el diseño, pendiente de armar)
+- La usuaria aprobó la vista previa: 4 pasos (a quién le llega · qué dice, con código de regalo personal opcional y campaña · prueba obligatoria a su mail · enviar ahora o programado), historial (enviados, no entregados, códigos canjeados y ventas, bajas), link «No quiero recibir más mails» en cada envío, solo a quienes aceptaron promociones y tienen email, solo Dueño/Admin envían, límite del plan gratis de Resend (100/día, 3.000/mes). «Agregar a campaña» queda para después.
+- Primer uso previsto: regalo de Navidad a Daniela Katch (cliente de un evento de Ambulante), 10%, un solo uso, enviado el 1/12 a las 10 h y vence el 31/12. **Pendiente:** su email (hoy solo tiene WhatsApp) y que la usuaria confirme que acepta recibirlo; recién ahí se arma y se publica (requiere «autorizo» por tocar servidor y reglas).
